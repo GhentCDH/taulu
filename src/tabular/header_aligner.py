@@ -10,6 +10,11 @@ from . import img_util as imu
 
 
 class HeaderAligner:
+    """
+    Calculates a transformation matrix to transform points from header-template-image-space to
+    subject-image-space.
+    """
+
     def __init__(
         self,
         template: None | MatLike | str = None,
@@ -69,19 +74,11 @@ class HeaderAligner:
     def _preprocess_image(self, img: MatLike):
         if self._template_orig is None:
             raise TabularException("process the template first")
-
-        img_orig = np.copy(img)
         _, _, img = cv.split(img)
-        # img = imu.threshold(img)
 
-        # img = cv.resize(
-        #     img, (self._template.shape[1], self._template.shape[0]))
-        # img_orig = cv.resize(
-        #     img_orig, (self._template_orig.shape[1], self._template_orig.shape[0]))
+        return img
 
-        return img, img_orig
-
-    def _align_images(self, im: MatLike, im_original: MatLike):
+    def _find_transform_of_template_on(self, im: MatLike, visual: bool = False):
         # Detect ORB features and compute descriptors.
         orb = cv.ORB_create(
             self._max_features,  # type:ignore
@@ -101,16 +98,17 @@ class HeaderAligner:
         numGoodMatches = int(len(matches) * self._match_fraction)
         matches = matches[:numGoodMatches]
 
-        final_img_filtered = cv.drawMatches(
-            im,
-            keypoints_im,
-            self._template,
-            keypoints_tg,
-            matches[:10],
-            None,
-            cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
-        )  # type:ignore
-        imu.show(final_img_filtered, title="matches")
+        if visual:
+            final_img_filtered = cv.drawMatches(
+                im,
+                keypoints_im,
+                self._template,
+                keypoints_tg,
+                matches[:10],
+                None,  # type:ignore
+                cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+            )
+            imu.show(final_img_filtered, title="matches")
 
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -138,30 +136,56 @@ class HeaderAligner:
 
         return h
 
-    def view_alignment(self, warped: MatLike):
-        # create an alignment preview
-        sz = warped.shape
-        im_preview = np.full((sz[0], sz[1], 3), 255, dtype=np.uint8)
-        im_preview[:, :, 1] = warped[:, :, 2]
-        im_preview[:, :, 2] = self._template_orig
+    def view_alignment(self, img: MatLike, h: NDArray):
+        """
+        Show the alignment of the template on the given image
+        by transforming it using the supplied transformation matrix `h`
+        and visualising both on different channels
 
-        return imu.show(im_preview, title="template alignment")
+        Args:
+            img (MatLike): the image on which the template is transformed
+            h (NDArray): the transformation matrix
+        """
 
-    def align(self, img: MatLike | str) -> NDArray:
+        im = imu.ensure_gray(img)
+        header = imu.ensure_gray(self._template)
+        height, width = im.shape
+
+        header_warped = cv.warpPerspective(header, h, (width, height))
+
+        merged = np.full((height, width, 3), 255, dtype=np.uint8)
+
+        merged[..., 1] = im
+        merged[..., 2] = header_warped
+
+        return imu.show(merged)
+
+    def align(self, img: MatLike | str, visual: bool = False) -> NDArray:
+        """
+        Calculates a homogeneous transformation matrix that maps pixels of
+        the template to the given image
+        """
+
         if type(img) is str:
             img = cv.imread(img)
         img = cast(MatLike, img)
 
-        img, img_orig = self._preprocess_image(img)
-        matrix = self._align_images(img, img_orig)
+        img = self._preprocess_image(img)
 
-        return matrix
+        return self._find_transform_of_template_on(img, visual)
 
-    def find_point_of_template_in_img(
-        self, matrix: NDArray, point: tuple[int, int]
-    ) -> tuple[int, int]:
-        point = np.array([[point[0], point[1], 1]])
-        transformed = np.dot(matrix, point.T)
+    def template_to_img(self, h: NDArray, point: tuple[int, int]) -> tuple[int, int]:
+        """
+        Transform the given point (in template-space) using the transformation h
+        (obtained through the `align` method)
+
+        Args:
+            h (NDArray): transformation matrix of shape (3, 3)
+            point (tuple[int, int]): the to-be-transformed point, (x, y)
+        """
+
+        point = np.array([[point[0], point[1], 1]])  # type:ignore
+        transformed = np.dot(h, point.T)  # type:ignore
 
         transformed /= transformed[2]
 
