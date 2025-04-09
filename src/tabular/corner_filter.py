@@ -5,23 +5,41 @@ from numpy.typing import NDArray
 
 from . import img_util as imu
 from .table_indexer import TableIndexer
-from .header_template import Rule
-
-REGION = 40
+from .header_template import _Rule
 
 
 class CornerFilter:
+    """
+    Implements filters that show high activation where the image has an intersection of a vertical
+    and horizontal rule, useful for finding the bounding boxes of cells
+    """
+
     def __init__(
         self,
         kernel_size: int = 21,
         cross_width: int = 6,
         cross_height: int | None = None,
         morph_size: int | None = None,
+        region: int = 40,
     ):
+        """
+        Args:
+            kernel_size (int): the size of the cross kernel
+                a larger kernel size often means that more penalty is applied, often leading
+                to more sparse results
+            cross_width (int): the width of one of the edges in the cross filter, should be
+                roughly equal to the width of the rules in the image after morphology is applied
+            cross_height (int | None (default)): useful if the horizontal rules and vertical rules
+                have different sizes
+            morph_size (int | None (default)): the size of the morphology operators that are applied before
+                the cross kernel. 'bridges the gaps' of broken-up lines
+            region (int): area in which to search for a new max value in `find_nearest` etc.
+        """
         self._k = kernel_size
         self._w = cross_width
         self._h = cross_width if cross_height is None else cross_height
         self._m = morph_size if morph_size is not None else cross_width
+        self._region = region
 
     @property
     def _cross_kernel(self) -> NDArray:
@@ -83,20 +101,25 @@ class CornerFilter:
         return filtered
 
     def find_nearest(
-        self,
-        filtered: MatLike,
-        point: tuple[int, int],
-        area: int = REGION,
-        area_y: int | None = None,
+        self, filtered: MatLike, point: tuple[int, int], region: None | int = None
     ) -> tuple[int, int]:
-        if area_y is None:
-            area_y = area
-        # crop the filtered image around the given point
+        """
+        Find the nearest 'corner match' in the image
 
-        y = point[0] - area_y // 2
-        x = point[1] - area // 2
+        Args:
+            filtered (MatLike): the filtered image (obtained through `apply`)
+            point (tuple[int, int]): the approximate target point (x, y)
+            region (None (default) | int): alternative value for search region,
+                overwriting the `__init__` parameter `region`
+        """
 
-        cropped = filtered[y : y + area_y, x : x + area]
+        if region is None:
+            region = self._region
+
+        x = point[0] - region // 2
+        y = point[1] - region // 2
+
+        cropped = filtered[y : y + region, x : x + region]
 
         best_match = np.argmax(cropped)
         best_match = np.unravel_index(best_match, cropped.shape)
@@ -104,7 +127,7 @@ class CornerFilter:
         if cropped[best_match] < 80:
             return point
 
-        result = (int(y + best_match[0]), int(x + best_match[1]))
+        result = (int(x + best_match[1]), int(y + best_match[0]))
 
         return result
 
@@ -114,13 +137,24 @@ class CornerFilter:
         left_top: tuple[int, int],
         cell_widths: list[int],
         cell_height: int,
-        filtered=None,
     ) -> "TableCrosses":
-        """left_top is given in (y, x)"""
-        if filtered is None:
-            filtered = self.apply(img)
+        """
+        Parse the image to a `TableCrosses` structure that holds all of the
+        intersections between horizontal and vertical rules, starting near the `left_top` point
 
-        left_top = self.find_nearest(filtered, left_top, 100)
+        Args:
+            img (MatLike): the input image of a table
+            left_top (tuple[int, int]): the starting point of the algorithm
+            cell_widths (list[int]): the expected widths of the cells (based on a header template)
+            cell_height (int): the expected height of one row of data
+
+        Returns:
+            a TableCrosses object
+        """
+
+        filtered = self.apply(img)
+
+        left_top = self.find_nearest(filtered, left_top, int(self._region * 3 / 2))
 
         points: list[list[tuple[int, int]]] = []
         current = left_top
@@ -130,16 +164,14 @@ class CornerFilter:
             while len(row) <= len(cell_widths):
                 jump = cell_widths[len(row) - 1]
 
-                match = self.find_nearest(
-                    filtered, (current[0], current[1] + jump), 60, 40
-                )
+                match = self.find_nearest(filtered, (current[0] + jump, current[1]))
 
                 current = match
                 row.append(current)
 
             points.append(row)
 
-            current = (row[0][0] + cell_height, row[0][1])
+            current = (row[0][0], row[0][1] + cell_height)
 
             if current[0] > filtered.shape[0]:
                 break
@@ -147,18 +179,19 @@ class CornerFilter:
             current = self.find_nearest(filtered, current)
             row = [current]
 
-        # reverse the order of the points
-        points = [[(p[1], p[0]) for p in row] for row in points]
-
         return TableCrosses(points)
 
 
 class TableCrosses(TableIndexer):
     """
-    points are in (x, y) order
+    A data class that allows segmenting the image into cells
     """
 
     def __init__(self, points: list[list[tuple[int, int]]]):
+        """
+        Args:
+            points: a 2D list of intersections between hor. and vert. rules
+        """
         self._points = points
 
     @property
@@ -190,19 +223,19 @@ class TableCrosses(TableIndexer):
         lt, rt, rb, lb = rect
         x, y = point
 
-        top = Rule(*lt, *rt)
+        top = _Rule(*lt, *rt)
         if top._y_at_x(x) > y:
             return False
 
-        right = Rule(*rt, *rb)
+        right = _Rule(*rt, *rb)
         if right._x_at_y(y) < x:
             return False
 
-        bottom = Rule(*lb, *rb)
+        bottom = _Rule(*lb, *rb)
         if bottom._y_at_x(x) < y:
             return False
 
-        left = Rule(*lb, *lt)
+        left = _Rule(*lb, *lt)
         if left._x_at_y(y) > x:
             return False
 
