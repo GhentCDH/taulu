@@ -3,5 +3,14 @@ from pathlib import Path
 
 this_dir = Path(__file__).parent
 
-def image_path(index: int) -> str:
+
+def table_image_path(index: int) -> str:
     return os.fspath((this_dir / f"../data/table_{index:02}.png").resolve())
+
+
+def table_left_image_path(index: int) -> str:
+    return os.fspath((this_dir / f"../data/table_left_{index:02}.png").resolve())
+
+
+def header_image_path(index: int) -> str:
+    return os.fspath((this_dir / f"../data/header_{index:02}.png").resolve())

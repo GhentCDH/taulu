@@ -1,0 +1,40 @@
+import pytest
+from util import header_image_path, table_left_image_path
+import cv2
+
+
+@pytest.mark.visual
+def test_aligner():
+    from tabular.header_aligner import HeaderAligner
+
+    im = cv2.imread(table_left_image_path(0))
+    header = cv2.imread(header_image_path(0))
+
+    aligner = HeaderAligner(header)
+    h = aligner.align(im)
+
+    aligner.view_alignment(im, h)
+
+
+@pytest.mark.visual
+def test_aligner_transform():
+    from tabular.header_aligner import HeaderAligner
+    from tabular.img_util import show
+
+    im = cv2.imread(table_left_image_path(0))
+    header = cv2.imread(header_image_path(0))
+
+    aligner = HeaderAligner(header)
+    h = aligner.align(im)
+
+    lt = aligner.template_to_img(h, (0, 0))
+    rt = aligner.template_to_img(h, (header.shape[1], 0))
+    rb = aligner.template_to_img(h, (header.shape[1], header.shape[0]))
+    lb = aligner.template_to_img(h, (0, header.shape[0]))
+
+    cv2.circle(im, lt, 5, (0, 255, 0), 2)
+    cv2.circle(im, rt, 5, (0, 255, 0), 2)
+    cv2.circle(im, rb, 5, (0, 255, 0), 2)
+    cv2.circle(im, lb, 5, (0, 255, 0), 2)
+
+    show(im)
