@@ -12,12 +12,13 @@ from .table_indexer import TableIndexer
 
 from .error import TabularException
 from . import img_util as imu
+from . import constants
 
 # angle tolerance for horizontal or vertical clasification (radians)
 TOLERANCE = math.pi / 6
 
 
-class Rule:
+class _Rule:
     def __init__(
         self, x0: int, y0: int, x1: int, y1: int, tolerance: float = TOLERANCE
     ):
@@ -51,8 +52,8 @@ class Rule:
         }
 
     @staticmethod
-    def from_dict(value: dict, tolerance: float = TOLERANCE) -> "Rule":
-        return Rule(value["x0"], value["y0"], value["x1"], value["y1"], tolerance)
+    def from_dict(value: dict, tolerance: float = TOLERANCE) -> "_Rule":
+        return _Rule(value["x0"], value["y0"], value["x1"], value["y1"], tolerance)
 
     @property
     def _angle(self) -> float:
@@ -100,7 +101,7 @@ class Rule:
             return self._p0[0]
         return self._p0[0] + (y - self._p0[1]) / self._slope
 
-    def intersection(self, other: "Rule") -> Optional[tuple[float, float]]:
+    def intersection(self, other: "_Rule") -> Optional[tuple[float, float]]:
         """Calculates the intersection point of two lines."""
         if self._slope == other._slope:
             return None  # Parallel lines
@@ -127,7 +128,7 @@ class HeaderTemplate(TableIndexer):
         """
 
         super().__init__()
-        self._rules = [Rule(*rule) for rule in rules]
+        self._rules = [_Rule(*rule) for rule in rules]
         self._h_rules = sorted(
             [rule for rule in self._rules if rule._is_horizontal()], key=lambda r: r._y
         )
@@ -194,7 +195,7 @@ class HeaderTemplate(TableIndexer):
                         2,
                         cv.LINE_AA,
                     )
-                    cv.imshow("main", template)
+                    cv.imshow(constants.WINDOW, template)
 
                     lines.append(line)
                     start_point = None
@@ -375,46 +376,4 @@ class HeaderTemplate(TableIndexer):
     def text_regions(
         self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -20
     ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-        """
-        Split the row into regions of continuous text
-
-        Returns
-            list[tuple[int, int]]: a list of spans (start col, end col)
-        """
-
-        def vertical_rule_crop(row: int, col: int):
-            self._check_col_idx(col)
-            self._check_row_idx(row)
-
-            top = self._h_rules[row]
-            bottom = self._h_rules[row + 1]
-            vertical = self._v_rules[col]
-
-            top = top.intersection(vertical)
-            bottom = bottom.intersection(vertical)
-
-            if top is None or bottom is None:
-                raise TabularException("No intersection...")
-
-            left = int(min(top[0], bottom[0]))
-            right = int(max(top[0], bottom[0]))
-
-            return img[
-                int(top[1]) - margin_y : int(bottom[1]) + margin_y,
-                left - margin_x : right + margin_x,
-            ]
-
-        result = []
-
-        start = None
-        for col in range(self.cols):
-            crop = vertical_rule_crop(row, col)
-            text_over_score = imu.text_presence_score(crop)
-            text_over = text_over_score > 0.1
-
-            if not text_over:
-                if start is not None:
-                    result.append(((row, start), (row, col - 1)))
-                start = col
-
-        return result
+        raise TabularException("text_regions should not be called on a HeaderTemplate")
