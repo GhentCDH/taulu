@@ -5,4 +5,10 @@ from .header_template import HeaderTemplate
 from .table_indexer import TableIndexer
 from .main import main
 
-__all__ = ["CornerFilter", "PageCropper", "HeaderAligner", "HeaderTemplate", "TableIndexer"]
+__all__ = [
+    "CornerFilter",
+    "PageCropper",
+    "HeaderAligner",
+    "HeaderTemplate",
+    "TableIndexer",
+]

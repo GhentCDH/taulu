@@ -2,8 +2,9 @@ from typing import Generic, TypeVar
 
 T = TypeVar("T")
 
+
 class Split(Generic[T]):
-    """Contains data for left and right images / processors / separately"""
+    """Wrapper for data that has both a left and a right variant"""
 
     def __init__(self, left: T | None = None, right: T | None = None):
         self._left = left
@@ -34,7 +35,6 @@ class Split(Generic[T]):
             self._right = value
 
     def __iter__(self):
-        """Allows unpacking with `left, right = split`"""
         assert self._left is not None
         assert self._right is not None
         return iter((self._left, self._right))
@@ -46,4 +46,3 @@ class Split(Generic[T]):
             return self._left
         else:
             return self._right
-

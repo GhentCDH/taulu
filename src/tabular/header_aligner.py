@@ -10,14 +10,15 @@ from . import img_util as imu
 
 
 class HeaderAligner:
-    def __init__(self,
+    def __init__(
+        self,
         template: None | MatLike | str = None,
         max_features: int = 25_000,
         patch_size: int = 31,
         match_fraction: float = 0.6,
         scale: float = 1.0,
-        max_dist: float = 1.00
-        ):
+        max_dist: float = 1.00,
+    ):
         """
         Args:
             template (MatLike | str): (path of) template image, with the table template clearly visible
@@ -40,7 +41,7 @@ class HeaderAligner:
         self._patch_size = patch_size
         self._match_fraction = match_fraction
         self._scale = scale
-        self._max_dist = max_dist 
+        self._max_dist = max_dist
 
     @property
     def template(self):
@@ -82,11 +83,12 @@ class HeaderAligner:
 
     def _align_images(self, im: MatLike, im_original: MatLike):
         # Detect ORB features and compute descriptors.
-        orb = cv.ORB_create(self._max_features, # type:ignore
-                            patchSize=self._patch_size)  
+        orb = cv.ORB_create(
+            self._max_features,  # type:ignore
+            patchSize=self._patch_size,
+        )
         keypoints_im, descriptors_im = orb.detectAndCompute(im, None)
-        keypoints_tg, descriptors_tg = orb.detectAndCompute(
-            self._template, None)
+        keypoints_tg, descriptors_tg = orb.detectAndCompute(self._template, None)
 
         # Match features
         matcher = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
@@ -100,9 +102,16 @@ class HeaderAligner:
         matches = matches[:numGoodMatches]
 
         final_img_filtered = cv.drawMatches(
-                im, keypoints_im, self._template, keypoints_tg, matches[:10], None, cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)  # type:ignore
+            im,
+            keypoints_im,
+            self._template,
+            keypoints_tg,
+            matches[:10],
+            None,
+            cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+        )  # type:ignore
         imu.show(final_img_filtered, title="matches")
-    
+
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
         points2 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -118,10 +127,8 @@ class HeaderAligner:
         p2 = pd.DataFrame(data=points2)
         refdist = abs(p1 - p2)
 
-        mask_x = refdist.loc[:, 0] < (
-            im.shape[0] * self._max_dist)
-        mask_y = refdist.loc[:, 1] < (
-            im.shape[1] * self._max_dist)
+        mask_x = refdist.loc[:, 0] < (im.shape[0] * self._max_dist)
+        mask_y = refdist.loc[:, 1] < (im.shape[1] * self._max_dist)
         mask = mask_x & mask_y
         points1 = points1[mask.to_numpy()]
         points2 = points2[mask.to_numpy()]
@@ -150,7 +157,9 @@ class HeaderAligner:
 
         return matrix
 
-    def find_point_of_template_in_img(self, matrix: NDArray, point: tuple[int, int]) -> tuple[int, int]:
+    def find_point_of_template_in_img(
+        self, matrix: NDArray, point: tuple[int, int]
+    ) -> tuple[int, int]:
         point = np.array([[point[0], point[1], 1]])
         transformed = np.dot(matrix, point.T)
 

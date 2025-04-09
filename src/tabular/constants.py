@@ -1,1 +1,1 @@
-WINDOW="tabular"
+WINDOW = "tabular"
