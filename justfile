@@ -3,14 +3,14 @@ alias ta := test-auto
 alias b := build
 
 # test this python project
-test-all:
-    uv run pytest
+test-all file='':
+    uv run pytest {{file}}
 
-test-visual:
-    uv run pytest -m visual
+test-visual file='':
+    uv run pytest -m visual {{file}}
 
-test-auto:
-    uv run pytest -m "not visual"
+test-auto file='':
+    uv run pytest -m "not visual" {{file}}
 
 build:
     uv build
