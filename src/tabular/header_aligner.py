@@ -2,7 +2,7 @@ import cv2 as cv
 import pandas as pd
 import numpy as np
 from numpy.typing import NDArray
-from typing import cast
+from typing import Iterable, cast
 from cv2.typing import MatLike
 
 from .error import TabularException
@@ -174,14 +174,14 @@ class HeaderAligner:
 
         return self._find_transform_of_template_on(img, visual)
 
-    def template_to_img(self, h: NDArray, point: tuple[int, int]) -> tuple[int, int]:
+    def template_to_img(self, h: NDArray, point: Iterable[int]) -> tuple[int, int]:
         """
         Transform the given point (in template-space) using the transformation h
         (obtained through the `align` method)
 
         Args:
             h (NDArray): transformation matrix of shape (3, 3)
-            point (tuple[int, int]): the to-be-transformed point, (x, y)
+            point (Iterable[int]): the to-be-transformed point, should conform to (x, y)
         """
 
         point = np.array([[point[0], point[1], 1]])  # type:ignore
