@@ -136,6 +136,10 @@ class HeaderTemplate(TableIndexer):
         )
 
     def save(self, path: Path):
+        """
+        Save the HeaderTemplate to the given path, as a json
+        """
+
         data = {"rules": [r.to_dict() for r in self._rules]}
 
         with open(path, "w") as f:
@@ -160,9 +164,16 @@ class HeaderTemplate(TableIndexer):
 
     @staticmethod
     def annotate_image(template: MatLike | str) -> "HeaderTemplate":
+        """
+        Utility method that allows users to create a template form a template image.
+
+        The user is asked to click to annotate lines (two clicks per line).
+        """
+
         if type(template) is str:
             value = cv.imread(template)
             template = value
+        template = cast(MatLike, template)
 
         start_point = None
         lines: list[list[int]] = []
@@ -223,29 +234,32 @@ class HeaderTemplate(TableIndexer):
         return int(self._v_rules[i + 1]._x - self._v_rules[i]._x)
 
     def cell_widths(self, start: int) -> list[int]:
-        self._check_col_idx(start)
-        return [
-            int(self._v_rules[i]._x - self._v_rules[i - 1]._x)
-            for i in range(1, len(self._v_rules))
-        ][start:]
+        return [self.cell_width(i) for i in range(start, len(self._v_rules))]
 
     def cell_height(self) -> int:
         return int((self._h_rules[1]._y - self._h_rules[0]._y) * 0.34)
 
     def intersection(self, index: tuple[int, int]) -> tuple[float, float]:
+        """
+        Returns the interaction of the index[0]th horizontal rule and the
+        index[1]th vertical rule
+        """
+
         ints = self._h_rules[index[0]].intersection(self._v_rules[index[1]])
         assert ints is not None
         return ints
 
-    def start_point(self):
-        p0, p1 = self._v_rules[1]._p0, self._v_rules[1]._p1
-
-        if p0[1] > p1[1]:
-            return p0
-        else:
-            return p1
-
     def cell(self, point: tuple[float, float]) -> tuple[int, int]:
+        """
+        Get the cell index (row, col) that corresponds with the point (x, y) in the template image
+
+        Args:
+            point (tuple[float, float]): the coordinates in the template image
+
+        Returns:
+            tuple[int, int]: (row, col)
+        """
+
         x, y = point
 
         row = -1
@@ -273,6 +287,11 @@ class HeaderTemplate(TableIndexer):
     def cell_polygon(
         self, cell: tuple[int, int]
     ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+        """
+        Return points (x,y) that make up a polygon around the requested cell
+        (top left, top right, bottom right, bottom left)
+        """
+
         row, col = cell
 
         self._check_col_idx(col)
