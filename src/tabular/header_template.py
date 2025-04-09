@@ -235,10 +235,10 @@ class HeaderTemplate(TableIndexer):
         return int(self._v_rules[i + 1]._x - self._v_rules[i]._x)
 
     def cell_widths(self, start: int) -> list[int]:
-        return [self.cell_width(i) for i in range(start, len(self._v_rules))]
+        return [self.cell_width(i) for i in range(start, self.cols)]
 
     def cell_height(self) -> int:
-        return int((self._h_rules[1]._y - self._h_rules[0]._y) * 0.34)
+        return int((self._h_rules[1]._y - self._h_rules[0]._y) * 0.8)
 
     def intersection(self, index: tuple[int, int]) -> tuple[float, float]:
         """
