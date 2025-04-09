@@ -1,6 +1,6 @@
 import pytest
 from tabular.img_util import show
-from util import image_path
+from util import table_image_path
 
 
 @pytest.mark.visual
@@ -17,7 +17,7 @@ def test_cropper_full():
         split_margin=0.06,
     )
 
-    cropped = cropper.crop(image_path(0))
+    cropped = cropper.crop(table_image_path(0))
 
     show(cropped, title="full crop")
 
@@ -36,7 +36,7 @@ def test_cropper_split():
         split_margin=0.06,
     )
 
-    cropped = cropper.crop_split(image_path(0))
+    cropped = cropper.crop_split(table_image_path(0))
 
     show(cropped.left, title="left crop")
     show(cropped.right, title="right crop")

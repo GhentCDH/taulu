@@ -1,4 +1,5 @@
 alias t := test-all
+alias ta := test-auto
 alias b := build
 
 # test this python project

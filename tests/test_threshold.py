@@ -1,8 +1,12 @@
-from tabular.img_util import sauvola, show
+import pytest
+from util import table_image_path
 import cv2 as cv
 
-def test_threshold():
-    im = cv.imread("/home/mielpeeters/code/ancestors-tale/data/imgs/format_2/1890/IMG_2024_01_24_09_10_50S.png")
-    result = sauvola(im)
-    show(result)
 
+@pytest.mark.visual
+def test_threshold():
+    from tabular.img_util import sauvola, show
+
+    im = cv.imread(table_image_path(0))
+    result = sauvola(im, k=0.04, window_size=15)
+    show(result, title="sauvola thresholded")
