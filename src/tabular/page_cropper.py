@@ -2,22 +2,31 @@ from typing import cast
 import numpy as np
 import cv2 as cv
 from cv2.typing import MatLike
-
 from .split import Split
-from .img_util import show
-
 from .error import TabularException
 
 
 class PageCropper:
+    """
+    Very simple utility that crops an image to the smallest rectangular region that
+    contains approximately the given colour (hsv).
+
+    This only works if the region of interest actually has a distinct colour from
+    the background, but it is very fast thanks.
+
+    The `crop` method returns a single image, the `crop_split` method returns a `Split`
+    of the left and right side (useful for when there are two pages next to each other,
+    and they need to be processed separately).
+    """
+
     def __init__(
         self,
-        target_hue=12,
-        target_s=26,
-        target_v=230,
-        tolerance=40,
-        margin=140,
-        split=0.5,
+        target_hue: int = 12,
+        target_s: int = 26,
+        target_v: int = 230,
+        tolerance: int = 40,
+        margin: int = 140,
+        split: float = 0.5,
         split_margin=0.06,
     ):
         """
@@ -108,11 +117,23 @@ class PageCropper:
 
         return x, y, w, h
 
-    def crop(self, img: MatLike | str) -> Split:
+    def crop_split(self, img: MatLike | str) -> Split:
         """
         Crops the given image with margin into two,
         one containing the left page, one containing the right page
         (with margin)
+        """
+        cropped = self.crop(img)
+        w = cropped.shape[1]
+
+        cropped_left = cropped[:, : int(w * (self._split + self._split_margin))]
+        cropped_right = cropped[:, int(w * (self._split - self._split_margin)) :]
+
+        return Split(cropped_left, cropped_right)
+
+    def crop(self, img: MatLike | str) -> MatLike:
+        """
+        Crops the given image to the smallest region that contains the target colour
         """
 
         if type(img) is str:
@@ -127,6 +148,7 @@ class PageCropper:
 
         x, y, w, h = bb
 
-        return Split(img[y : y + h, x : x + w], img[y : y + h, x : x + w])
+        if self._split is not None:
+            pass
 
-        # return cropped_left[0:cropped_left.shape[0]//4,:],cropped_right[0:cropped_right.shape[0]//4,:]
+        return img[y : y + h, x : x + w]
