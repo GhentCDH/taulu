@@ -14,7 +14,7 @@ def test_filter():
     )
     im = cv2.imread(table_left_image_path(0))
 
-    template = HeaderTemplate.from_saved(Path(header_anno_path(0)))
+    template = HeaderTemplate.from_saved(header_anno_path(0))
 
     filtered = filter.apply(im, True)
 

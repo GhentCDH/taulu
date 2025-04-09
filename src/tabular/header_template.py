@@ -147,7 +147,7 @@ class HeaderTemplate(TableIndexer):
             json.dump(data, f)
 
     @staticmethod
-    def from_saved(path: Path) -> "HeaderTemplate":
+    def from_saved(path: str) -> "HeaderTemplate":
         with open(path, "r") as f:
             data = json.load(f)
             rules = data["rules"]
@@ -234,7 +234,7 @@ class HeaderTemplate(TableIndexer):
         self._check_col_idx(i)
         return int(self._v_rules[i + 1]._x - self._v_rules[i]._x)
 
-    def cell_widths(self, start: int) -> list[int]:
+    def cell_widths(self, start: int = 0) -> list[int]:
         return [self.cell_width(i) for i in range(start, self.cols)]
 
     def cell_height(self) -> int:
