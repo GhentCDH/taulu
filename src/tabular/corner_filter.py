@@ -21,6 +21,8 @@ class CornerFilter:
         cross_height: int | None = None,
         morph_size: int | None = None,
         region: int = 40,
+        k: float = 0.04,
+        w: int = 15,
     ):
         """
         Args:
@@ -34,12 +36,16 @@ class CornerFilter:
             morph_size (int | None (default)): the size of the morphology operators that are applied before
                 the cross kernel. 'bridges the gaps' of broken-up lines
             region (int): area in which to search for a new max value in `find_nearest` etc.
+            k (float): threshold parameter for sauvola thresholding
+            w (int): window_size parameter for sauvola thresholding
         """
         self._k = kernel_size
         self._w = cross_width
         self._h = cross_width if cross_height is None else cross_height
         self._m = morph_size if morph_size is not None else cross_width
         self._region = region
+        self._k_thresh = k
+        self._w_thresh = w
 
     @property
     def _cross_kernel(self) -> NDArray:
@@ -75,8 +81,11 @@ class CornerFilter:
 
         return dot / abs(dot.sum())
 
-    def apply(self, img: MatLike) -> MatLike:
-        binary = imu.sauvola(img)
+    def apply(self, img: MatLike, visual: bool = False) -> MatLike:
+        binary = imu.sauvola(img, k=self._k_thresh, window_size=self._w_thresh)
+
+        if visual:
+            imu.show(binary, title="dilated")
 
         # Define a horizontal kernel (adjust width as needed)
         kernel_hor = cv.getStructuringElement(cv.MORPH_RECT, (self._m, 1))
@@ -86,11 +95,18 @@ class CornerFilter:
         dilated = cv.dilate(binary, kernel_hor, iterations=1)
         dilated = cv.dilate(dilated, kernel_ver, iterations=1)
 
+        if visual:
+            imu.show(dilated, title="dilated")
+
         # apply cross kernel to find intersections
         closed = dilated.astype(np.float32)
         filtered = cv.filter2D(closed, -1, self._cross_kernel)
         filtered[filtered < 0] = 0  # type:ignore
         filtered *= 255 / filtered.max()
+
+        if visual:
+            f = np.clip(filtered, 0, 255).astype(np.uint8)
+            imu.show(f, title="dilated")
 
         # find the best matches to the cross kernel
         filtered = cv.filter2D(filtered, -1, self._dot_kernel)
@@ -119,12 +135,17 @@ class CornerFilter:
         x = point[0] - region // 2
         y = point[1] - region // 2
 
+        print(f"looking for nearest around: {point}")
+        print(f"left top of region: ({x}, {y})")
+
         cropped = filtered[y : y + region, x : x + region]
+
+        print(f"shape: {filtered.shape[::-1]} (width, height)")
 
         best_match = np.argmax(cropped)
         best_match = np.unravel_index(best_match, cropped.shape)
 
-        if cropped[best_match] < 80:
+        if cropped[best_match] < 90:
             return point
 
         result = (int(x + best_match[1]), int(y + best_match[0]))
@@ -173,7 +194,7 @@ class CornerFilter:
 
             current = (row[0][0], row[0][1] + cell_height)
 
-            if current[0] > filtered.shape[0]:
+            if current[1] > filtered.shape[0]:
                 break
 
             current = self.find_nearest(filtered, current)
