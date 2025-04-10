@@ -1,9 +1,8 @@
-from pathlib import Path
 import pytest
 from tabular.img_util import show
 from tabular.corner_filter import CornerFilter
 from tabular.header_template import HeaderTemplate
-from util import table_left_image_path, header_anno_path
+from util import table_left_image_path, header_anno_path, table_image_path
 import cv2
 
 
@@ -20,11 +19,12 @@ def test_filter():
 
     show(filtered)
 
-    # known start point, for now
+    # known start point (should be retrieved from template alignment)
     start = (300, 426)
 
     points = filter.find_table_points(
         im, start, template.cell_widths(1), template.cell_height()
     )
 
+    points.visualize_points(im)
     points.show_cells(im)
