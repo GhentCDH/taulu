@@ -124,3 +124,6 @@ class TableIndexer(ABC):
         """
 
         pass
+
+    def crop_cell(self, image, cell: tuple[int, int], margin: int = 0) -> MatLike:
+        return self.crop_region(image, cell, cell, margin)
