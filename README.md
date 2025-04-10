@@ -1,34 +1,37 @@
 # Taulu
-_segments tables from images_
+_Segmentation of tables from images_
 
 ## Data Requirements 
 
-This package assumes that you are working with images of tables with **clearly visible rules**.
+This package assumes that you are working with images of tables that have **clearly visible rules** (the lines that divide the table into cells).
 
-To use the fully-automated workflow as-is, your tables should have some **recognizable header**.
-This header will be used to find the location of the first cell in the input image, as well as the expected widths of the 
-cells of the table.
+To fully utilize the automated workflow, your tables should include a recognizable header. This header will be used to identify the position of the first cell in the input image and determine the expected widths of the table's cells.
 
-In order for the segmentation to work properly, your tables need to be rotated such that the rules are approximately vertical and horizontal. The pages can be slightly warped, within reason.
+For optimal segmentation, ensure that the tables are rotated so the borders are approximately vertical and horizontal. Minor page warping is acceptable.
 
 
 ## Installation
 
-### pip
+### Using pip
 ```sh
 pip install git+https://github.com/ghentcdh/taulu.git
 ```
 
-### uv
+### Using uv
 ```sh
 uv add git+https://github.com/ghentcdh/taulu.git
 ```
 
-## Usage
 
-This package has a modular structure, defining multiple classes that can work together.
+## Workflow
 
-The usual flow looks something like this:
+This package is structured in a modular way, with several components that work together.
+
+The algorithm identifies the header's location in the input image, which provides a starting point. From there, it scans the image to find intersections of the rules (borders) and segments the image into cells accordingly.
+
+The output is a `TableCrosses` object that contains the detected intersections, enabling you to segment the image into rows, columns, and cells.
+
+Here is a visualization of the workflow and the components:
 
 ```mermaid
 flowchart LR
@@ -47,23 +50,19 @@ flowchart LR
 
 The components are:
 
-- `HeaderAligner`: this component uses template matching to find the location of the header in the input images.
-- `PageCropper`: optional component that crops the image to a region where some colour exists. This is a very simple component and is not necessary when your images don't contain a lot of background.
-- `HeaderTemplate`: this component holds information about the template of the table, by reading an annotation `json` file.
+- `HeaderAligner`: Uses template matching to identify the header's location in the input images.
+- `PageCropper`: An optional component that crops the image to a region containing a given color. This is useful if your image contains a lot of background, but can be skipped if the table occupies most of the image. Only works if your table has a distinct color from the background.
+- `HeaderTemplate`: Stores table template information by reading an annotation JSON file. You can create this file by running `HeaderTemplate.annotate_image` on a cropped image of your table’s header.
 You can make such a file by running `HeaderTemplate.annotate_image` on a cropped image of your table's header.
-- `CornerFilter`: this component filters the input image and finds locations of intersections of horizontal and vertical rules.
-- `h` is a transformation matrix to go from points in the header template to the input image
-- `s` is the starting point of the segmentation algorithm (most often the left-top intersection, just below the header).
-
-In short, the algorithm looks for the location of the header in the input image, in order to find a starting point.
-Then, it iterates over the image starting from that point to find the intersections of the rules, and segments the image in to cells accordingly.
-
-The result is a `TableCrosses` object, which holds the detected intersections and allows you to segment the image into rows / columns / cells / ...
+- `CornerFilter`: Processes the image to identify intersections of horizontal and vertical lines (borders).
+- `h`: A transformation matrix that maps points from the header template to the input image.
+- `s`: The starting point of the segmentation algorithm (typically the top-left intersection, just below the header).
 
 example code:
 
 ```py
 from pathlib import Path
+from cv2 import imshow
 
 from taulu.page_cropper import PageCropper
 from taulu.header_aligner import HeaderAligner
@@ -105,6 +104,9 @@ table_structure = filter.find_table_points(
 )
 
 table_structure.show_cells(im)
+
+# get
+cell_3_4 = table_structure.crop_cell((3,4))
+imshow("cell (row: 3, col: 4)", cell_3_4)
 ```
 
-using this setup, `table_structure`'s methods can be used to segments the image into its cells
