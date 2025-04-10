@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 from typing import Iterable, cast
 from cv2.typing import MatLike
 
-from .error import TabularException
+from .error import TauluException
 from . import img_util as imu
 
 
@@ -73,7 +73,7 @@ class HeaderAligner:
 
     def _preprocess_image(self, img: MatLike):
         if self._template_orig is None:
-            raise TabularException("process the template first")
+            raise TauluException("process the template first")
         _, _, img = cv.split(img)
 
         return img
@@ -189,4 +189,4 @@ class HeaderAligner:
 
         transformed /= transformed[2]
 
-        return int(transformed[0]), int(transformed[1])
+        return int(transformed[0][0]), int(transformed[1][0])

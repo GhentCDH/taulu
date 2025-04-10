@@ -1,11 +1,11 @@
 import pytest
-from tabular.img_util import show
+from taulu.img_util import show
 from util import table_image_path
 
 
 @pytest.mark.visual
 def test_cropper_full():
-    from tabular.page_cropper import PageCropper
+    from taulu.page_cropper import PageCropper
 
     cropper = PageCropper(
         target_hue=12,
@@ -24,7 +24,7 @@ def test_cropper_full():
 
 @pytest.mark.visual
 def test_cropper_split():
-    from tabular.page_cropper import PageCropper
+    from taulu.page_cropper import PageCropper
 
     cropper = PageCropper(
         target_hue=12,

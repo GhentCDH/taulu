@@ -1,16 +1,16 @@
-# Tabular
+# Taulu
 _segments tables from images_
 
 ## Installation
 
 ### pip
 ```sh
-pip install git+https://github.com/ghentcdh/tabular.git
+pip install git+https://github.com/ghentcdh/taulu.git
 ```
 
 ### uv
 ```sh
-uv add git+https://github.com/ghentcdh/tabular.git
+uv add git+https://github.com/ghentcdh/taulu.git
 ```
 
 ## Usage
@@ -22,10 +22,10 @@ example usage:
 ```py
 from pathlib import Path
 
-from tabular.page_cropper import PageCropper
-from tabular.header_aligner import HeaderAligner
-from tabular.header_template import HeaderTemplate
-from tabular.corner_filter import CornerFilter
+from taulu.page_cropper import PageCropper
+from taulu.header_aligner import HeaderAligner
+from taulu.header_template import HeaderTemplate
+from taulu.corner_filter import CornerFilter
 
 cropper = PageCropper(
     target_hue=12,

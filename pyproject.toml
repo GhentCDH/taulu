@@ -1,5 +1,5 @@
 [project]
-name = "tabular"
+name = "taulu"
 version = "0.1.0"
 description = "Segment a table from an image"
 readme = "README.md"
@@ -12,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-tabular = "tabular:main"
+taulu = "taulu:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -6,7 +6,7 @@ import numpy as np
 
 from . import img_util as imu
 from .constants import WINDOW
-from .error import TabularException
+from .error import TauluException
 
 
 class TableIndexer(ABC):
@@ -39,15 +39,15 @@ class TableIndexer(ABC):
 
     def _check_row_idx(self, row: int):
         if row < 0:
-            raise TabularException("row number needs to be positive or zero")
+            raise TauluException("row number needs to be positive or zero")
         if row >= self.rows:
-            raise TabularException(f"row number too high: {row} >= {self.rows}")
+            raise TauluException(f"row number too high: {row} >= {self.rows}")
 
     def _check_col_idx(self, col: int):
         if col < 0:
-            raise TabularException("col number needs to be positive or zero")
+            raise TauluException("col number needs to be positive or zero")
         if col >= self.cols:
-            raise TabularException(f"col number too high: {col} >= {self.cols}")
+            raise TauluException(f"col number too high: {col} >= {self.cols}")
 
     @abstractmethod
     def cell(self, point: tuple[float, float]) -> tuple[int, int]:

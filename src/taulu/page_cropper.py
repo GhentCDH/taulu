@@ -3,7 +3,7 @@ import numpy as np
 import cv2 as cv
 from cv2.typing import MatLike
 from .split import Split
-from .error import TabularException
+from .error import TauluException
 
 
 class PageCropper:
@@ -144,7 +144,7 @@ class PageCropper:
 
         bb = self._find_bounding_box_with_margin(mask)
         if bb is None:
-            raise TabularException("couldn't create bounding box")
+            raise TauluException("couldn't create bounding box")
 
         x, y, w, h = bb
 

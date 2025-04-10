@@ -10,7 +10,7 @@ import cv2 as cv
 from cv2.typing import MatLike
 from .table_indexer import TableIndexer
 
-from .error import TabularException
+from .error import TauluException
 from . import img_util as imu
 from . import constants
 
@@ -315,7 +315,7 @@ class HeaderTemplate(TableIndexer):
                 for point in [top_left, top_right, bottom_left, bottom_right]
             ]
         ):
-            raise TabularException("the lines around this cell do not intersect")
+            raise TauluException("the lines around this cell do not intersect")
 
         return top_left, top_right, bottom_right, bottom_left  # type:ignore
 
@@ -346,9 +346,7 @@ class HeaderTemplate(TableIndexer):
             or bottom_left is None
             or bottom_right is None
         ):
-            raise TabularException(
-                "the lines around this row do not intersect properly"
-            )
+            raise TauluException("the lines around this row do not intersect properly")
 
         top_left = cast(tuple[float, float], top_left)
         bottom_left = cast(tuple[float, float], bottom_left)
@@ -376,4 +374,4 @@ class HeaderTemplate(TableIndexer):
     def text_regions(
         self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -20
     ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-        raise TabularException("text_regions should not be called on a HeaderTemplate")
+        raise TauluException("text_regions should not be called on a HeaderTemplate")

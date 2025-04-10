@@ -5,7 +5,7 @@ import cv2
 
 @pytest.mark.visual
 def test_aligner():
-    from tabular.header_aligner import HeaderAligner
+    from taulu.header_aligner import HeaderAligner
 
     im = cv2.imread(table_left_image_path(0))
     header = cv2.imread(header_image_path(0))
@@ -18,8 +18,8 @@ def test_aligner():
 
 @pytest.mark.visual
 def test_aligner_transform():
-    from tabular.header_aligner import HeaderAligner
-    from tabular.img_util import show
+    from taulu.header_aligner import HeaderAligner
+    from taulu.img_util import show
 
     im = cv2.imread(table_left_image_path(0))
     header = cv2.imread(header_image_path(0))

@@ -1,1 +1,0 @@
-WINDOW = "tabular"

@@ -1,7 +1,7 @@
 import pytest
-from tabular.img_util import show
-from tabular.corner_filter import CornerFilter
-from tabular.header_template import HeaderTemplate
+from taulu.img_util import show
+from taulu.corner_filter import CornerFilter
+from taulu.header_template import HeaderTemplate
 from util import table_left_image_path, header_anno_path, table_image_path
 import cv2
 
