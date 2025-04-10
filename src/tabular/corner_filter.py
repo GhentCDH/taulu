@@ -46,46 +46,29 @@ class CornerFilter:
         self._region = region
         self._k_thresh = k
         self._w_thresh = w
+        self._cross_kernel = self._cross_kernel_uint8()
 
-    @property
-    def _cross_kernel(self) -> NDArray:
-        return self._cross_kernel_penalty(-1)
-
-    def _cross_kernel_penalty(self, penalty: float = -1) -> NDArray:
-        kernel = np.full((self._k, self._k), penalty, dtype=np.float32)
+    def _cross_kernel_uint8(self) -> NDArray:
+        kernel = np.zeros((self._k, self._k), dtype=np.uint8)
 
         # Define the center
         center = self._k // 2
 
         # Create horizontal and vertical bars of width y
         kernel[center - self._h // 2 : center + (self._h + 1) // 2, :] = (
-            1  # Horizontal line
+            255  # Horizontal line
         )
         kernel[:, center - self._w // 2 : center + (self._w + 1) // 2] = (
-            1  # Vertical line
+            255  # Vertical line
         )
 
         return kernel
-
-    @property
-    def _dot_kernel(self) -> NDArray:
-        penalty = -0.5
-        dot = cv.filter2D(
-            self._cross_kernel_penalty(penalty),
-            -1,
-            self._cross_kernel_penalty(penalty),
-            borderType=cv.BORDER_CONSTANT,
-            delta=0,
-        )
-        dot = cv.normalize(dot, None, -0.3, 1, cv.NORM_MINMAX)  # type:ignore
-
-        return dot / abs(dot.sum())
 
     def apply(self, img: MatLike, visual: bool = False) -> MatLike:
         binary = imu.sauvola(img, k=self._k_thresh, window_size=self._w_thresh)
 
         if visual:
-            imu.show(binary, title="dilated")
+            imu.show(binary, title="thresholded")
 
         # Define a horizontal kernel (adjust width as needed)
         kernel_hor = cv.getStructuringElement(cv.MORPH_RECT, (self._m, 1))
@@ -98,21 +81,12 @@ class CornerFilter:
         if visual:
             imu.show(dilated, title="dilated")
 
-        # apply cross kernel to find intersections
-        closed = dilated.astype(np.float32)
-        filtered = cv.filter2D(closed, -1, self._cross_kernel)
-        filtered[filtered < 0] = 0  # type:ignore
-        filtered *= 255 / filtered.max()
-
-        if visual:
-            f = np.clip(filtered, 0, 255).astype(np.uint8)
-            imu.show(f, title="dilated")
-
-        # find the best matches to the cross kernel
-        filtered = cv.filter2D(filtered, -1, self._dot_kernel)
-        filtered *= 255 / filtered.max()
-        filtered = np.clip(filtered, 0, 255).astype(np.uint8)
-        filtered[filtered < 90] = 0
+        filtered = cv.matchTemplate(
+            dilated, self._cross_kernel_uint8(), cv.TM_SQDIFF_NORMED
+        )
+        filtered = 255 - cv.normalize(filtered, None, 0, 255, cv.NORM_MINMAX).astype(  # type:ignore
+            np.uint8
+        )
 
         return filtered
 
@@ -135,12 +109,7 @@ class CornerFilter:
         x = point[0] - region // 2
         y = point[1] - region // 2
 
-        print(f"looking for nearest around: {point}")
-        print(f"left top of region: ({x}, {y})")
-
         cropped = filtered[y : y + region, x : x + region]
-
-        print(f"shape: {filtered.shape[::-1]} (width, height)")
 
         best_match = np.argmax(cropped)
         best_match = np.unravel_index(best_match, cropped.shape)
@@ -148,7 +117,10 @@ class CornerFilter:
         if cropped[best_match] < 90:
             return point
 
-        result = (int(x + best_match[1]), int(y + best_match[0]))
+        result = (
+            int(x + best_match[1]) + self._k // 2,
+            int(y + best_match[0]) + self._k // 2,
+        )
 
         return result
 
@@ -320,6 +292,23 @@ class TableCrosses(TableIndexer):
         warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
 
         return warped
+
+    def visualize_points(self, img: MatLike):
+        """
+        Draw the detected table points on the image for visual verification
+        """
+        import colorsys
+
+        def clr(index, total_steps):
+            hue = index / total_steps  # Normalized hue between 0 and 1
+            r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+            return int(r * 255), int(g * 255), int(b * 255)
+
+        for i, row in enumerate(self._points):
+            for p in row:
+                cv.circle(img, p, 4, clr(i, len(self._points)), -1)
+
+        imu.show(img)
 
     def text_regions(
         self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -3
