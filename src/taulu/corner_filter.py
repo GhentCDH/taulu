@@ -106,8 +106,13 @@ class CornerFilter:
         if region is None:
             region = self._region
 
-        x = point[0] - region // 2
-        y = point[1] - region // 2
+        x = point[0] - self._k // 2 - region // 2
+        y = point[1] - self._k // 2 - region // 2
+
+        if x >= filtered.shape[1]:
+            x = filtered.shape[1] - 1
+        if y >= filtered.shape[0]:
+            y = filtered.shape[0] - 1
 
         cropped = filtered[y : y + region, x : x + region]
 
