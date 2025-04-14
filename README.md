@@ -135,6 +135,27 @@ if __name__ == "__main__":
 The taulu algorithm has a few parameters which you might need to tune in order for it to fit your data's characteristics.
 The following is a summary of the most important parameters and how you could tune them to your data.
 
-- `CornerFilter` > `kernel_size`, `cross_width`, `cross_height`: The CornerFilter uses a kernel to detect intersections of rules in the image. That corner looks like this:
-  ![](./data/kernel.svg)
-- TODO
+### `CornerFilter`
+
+- `kernel_size`, `cross_width`, `cross_height`: The CornerFilter uses a kernel to detect intersections of rules in the image. By default, `cross_height` follows the value of `cross_width`. The kernel looks like this:
+
+  ![kernel diagram](./data/kernel.svg)
+
+  The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result, which you can use to estimate the `cross_width` and `cross_height` values that fit your image.
+  Note that the optimal values will depend on the `morph_size` parameter too.
+- `morph_size`: The CornerFilter uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `morph_size`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As such, this parameter affects the optimal `cross_width` and `cross_height`.
+- `region`: This parameter influences the search algorithm. The algorithm starts at an already-detected intersection, and jumps right with a distance that is derived from the annotated header template. At the jumped location, the algorithm then finds the best corner-match that is within a square of size `region` around that point, and selects that as the detected corner. Visualized:
+
+  ![search algorithm region](./data/search.svg)
+
+  A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too.
+- `k`, `w`: These parameters affect the thresholding algorithm that's used in the `CornerFilter`. `k` is adjusts the threshold. Larger values of `k` correspond with a larger threshold, meaning more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table. `w` is less important, but adjusts the window size of the sauvola thresholding algorithm that is used under the hood.
+
+### `HeaderTemplate`
+
+- `intersection((row, height))`: this method of `HeaderTemplate` calculates the intersection of a horizontal and vertical line in the annotated template. For example, running `template.intersection((1, 1))` corresponds with this intersection:
+
+  ![intersection diagram](./data/intersect.svg)
+
+  This point can then be transformed to the image using the aligner, and this can serve as the starting point of the search algorithm. Note that in this case, the first column is skipped. This can often be useful since the `CornerFilter` kernel looks for crosses, and the left-most intersection often only has a T shape (the left leg of the cross might be missing).
+  If that is the case with your data too, it is a good idea to set the starting point to the (1, 1) intersection, and add in the first row later using the `add_left_col(width)` function. See [this example](./examples/with_col_offset.py).
