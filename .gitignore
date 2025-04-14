@@ -8,3 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+
+examples/table.png
+examples/header.png
+examples/README.md
+examples/header.json
+examples/main.py
+examples/pyproject.toml

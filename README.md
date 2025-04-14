@@ -60,75 +60,19 @@ You can make such a file by running `HeaderTemplate.annotate_image` on a cropped
 - `h`: A transformation matrix that maps points from the header template to the input image.
 - `s`: The starting point of the segmentation algorithm (typically the top-left intersection, just below the header).
 
-example code:
+## Example
 
-```py
-from pathlib import Path
-import os
-
-from cv2 import imread
-from taulu.img_util import show
-from taulu.header_aligner import HeaderAligner
-from taulu.header_template import HeaderTemplate
-from taulu.corner_filter import CornerFilter
-
-
-def main():
-    aligner = HeaderAligner("header.png")
-    filter = CornerFilter(
-        # these are the most important parameters to tune
-        kernel_size=41, cross_width=10, morph_size=7, region=60, k=0.45
-    )
-    template = HeaderTemplate.from_saved("header.json")
-
-    # crop the input image (this step is only necessary if the image contains more than just the table)
-    table = imread("table.png")
-    h = aligner.align(table)
-
-    # find the intersections of rules in the image
-    # the `True` parameter means that intermediate results are shown too, for debugging and parameter tuning
-    filtered = filter.apply(table, True)
-    show(filtered)
-
-    # define the start point as the intersection of the first
-    left_top_template = template.intersection((1, 0))
-    left_top_template = (int(left_top_template[0]), int(left_top_template[1])) # round the floats to integers
-    left_top_table = aligner.template_to_img(h, left_top_template)
-
-    table_structure = filter.find_table_points(
-        table,
-        left_top_table,
-        # 0 means that we start from the first column 
-        template.cell_widths(0),
-        # 0.8 means that the height of the cells is approx. 0.8 times the height of the header 
-        template.cell_height(0.8),
-    )
-
-    # you can click the cells to verify that the algorithm works
-    table_structure.show_cells(table)
-
-
-def setup():
-    # annotate your header 
-    template = HeaderTemplate.annotate_image("header.png")
-    template.save(Path("header.json"))
-
-
-if __name__ == "__main__":
-    if not os.path.exists("header.png"):
-        print("You need to supply your own header image (header.png)")
-        exit(1)
-
-    if not os.path.exists("table.png"):
-        print("You need to supply your own table image (table.png)")
-        exit(1)
-
-    if not os.path.exists("header.json"):
-        print("Annotating your header.png image using OpenCV...")
-        setup()
-        
-    main()
+```bash
+cd examples
+cp ../data/header_00.png header.png
+cp ../data/table.png table.png
+uv init
+uv add ..
+uv run example.py 
 ```
+Below is an example of table cell identification using the `Taulu` package:
+
+![Table Cell Identification Example](examples/table_cell_identification_example.jpg)
 
 ## Parameters
 
@@ -153,9 +97,10 @@ The following is a summary of the most important parameters and how you could tu
 
 ### `HeaderTemplate`
 
-- `intersection((row, height))`: this method of `HeaderTemplate` calculates the intersection of a horizontal and vertical line in the annotated header template. For example, running `template.intersection((1, 1))` corresponds with this intersection:
+- `intersection((row, height))`: this method calculates the intersection of a horizontal and vertical line in the annotated header template. For example, running `template.intersection((1, 1))` corresponds with this intersection:
 
   ![intersection diagram](./data/intersect.svg)
 
   This point can then be transformed to the image using the aligner, and this can serve as the starting point of the search algorithm. Note that in this case, the first column is skipped. This can often be useful since the `CornerFilter` kernel looks for crosses, and the left-most intersection often only has a T shape (the left leg of the cross might be missing).
-  If that is the case with your data too, it is a good idea to set the starting point to the (1, 1) intersection, and add in the first row later using the `add_left_col(width)` function. When doing this, you also need to set the parameter of the `cell_widths` function to `1`. See [this example](./examples/with_col_offset.py).
+  If that is the case with your data too, it is a good idea to set the starting point to the (1, 1) intersection, and add in the first row later using the `add_left_col(width)` function. When doing this, you also need to set the parameter of the `cell_widths` function to `1`. See [this example](./examples/example.py).
+- `cell_height(fraction: float)`: this method defines a single cell height for all of the rows. The fraction is multiplied with the height of the annotated header template to get the cell height relative to it.
