@@ -4,8 +4,6 @@
   <i>Segmentation of tables from images</i>
 </p>
 
-# Taulu
-
 ## Data Requirements 
 
 This package assumes that you are working with images of tables that have **clearly visible rules** (the lines that divide the table into cells).
