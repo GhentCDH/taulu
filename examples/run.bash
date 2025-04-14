@@ -9,7 +9,7 @@ fi
 
 if [ ! -f pyproject.toml ]; then
     echo "Initializing python uv project"
-    uv init --no-workspace
+    uv init --no-workspace --bare
     uv add ..
 fi
 

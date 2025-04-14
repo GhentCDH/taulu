@@ -73,9 +73,14 @@ uv init
 uv add ..
 uv run example.py 
 ```
+
+During this example, you will need to annotate the header image. You do this by simply clicking twice per line, once for each endpoint. It does not matter in which order you annotate the lines. Example:
+
+![Table Header Annotation Example](./data/header_annotation.png)
+
 Below is an example of table cell identification using the `Taulu` package:
 
-![Table Cell Identification Example](examples/table_cell_identification_example.jpg)
+![Table Cell Identification Example](./data/example_segmentation.png)
 
 ## Parameters
 
