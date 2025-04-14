@@ -20,10 +20,10 @@ def test_filter():
     show(filtered)
 
     # known start point (should be retrieved from template alignment)
-    start = (300, 426)
+    start = (240, 426)
 
     points = filter.find_table_points(
-        im, start, template.cell_widths(1), template.cell_height()
+        im, start, template.cell_widths(0), template.cell_height()
     )
 
     points.visualize_points(im)
