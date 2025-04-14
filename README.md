@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./data/banner.svg" alt="Banner" />
+</p>
+
 # Taulu
 _Segmentation of tables from images_
 
@@ -88,12 +92,12 @@ The following is a summary of the most important parameters and how you could tu
   The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result, which you can use to estimate the `cross_width` and `cross_height` values that fit your image.
   Note that the optimal values will depend on the `morph_size` parameter too.
 - `morph_size`: The CornerFilter uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `morph_size`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As such, this parameter affects the optimal `cross_width` and `cross_height`.
-- `region`: This parameter influences the search algorithm. The algorithm starts at an already-detected intersection, and jumps right with a distance that is derived from the annotated header template. At the jumped location, the algorithm then finds the best corner-match that is within a square of size `region` around that point, and selects that as the detected corner. Visualized:
+- `region`: This parameter influences the search algorithm. The algorithm starts at an already-detected intersection, and jumps right with a distance that is derived from the annotated header template. At the new location, the algorithm then finds the best corner-match that is within a square of size `region` around that point, and selects that as the detected corner. Visualized:
 
   ![search algorithm region](./data/search.svg)
 
   A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too.
-- `k`, `w`: These parameters affect the thresholding algorithm that's used in the `CornerFilter`. `k` is adjusts the threshold. Larger values of `k` correspond with a larger threshold, meaning more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table. `w` is less important, but adjusts the window size of the sauvola thresholding algorithm that is used under the hood.
+- `k`, `w`: These parameters affect the thresholding algorithm that's used in the `CornerFilter`. `k` adjusts the threshold. Larger values of `k` correspond with a larger threshold, meaning more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table. `w` is less important, but adjusts the window size of the sauvola thresholding algorithm that is used under the hood.
 
 ### `HeaderTemplate`
 
