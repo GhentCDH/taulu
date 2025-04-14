@@ -1,9 +1,10 @@
 <p align="center">
-  <img src="./data/banner.svg" alt="Banner" />
+  <img src="./data/banner.svg" alt="Banner" width="400"/>
+  <br>
+  <i>Segmentation of tables from images</i>
 </p>
 
 # Taulu
-_Segmentation of tables from images_
 
 ## Data Requirements 
 
