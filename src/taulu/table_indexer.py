@@ -97,7 +97,6 @@ class TableIndexer(ABC):
                     cells.append(cell)
                 else:
                     return
-                print(f"clicked cell: {cell}")
                 self._highlight_cell(img, cell)
                 cv.imshow(WINDOW, img)
 
