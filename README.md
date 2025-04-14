@@ -153,7 +153,7 @@ The following is a summary of the most important parameters and how you could tu
 
 ### `HeaderTemplate`
 
-- `intersection((row, height))`: this method of `HeaderTemplate` calculates the intersection of a horizontal and vertical line in the annotated template. For example, running `template.intersection((1, 1))` corresponds with this intersection:
+- `intersection((row, height))`: this method of `HeaderTemplate` calculates the intersection of a horizontal and vertical line in the annotated header template. For example, running `template.intersection((1, 1))` corresponds with this intersection:
 
   ![intersection diagram](./data/intersect.svg)
 
