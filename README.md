@@ -19,7 +19,9 @@ pip install git+https://github.com/ghentcdh/taulu.git
 
 ### Using uv
 ```sh
-uv add git+https://github.com/ghentcdh/taulu.git
+uv init my_taulu_project;
+cd my_taulu_project;
+uv add git+https://github.com/ghentcdh/taulu.git;
 ```
 
 
@@ -90,7 +92,7 @@ def main():
 
     # define the start point as the intersection of the first
     left_top_template = template.intersection((1, 0))
-    left_top_template = (int(left_top_template[0]), int(left_top_template[1]))
+    left_top_template = (int(left_top_template[0]), int(left_top_template[1])) # round the floats to integers
     left_top_table = aligner.template_to_img(h, left_top_template)
 
     table_structure = filter.find_table_points(
@@ -128,3 +130,11 @@ if __name__ == "__main__":
     main()
 ```
 
+## Parameters
+
+The taulu algorithm has a few parameters which you might need to tune in order for it to fit your data's characteristics.
+The following is a summary of the most important parameters and how you could tune them to your data.
+
+- `CornerFilter` > `kernel_size`, `cross_width`, `cross_height`: The CornerFilter uses a kernel to detect intersections of rules in the image. That corner looks like this:
+  ![](./data/kernel.svg)
+- TODO
