@@ -158,4 +158,4 @@ The following is a summary of the most important parameters and how you could tu
   ![intersection diagram](./data/intersect.svg)
 
   This point can then be transformed to the image using the aligner, and this can serve as the starting point of the search algorithm. Note that in this case, the first column is skipped. This can often be useful since the `CornerFilter` kernel looks for crosses, and the left-most intersection often only has a T shape (the left leg of the cross might be missing).
-  If that is the case with your data too, it is a good idea to set the starting point to the (1, 1) intersection, and add in the first row later using the `add_left_col(width)` function. See [this example](./examples/with_col_offset.py).
+  If that is the case with your data too, it is a good idea to set the starting point to the (1, 1) intersection, and add in the first row later using the `add_left_col(width)` function. When doing this, you also need to set the parameter of the `cell_widths` function to `1`. See [this example](./examples/with_col_offset.py).
