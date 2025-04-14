@@ -27,6 +27,22 @@ cd my_taulu_project;
 uv add git+https://github.com/ghentcdh/taulu.git;
 ```
 
+## Example
+
+```bash
+git clone https://github.com/GhentCDH/taulu.git
+cd taulu/examples
+bash run.bash
+```
+
+During this example, you will need to annotate the header image. You do this by simply clicking twice per line, once for each endpoint. It does not matter in which order you annotate the lines. Example:
+
+![Table Header Annotation Example](./data/header_annotation.png)
+
+Below is an example of table cell identification using the `Taulu` package:
+
+![Table Cell Identification Example](./data/example_segmentation.png)
+
 
 ## Workflow
 
@@ -62,25 +78,6 @@ You can make such a file by running `HeaderTemplate.annotate_image` on a cropped
 - `CornerFilter`: Processes the image to identify intersections of horizontal and vertical lines (borders).
 - `h`: A transformation matrix that maps points from the header template to the input image.
 - `s`: The starting point of the segmentation algorithm (typically the top-left intersection, just below the header).
-
-## Example
-
-```bash
-cd examples
-cp ../data/header_00.png header.png
-cp ../data/table.png table.png
-uv init
-uv add ..
-uv run example.py 
-```
-
-During this example, you will need to annotate the header image. You do this by simply clicking twice per line, once for each endpoint. It does not matter in which order you annotate the lines. Example:
-
-![Table Header Annotation Example](./data/header_annotation.png)
-
-Below is an example of table cell identification using the `Taulu` package:
-
-![Table Cell Identification Example](./data/example_segmentation.png)
 
 ## Parameters
 

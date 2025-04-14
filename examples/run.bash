@@ -3,8 +3,14 @@
 cp ../data/header_00.png header.png
 cp ../data/table_00.png table.png
 
+
 if ! command -v uv > /dev/null; then
-    echo "you need to install uv in order to use this script"
+    printf "\x1b[1mYou need to install uv in order to run this example\x1b[0m\n"
+    printf "or you can install the taulu dependcy using pip:\n"
+    printf "\tpip install git+https://github.com/ghentcdh/taulu.git\n"
+    printf "\tpython example.py\n"
+
+    exit 1
 fi
 
 if [ ! -f pyproject.toml ]; then
