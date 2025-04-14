@@ -39,6 +39,10 @@ class CornerFilter:
             k (float): threshold parameter for sauvola thresholding
             w (int): window_size parameter for sauvola thresholding
         """
+        assert kernel_size % 2 == 1, (
+            "CornerFilter: kernel size (k) needs to be ann odd number"
+        )
+
         self._k = kernel_size
         self._w = cross_width
         self._h = cross_width if cross_height is None else cross_height
@@ -47,6 +51,31 @@ class CornerFilter:
         self._k_thresh = k
         self._w_thresh = w
         self._cross_kernel = self._cross_kernel_uint8()
+
+    def _gaussian_weights(self, region: int, p: float = 0.4):
+        """
+        Create a 2D Gaussian weight mask.
+
+        Args:
+            shape (tuple[int, int]): Shape of the region (height, width)
+            p (float): Minimum value at the edge = 1 - p
+
+        Returns:
+            NDArray: Gaussian weight mask
+        """
+        h, w = region, region
+        y = np.linspace(-1, 1, h)
+        x = np.linspace(-1, 1, w)
+        xv, yv = np.meshgrid(x, y)
+        dist_squared = xv**2 + yv**2
+
+        # Scale so that center is 1 and edges are 1 - p
+        sigma = np.sqrt(
+            -1 / (2 * np.log(1 - p))
+        )  # solves exp(-r^2 / (2 * sigma^2)) = 1 - p for r=1
+        weights = np.exp(-dist_squared / (2 * sigma**2))
+
+        return weights
 
     def _cross_kernel_uint8(self) -> NDArray:
         kernel = np.zeros((self._k, self._k), dtype=np.uint8)
@@ -81,9 +110,20 @@ class CornerFilter:
         if visual:
             imu.show(dilated, title="dilated")
 
-        filtered = cv.matchTemplate(
-            dilated, self._cross_kernel_uint8(), cv.TM_SQDIFF_NORMED
+        pad_y = self._cross_kernel.shape[0] // 2
+        pad_x = self._cross_kernel.shape[1] // 2
+
+        padded = cv.copyMakeBorder(
+            dilated,
+            pad_y,
+            pad_y,  # top, bottom
+            pad_x,
+            pad_x,  # left, right
+            borderType=cv.BORDER_CONSTANT,
+            value=[0, 0, 0],  # black padding (BGR)
         )
+
+        filtered = cv.matchTemplate(padded, self._cross_kernel, cv.TM_SQDIFF_NORMED)
         filtered = 255 - cv.normalize(filtered, None, 0, 255, cv.NORM_MINMAX).astype(  # type:ignore
             np.uint8
         )
@@ -106,25 +146,22 @@ class CornerFilter:
         if region is None:
             region = self._region
 
-        x = point[0] - self._k // 2 - region // 2
-        y = point[1] - self._k // 2 - region // 2
+        x = point[0] - region // 2
+        y = point[1] - region // 2
 
-        if x >= filtered.shape[1]:
-            x = filtered.shape[1] - 1
-        if y >= filtered.shape[0]:
-            y = filtered.shape[0] - 1
+        cropped = imu.safe_crop(filtered, x, y, region, region)
 
-        cropped = filtered[y : y + region, x : x + region]
-
-        best_match = np.argmax(cropped)
-        best_match = np.unravel_index(best_match, cropped.shape)
-
-        if cropped[best_match] < 90:
+        if cropped.shape != (region, region):
             return point
 
+        weighted = cropped * self._gaussian_weights(region)
+
+        best_match = np.argmax(weighted)
+        best_match = np.unravel_index(best_match, cropped.shape)
+
         result = (
-            int(x + best_match[1]) + self._k // 2,
-            int(y + best_match[0]) + self._k // 2,
+            int(x + best_match[1]),
+            int(y + best_match[0]),
         )
 
         return result

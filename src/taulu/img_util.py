@@ -1,6 +1,7 @@
 import cv2 as cv
 from skimage.filters import threshold_sauvola
 import numpy as np
+from cv2.typing import MatLike
 
 from .constants import WINDOW
 
@@ -128,3 +129,38 @@ def text_presence_score(img) -> float:
     black_pixels_fraction = np.sum(masked == 0) / masked.size
 
     return min((black_pixels_fraction - 0.020) / 0.1, 1)
+
+
+def safe_crop(img: MatLike, x: int, y: int, w: int, h: int):
+    """
+    Crop the input image at the given offset to the asked size,
+    extending the image with zeros where necessary
+    """
+
+    img_h, img_w = img.shape[:2]
+
+    # Calculate coordinates in original image
+    x1 = max(x, 0)
+    y1 = max(y, 0)
+    x2 = min(x + w, img_w)
+    y2 = min(y + h, img_h)
+
+    # Calculate where to place the cropped region in the output image
+    crop_w = x2 - x1
+    crop_h = y2 - y1
+    x_offset = max(-x, 0)
+    y_offset = max(-y, 0)
+
+    # Create blank output image
+    result = (
+        np.zeros((h, w, img.shape[2]), dtype=img.dtype)
+        if len(img.shape) == 3
+        else np.zeros((h, w), dtype=img.dtype)
+    )
+
+    # Paste the valid region into the blank output
+    result[y_offset : y_offset + crop_h, x_offset : x_offset + crop_w] = img[
+        y1:y2, x1:x2
+    ]
+
+    return result
