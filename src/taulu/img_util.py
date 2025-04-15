@@ -6,7 +6,7 @@ from cv2.typing import MatLike
 from .constants import WINDOW
 
 
-def show(image, click_event=None, title: str | None = None):
+def show(image, click_event=None, title: str | None = None, window: str = WINDOW):
     """
     shows an image to the user, who then gets the option to press q or n,
     determining the output of the function
@@ -15,7 +15,7 @@ def show(image, click_event=None, title: str | None = None):
     """
 
     try:
-        cv.namedWindow(WINDOW, cv.WINDOW_NORMAL)
+        cv.namedWindow(window, cv.WINDOW_NORMAL)
     except cv.error:
         # window already exists
         pass
@@ -37,9 +37,9 @@ def show(image, click_event=None, title: str | None = None):
             image, title, position, cv.FONT_HERSHEY_PLAIN, 2.0, (255, 255, 255), 2
         )
 
-    cv.imshow(WINDOW, image)
+    cv.imshow(window, image)
     if click_event:
-        cv.setMouseCallback(WINDOW, click_event)
+        cv.setMouseCallback(window, click_event)
 
     while True:
         key = cv.waitKey(10)
@@ -48,7 +48,7 @@ def show(image, click_event=None, title: str | None = None):
         if key == ord("n"):
             break
         elif (
-            key == -1 and cv.getWindowProperty(WINDOW, cv.WND_PROP_VISIBLE) < 1
+            key == -1 and cv.getWindowProperty(window, cv.WND_PROP_VISIBLE) < 1
         ):  # Check if the window is actually closed
             break
 

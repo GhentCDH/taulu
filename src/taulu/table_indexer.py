@@ -83,7 +83,7 @@ class TableIndexer(ABC):
             2,
         )
 
-    def show_cells(self, image: MatLike) -> list[tuple[int, int]]:
+    def show_cells(self, image: MatLike, window: str = WINDOW) -> list[tuple[int, int]]:
         img = np.copy(image)
 
         cells = []
@@ -98,9 +98,14 @@ class TableIndexer(ABC):
                 else:
                     return
                 self._highlight_cell(img, cell)
-                cv.imshow(WINDOW, img)
+                cv.imshow(window, img)
 
-        imu.show(img, click_event, "click to highlight cells")
+        imu.show(
+            img,
+            click_event=click_event,
+            title="click to highlight cells",
+            window=window,
+        )
 
         return cells
 
