@@ -117,7 +117,7 @@ class PageCropper:
 
         return x, y, w, h
 
-    def crop_split(self, img: MatLike | str) -> Split:
+    def crop_split(self, img: MatLike | str) -> Split[MatLike]:
         """
         Crops the given image with margin into two,
         one containing the left page, one containing the right page
