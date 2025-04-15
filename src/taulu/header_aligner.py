@@ -5,6 +5,7 @@ from numpy.typing import NDArray
 from typing import Iterable, cast
 from cv2.typing import MatLike
 
+from .constants import WINDOW
 from .error import TauluException
 from . import img_util as imu
 
@@ -78,7 +79,9 @@ class HeaderAligner:
 
         return img
 
-    def _find_transform_of_template_on(self, im: MatLike, visual: bool = False):
+    def _find_transform_of_template_on(
+        self, im: MatLike, visual: bool = False, window: str = WINDOW
+    ):
         # Detect ORB features and compute descriptors.
         orb = cv.ORB_create(
             self._max_features,  # type:ignore
@@ -108,7 +111,7 @@ class HeaderAligner:
                 None,  # type:ignore
                 cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
             )
-            imu.show(final_img_filtered, title="matches")
+            imu.show(final_img_filtered, title="matches", window=window)
 
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -160,7 +163,9 @@ class HeaderAligner:
 
         return imu.show(merged)
 
-    def align(self, img: MatLike | str, visual: bool = False) -> NDArray:
+    def align(
+        self, img: MatLike | str, visual: bool = False, window: str = WINDOW
+    ) -> NDArray:
         """
         Calculates a homogeneous transformation matrix that maps pixels of
         the template to the given image
@@ -172,7 +177,7 @@ class HeaderAligner:
 
         img = self._preprocess_image(img)
 
-        return self._find_transform_of_template_on(img, visual)
+        return self._find_transform_of_template_on(img, visual, window)
 
     def template_to_img(self, h: NDArray, point: Iterable[int]) -> tuple[int, int]:
         """

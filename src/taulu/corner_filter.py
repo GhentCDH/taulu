@@ -4,6 +4,7 @@ from cv2.typing import MatLike
 from numpy.typing import NDArray
 
 from . import img_util as imu
+from .constants import WINDOW
 from .table_indexer import TableIndexer
 from .header_template import _Rule
 
@@ -172,6 +173,8 @@ class CornerFilter:
         left_top: tuple[int, int],
         cell_widths: list[int],
         cell_height: int,
+        visual: bool = False,
+        window: str = WINDOW,
     ) -> "TableCrosses":
         """
         Parse the image to a `TableCrosses` structure that holds all of the
@@ -188,6 +191,8 @@ class CornerFilter:
         """
 
         filtered = self.apply(img)
+        if visual:
+            imu.show(filtered, window=window)
 
         left_top = self.find_nearest(filtered, left_top, int(self._region * 3 / 2))
 
