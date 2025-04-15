@@ -1,6 +1,8 @@
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Callable, Any
 
 T = TypeVar("T")
+U = TypeVar("U")
+V = TypeVar("V")
 
 
 class Split(Generic[T]):
@@ -46,3 +48,44 @@ class Split(Generic[T]):
             return self._left
         else:
             return self._right
+
+    def apply(
+        self,
+        funcs: "Split[Callable[[T, *Any], V]] | Callable[[T, *Any], V]",
+        *args,
+        **kwargs,
+    ) -> "Split[V]":
+        if not isinstance(funcs, Split):
+            funcs = Split(funcs, funcs)
+
+        def get_arg(side: str, arg):
+            if isinstance(arg, Split):
+                return getattr(arg, side)
+            return arg
+
+        def call(side: str):
+            func = getattr(funcs, side)
+            target = getattr(self, side)
+
+            side_args = [get_arg(side, arg) for arg in args]
+            side_kwargs = {k: get_arg(side, v) for k, v in kwargs.items()}
+
+            return func(target, *side_args, **side_kwargs)
+
+        return Split(call("left"), call("right"))
+
+    def __getattr__(self, attr_name: str):
+        if attr_name in self.__dict__:
+            return getattr(self, attr_name)
+
+        def wrapper(*args, **kwargs):
+            return self.apply(
+                Split(
+                    getattr(self.left.__class__, attr_name),
+                    getattr(self.right.__class__, attr_name),
+                ),
+                *args,
+                **kwargs,
+            )
+
+        return wrapper
