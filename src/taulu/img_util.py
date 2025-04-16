@@ -113,7 +113,6 @@ def _rm_v_edges(img):
     edges = vertical_edges(img, x=8)
     edges_n = cv.bitwise_not(edges)
 
-    img = cv.bitwise_not(img)
     masked = cv.bitwise_and(img, img, mask=edges_n, dst=None)
     masked = cv.bitwise_not(masked)
 
