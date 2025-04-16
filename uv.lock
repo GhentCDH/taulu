@@ -37,7 +37,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "taulu", editable = "." }]
+requires-dist = [{ name = "taulu" }]
 
 [[package]]
 name = "exceptiongroup"

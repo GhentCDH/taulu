@@ -16,3 +16,4 @@ examples/header.json
 examples/main.py
 examples/pyproject.toml
 examples/.python-version
+examples/uv.lock
