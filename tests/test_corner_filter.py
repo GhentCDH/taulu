@@ -46,11 +46,11 @@ def test_text_regions():
         im, start, template.cell_widths(0), template.cell_height()
     )
 
-    regions = set()
+    regions: set[tuple[tuple[int, int], tuple[int, int]]] = set()
     for row in range(points.rows):
         for region in points.text_regions(im, row):
             regions.add(region)
 
-    print(f"regions: {regions}")
-
-    exit(1)
+    for region in regions:
+        crop = points.crop_region(im, region[0], region[1])
+        show(crop, title="region crop")
