@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - 'v*'  # or '*' to match all tags
-    branches:
-      - main  # ensures the tag is on main
 
 jobs:
   uv-build:
