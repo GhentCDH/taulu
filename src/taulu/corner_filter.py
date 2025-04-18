@@ -256,6 +256,13 @@ class TableCrosses(TableIndexer):
             new_first = (first[0] - width, first[1])
             row.insert(0, new_first)
 
+    def add_top_row(self, height: int):
+        new_row = []
+        for point in self._points[0]:
+            new_row.append((point[0], point[1] - height))
+
+        self.points.insert(0, new_row)
+
     def _surrounds(
         self, rect: list[tuple[int, int]], point: tuple[float, float]
     ) -> bool:
