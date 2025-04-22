@@ -27,7 +27,7 @@ class PageCropper:
         tolerance: int = 40,
         margin: int = 140,
         split: float = 0.5,
-        split_margin=0.06,
+        split_margin: float = 0.06,
     ):
         """
         Simple object that crops an input image to the rectangular region that contains the target hsv colour,
@@ -117,23 +117,31 @@ class PageCropper:
 
         return x, y, w, h
 
-    def crop_split(self, img: MatLike | str) -> Split[MatLike]:
+    def crop_split(
+        self, img: MatLike | str
+    ) -> tuple[Split[MatLike], Split[tuple[int, int]]]:
         """
         Crops the given image with margin into two,
         one containing the left page, one containing the right page
         (with margin)
         """
-        cropped = self.crop(img)
+        cropped, offset = self.crop(img)
         w = cropped.shape[1]
 
         cropped_left = cropped[:, : int(w * (self._split + self._split_margin))]
         cropped_right = cropped[:, int(w * (self._split - self._split_margin)) :]
 
-        return Split(cropped_left, cropped_right)
+        return Split(cropped_left, cropped_right), Split(
+            offset, (offset[0] + int(w * (self._split - self._split_margin)), offset[1])
+        )
 
-    def crop(self, img: MatLike | str) -> MatLike:
+    def crop(self, img: MatLike | str) -> tuple[MatLike, tuple[int, int]]:
         """
         Crops the given image to the smallest region that contains the target colour
+
+        Returns:
+            The cropped image
+            The offset in the original image where the crop starts (x, y)
         """
 
         if type(img) is str:
@@ -151,4 +159,4 @@ class PageCropper:
         if self._split is not None:
             pass
 
-        return img[y : y + h, x : x + w]
+        return img[y : y + h, x : x + w], (x, y)

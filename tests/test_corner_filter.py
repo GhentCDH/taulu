@@ -1,14 +1,13 @@
 import pytest
 from taulu.img_util import show
-from taulu.corner_filter import CornerFilter
-from taulu.header_template import HeaderTemplate
+from taulu import HeaderTemplate, GridDetector
 from util import table_left_image_path, header_anno_path
 import cv2
 
 
 @pytest.mark.visual
 def test_filter():
-    filter = CornerFilter(
+    filter = GridDetector(
         kernel_size=41, cross_width=6, morph_size=4, region=60, k=0.05
     )
     im = cv2.imread(table_left_image_path(0))
@@ -32,7 +31,7 @@ def test_filter():
 
 @pytest.mark.visual
 def test_text_regions():
-    filter = CornerFilter(
+    filter = GridDetector(
         kernel_size=41, cross_width=6, morph_size=4, region=60, k=0.05
     )
     im = cv2.imread(table_left_image_path(0))

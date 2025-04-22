@@ -7,9 +7,10 @@ from . import img_util as imu
 from .constants import WINDOW
 from .table_indexer import TableIndexer
 from .header_template import _Rule
+from .split import Split
 
 
-class CornerFilter:
+class GridDetector:
     """
     Implements filters that show high activation where the image has an intersection of a vertical
     and horizontal rule, useful for finding the bounding boxes of cells
@@ -41,7 +42,7 @@ class CornerFilter:
             w (int): window_size parameter for sauvola thresholding
         """
         assert kernel_size % 2 == 1, (
-            "CornerFilter: kernel size (k) needs to be ann odd number"
+            "GridDetector: kernel size (k) needs to be ann odd number"
         )
 
         self._k = kernel_size
@@ -175,9 +176,9 @@ class CornerFilter:
         cell_height: int,
         visual: bool = False,
         window: str = WINDOW,
-    ) -> "TableCrosses":
+    ) -> "TableGrid":
         """
-        Parse the image to a `TableCrosses` structure that holds all of the
+        Parse the image to a `TableGrid` structure that holds all of the
         intersections between horizontal and vertical rules, starting near the `left_top` point
 
         Args:
@@ -187,7 +188,7 @@ class CornerFilter:
             cell_height (int): the expected height of one row of data
 
         Returns:
-            a TableCrosses object
+            a TableGrid object
         """
 
         filtered = self.apply(img)
@@ -219,13 +220,15 @@ class CornerFilter:
             current = self.find_nearest(filtered, current)
             row = [current]
 
-        return TableCrosses(points)
+        return TableGrid(points)
 
 
-class TableCrosses(TableIndexer):
+class TableGrid(TableIndexer):
     """
     A data class that allows segmenting the image into cells
     """
+
+    _right_offset: int | None = None
 
     def __init__(self, points: list[list[tuple[int, int]]]):
         """
@@ -244,11 +247,52 @@ class TableCrosses(TableIndexer):
 
     @property
     def cols(self) -> int:
-        return len(self.row(0)) - 1
+        if self._right_offset is not None:
+            return len(self.row(0)) - 2
+        else:
+            return len(self.row(0)) - 1
 
     @property
     def rows(self) -> int:
         return len(self._points) - 1
+
+    @staticmethod
+    def from_split(
+        split_grids: Split["TableGrid"], offsets: Split[tuple[int, int]]
+    ) -> "TableGrid":
+        """
+        Convert two ``TableGrid`` objects into one, that is able to segment the original (non-cropped) image
+
+        Args:
+            split_grids (Split[TableGrid]): a Split of TableGrid objects of the left and right part of the table
+            offsets (Split[tuple[int, int]]): a Split of the offsets in the image where the crop happened
+        """
+
+        def offset_points(points, offset):
+            return [
+                [(p[0] + offset[0], p[1] + offset[1]) for p in row] for row in points
+            ]
+
+        split_points = split_grids.apply(
+            lambda grid, offset: offset_points(grid.points, offset), offsets
+        )
+
+        points = []
+
+        rows = min(split_grids.left.rows, split_grids.right.rows)
+
+        for row in range(rows + 1):
+            row_points = []
+
+            row_points.extend(split_points.left[row])
+            row_points.extend(split_points.right[row])
+
+            points.append(row_points)
+
+        table_grid = TableGrid(points)
+        table_grid._right_offset = split_grids.left.cols
+
+        return table_grid
 
     def add_left_col(self, width: int):
         for row in self._points:
@@ -290,7 +334,12 @@ class TableCrosses(TableIndexer):
 
     def cell(self, point: tuple[float, float]) -> tuple[int, int]:
         for r in range(len(self._points) - 1):
+            offset = 0
             for c in range(len(self.row(0)) - 1):
+                if self._right_offset is not None and c == self._right_offset:
+                    offset = -1
+                    continue
+
                 if self._surrounds(
                     [
                         self._points[r][c],
@@ -300,7 +349,7 @@ class TableCrosses(TableIndexer):
                     ],
                     point,
                 ):
-                    return (r, c)
+                    return (r, c + offset)
 
         return (-1, -1)
 
@@ -311,6 +360,9 @@ class TableCrosses(TableIndexer):
 
         self._check_row_idx(r)
         self._check_col_idx(c)
+
+        if self._right_offset is not None and c >= self._right_offset:
+            c = c + 1
 
         return (
             self._points[r][c],
@@ -330,6 +382,12 @@ class TableCrosses(TableIndexer):
         self._check_row_idx(r1)
         self._check_col_idx(c0)
         self._check_col_idx(c1)
+
+        if self._right_offset is not None and c0 >= self._right_offset:
+            c0 = c0 + 1
+
+        if self._right_offset is not None and c1 >= self._right_offset:
+            c1 = c1 + 1
 
         lt = self._points[r0][c0]
         rt = self._points[r0][c1 + 1]
@@ -370,6 +428,9 @@ class TableCrosses(TableIndexer):
         def vertical_rule_crop(row: int, col: int):
             self._check_col_idx(col)
             self._check_row_idx(row)
+
+            if self._right_offset is not None and col >= self._right_offset:
+                col = col + 1
 
             top = self._points[row][col]
             bottom = self._points[row + 1][col]
