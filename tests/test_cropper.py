@@ -17,7 +17,7 @@ def test_cropper_full():
         split_margin=0.06,
     )
 
-    cropped = cropper.crop(table_image_path(0))
+    cropped, _ = cropper.crop(table_image_path(0))
 
     show(cropped, title="full crop")
 
@@ -36,7 +36,7 @@ def test_cropper_split():
         split_margin=0.06,
     )
 
-    cropped = cropper.crop_split(table_image_path(0))
+    cropped, _ = cropper.crop_split(table_image_path(0))
 
     show(cropped.left, title="left crop")
     show(cropped.right, title="right crop")

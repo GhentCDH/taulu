@@ -36,6 +36,9 @@ class Split(Generic[T]):
         else:
             self._right = value
 
+    def __repr__(self) -> str:
+        return f"left: {self._left}, right: {self._right}"
+
     def __iter__(self):
         assert self._left is not None
         assert self._right is not None

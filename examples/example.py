@@ -3,14 +3,12 @@ import os
 
 from cv2 import imread
 from taulu.img_util import show
-from taulu.header_aligner import HeaderAligner
-from taulu.header_template import HeaderTemplate
-from taulu.corner_filter import CornerFilter
+from taulu import HeaderAligner, HeaderTemplate, GridDetector
 
 
 def main():
     aligner = HeaderAligner("header.png")
-    filter = CornerFilter(
+    filter = GridDetector(
         # these are the most important parameters to tune
         kernel_size=41,
         cross_width=10,
@@ -71,4 +69,3 @@ if __name__ == "__main__":
         setup()
 
     main()
-
