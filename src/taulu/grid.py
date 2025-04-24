@@ -5,7 +5,7 @@ from numpy.typing import NDArray
 
 from . import img_util as imu
 from .constants import WINDOW
-from .table_indexer import TableIndexer
+from .table_indexer import Point, TableIndexer
 from .header_template import _Rule
 from .split import Split
 
@@ -133,8 +133,8 @@ class GridDetector:
         return filtered
 
     def find_nearest(
-        self, filtered: MatLike, point: tuple[int, int], region: None | int = None
-    ) -> tuple[int, int]:
+        self, filtered: MatLike, point: Point, region: None | int = None
+    ) -> Point:
         """
         Find the nearest 'corner match' in the image
 
@@ -171,7 +171,7 @@ class GridDetector:
     def find_table_points(
         self,
         img: MatLike,
-        left_top: tuple[int, int],
+        left_top: Point,
         cell_widths: list[int],
         cell_height: int,
         visual: bool = False,
@@ -197,7 +197,7 @@ class GridDetector:
 
         left_top = self.find_nearest(filtered, left_top, int(self._region * 3 / 2))
 
-        points: list[list[tuple[int, int]]] = []
+        points: list[list[Point]] = []
         current = left_top
         row = [current]
 
@@ -230,7 +230,7 @@ class TableGrid(TableIndexer):
 
     _right_offset: int | None = None
 
-    def __init__(self, points: list[list[tuple[int, int]]]):
+    def __init__(self, points: list[list[Point]]):
         """
         Args:
             points: a 2D list of intersections between hor. and vert. rules
@@ -238,10 +238,10 @@ class TableGrid(TableIndexer):
         self._points = points
 
     @property
-    def points(self) -> list[list[tuple[int, int]]]:
+    def points(self) -> list[list[Point]]:
         return self._points
 
-    def row(self, i: int) -> list[tuple[int, int]]:
+    def row(self, i: int) -> list[Point]:
         assert 0 <= i and i < len(self._points)
         return self._points[i]
 
@@ -258,7 +258,7 @@ class TableGrid(TableIndexer):
 
     @staticmethod
     def from_split(
-        split_grids: Split["TableGrid"], offsets: Split[tuple[int, int]]
+        split_grids: Split["TableGrid"], offsets: Split[Point]
     ) -> "TableGrid":
         """
         Convert two ``TableGrid`` objects into one, that is able to segment the original (non-cropped) image
@@ -307,9 +307,7 @@ class TableGrid(TableIndexer):
 
         self.points.insert(0, new_row)
 
-    def _surrounds(
-        self, rect: list[tuple[int, int]], point: tuple[float, float]
-    ) -> bool:
+    def _surrounds(self, rect: list[Point], point: tuple[float, float]) -> bool:
         """point: x, y"""
         lt, rt, rb, lb = rect
         x, y = point
@@ -353,9 +351,7 @@ class TableGrid(TableIndexer):
 
         return (-1, -1)
 
-    def cell_polygon(
-        self, cell: tuple[int, int]
-    ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+    def cell_polygon(self, cell: tuple[int, int]) -> tuple[Point, Point, Point, Point]:
         r, c = cell
 
         self._check_row_idx(r)
@@ -371,10 +367,9 @@ class TableGrid(TableIndexer):
             self._points[r + 1][c],
         )
 
-    def crop_region(
-        self, image, start: tuple[int, int], end: tuple[int, int], margin: int = 0
-    ) -> MatLike:
-        _ = margin
+    def region(
+        self, start: tuple[int, int], end: tuple[int, int]
+    ) -> tuple[Point, Point, Point, Point]:
         r0, c0 = start
         r1, c1 = end
 
@@ -394,16 +389,7 @@ class TableGrid(TableIndexer):
         rb = self._points[r1 + 1][c1 + 1]
         lb = self._points[r1 + 1][c0]
 
-        w = (rt[0] - lt[0] + rb[0] - lb[0]) / 2
-        h = (rb[1] - rt[1] + lb[1] - lt[1]) / 2
-
-        # crop by doing a perspective transform to the desired quad
-        src_pts = np.array([lt, rt, rb, lb], dtype="float32")
-        dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype="float32")
-        M = cv.getPerspectiveTransform(src_pts, dst_pts)
-        warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
-
-        return warped
+        return lt, rt, rb, lb
 
     def visualize_points(self, img: MatLike):
         """

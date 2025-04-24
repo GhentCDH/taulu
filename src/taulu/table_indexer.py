@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Tuple
 
 import cv2 as cv
 from cv2.typing import MatLike
@@ -7,6 +8,59 @@ import numpy as np
 from . import img_util as imu
 from .constants import WINDOW
 from .error import TauluException
+
+Point = Tuple[int, int]
+
+
+def _add(left: Point, right: Point) -> Point:
+    return (left[0] + right[0], left[1] + right[1])
+
+
+def _apply_margin(
+    lt: Point,
+    rt: Point,
+    rb: Point,
+    lb: Point,
+    margin: int = 0,
+    margin_top: int | None = None,
+    margin_bottom: int | None = None,
+    margin_left: int | None = None,
+    margin_right: int | None = None,
+    margin_y: int | None = None,
+    margin_x: int | None = None,
+) -> tuple[Point, Point, Point, Point]:
+    """
+    Apply margins to the bounding box, with priority:
+        top/bottom/left/right > x/y > margin
+    """
+
+    top = (
+        margin_top
+        if margin_top is not None
+        else (margin_y if margin_y is not None else margin)
+    )
+    bottom = (
+        margin_bottom
+        if margin_bottom is not None
+        else (margin_y if margin_y is not None else margin)
+    )
+    left = (
+        margin_left
+        if margin_left is not None
+        else (margin_x if margin_x is not None else margin)
+    )
+    right = (
+        margin_right
+        if margin_right is not None
+        else (margin_x if margin_x is not None else margin)
+    )
+
+    lt_out = _add(lt, (-left, -top))
+    rt_out = _add(rt, (right, -top))
+    rb_out = _add(rb, (right, bottom))
+    lb_out = _add(lb, (-left, bottom))
+
+    return lt_out, rt_out, rb_out, lb_out
 
 
 class TableIndexer(ABC):
@@ -110,11 +164,60 @@ class TableIndexer(ABC):
         return cells
 
     @abstractmethod
+    def region(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+    ) -> tuple[Point, Point, Point, Point]:
+        """
+        Get the bounding box for the rectangular region that goes from start to end
+
+        Returns:
+            4 points: lt, rt, rb, lb, in format (x, y)
+        """
+        pass
+
     def crop_region(
-        self, image, start: tuple[int, int], end: tuple[int, int], margin: int = 0
+        self,
+        image: MatLike,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        margin: int = 0,
+        margin_top: int | None = None,
+        margin_bottom: int | None = None,
+        margin_left: int | None = None,
+        margin_right: int | None = None,
+        margin_y: int | None = None,
+        margin_x: int | None = None,
     ) -> MatLike:
         """Crop the input image to a rectangular region with the start and end cells as extremes"""
-        pass
+
+        region = self.region(start, end)
+
+        lt, rt, rb, lb = _apply_margin(
+            *region,
+            margin=margin,
+            margin_top=margin_top,
+            margin_bottom=margin_bottom,
+            margin_left=margin_left,
+            margin_right=margin_right,
+            margin_y=margin_y,
+            margin_x=margin_x,
+        )
+
+        # apply margins according to priority:
+        # margin_top > margin_y > margin (etc.)
+
+        w = (rt[0] - lt[0] + rb[0] - lb[0]) / 2
+        h = (rb[1] - rt[1] + lb[1] - lt[1]) / 2
+
+        # crop by doing a perspective transform to the desired quad
+        src_pts = np.array([lt, rt, rb, lb], dtype="float32")
+        dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype="float32")
+        M = cv.getPerspectiveTransform(src_pts, dst_pts)
+        warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
+
+        return warped
 
     @abstractmethod
     def text_regions(
