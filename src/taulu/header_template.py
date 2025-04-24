@@ -2,13 +2,12 @@ from pathlib import Path
 from typing import Iterable, Optional, cast
 import csv
 import json
-import numpy as np
 
 import math
 
 import cv2 as cv
 from cv2.typing import MatLike
-from .table_indexer import TableIndexer
+from .table_indexer import Point, TableIndexer
 
 from .error import TauluException
 from . import img_util as imu
@@ -319,9 +318,9 @@ class HeaderTemplate(TableIndexer):
 
         return top_left, top_right, bottom_right, bottom_left  # type:ignore
 
-    def crop_region(
-        self, image, start: tuple[int, int], end: tuple[int, int], margin: int = 0
-    ) -> MatLike:
+    def region(
+        self, start: tuple[int, int], end: tuple[int, int]
+    ) -> tuple[Point, Point, Point, Point]:
         self._check_row_idx(start[0])
         self._check_row_idx(end[0])
         self._check_col_idx(start[1])
@@ -348,28 +347,15 @@ class HeaderTemplate(TableIndexer):
         ):
             raise TauluException("the lines around this row do not intersect properly")
 
-        top_left = cast(tuple[float, float], top_left)
-        bottom_left = cast(tuple[float, float], bottom_left)
-        top_right = cast(tuple[float, float], top_right)
-        bottom_right = cast(tuple[float, float], bottom_right)
+        def to_point(pnt) -> Point:
+            return (int(pnt[0]), int(pnt[1]))
 
-        top_left = (top_left[0] - margin, top_left[1] - margin)
-        bottom_left = (bottom_left[0] - margin, bottom_left[1] + margin)
-        top_right = (top_right[0] + margin, top_right[1] - margin)
-        bottom_right = (bottom_right[0] + margin, bottom_right[1] + margin)
-
-        w = (top_right[0] - top_left[0] + bottom_right[0] - bottom_left[0]) / 2
-        h = -(top_right[1] - bottom_right[1] + top_left[1] - bottom_left[1]) / 2
-
-        # crop by doing a perspective transform to the desired quad
-        src_pts = np.array(
-            [top_left, top_right, bottom_right, bottom_left], dtype="float32"
+        return (
+            to_point(top_left),
+            to_point(top_right),
+            to_point(bottom_right),
+            to_point(bottom_left),
         )
-        dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype="float32")
-        M = cv.getPerspectiveTransform(src_pts, dst_pts)
-        warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
-
-        return warped
 
     def text_regions(
         self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -20
