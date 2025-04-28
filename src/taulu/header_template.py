@@ -7,6 +7,7 @@ import math
 
 import cv2 as cv
 from cv2.typing import MatLike
+import numpy as np
 from .table_indexer import Point, TableIndexer
 
 from .error import TauluException
@@ -15,6 +16,15 @@ from . import constants
 
 # angle tolerance for horizontal or vertical clasification (radians)
 TOLERANCE = math.pi / 6
+
+ANNO_HELP = """Start annotating the header
+
+To draw a line, click on the image twice (the line will be drawn between your two clicks).
+
+To undo the last line you drew, right-click anywhere on the image (you cannot redo the undo).
+
+You should annotate all of the vertical lines that extend into the table body, as well as the top and bottom horizontal lines. 
+"""
 
 
 class _Rule:
@@ -178,30 +188,53 @@ class HeaderTemplate(TableIndexer):
         start_point = None
         lines: list[list[int]] = []
 
+        orig_template = np.copy(template)
+
         def get_point(event, x, y, flags, params):
-            nonlocal lines, start_point
+            nonlocal lines, start_point, template
             _ = flags
             _ = params
             if event == cv.EVENT_LBUTTONDOWN:
                 if start_point is not None:
                     line: list[int] = [start_point[1], start_point[0], x, y]
 
-                    cv.line(
-                        template,
+                    cv.line(  # type:ignore
+                        template,  # type:ignore
                         (start_point[1], start_point[0]),
                         (x, y),
                         (0, 255, 0),
                         2,
                         cv.LINE_AA,
                     )
-                    cv.imshow(constants.WINDOW, template)
+                    cv.imshow(constants.WINDOW, template)  # type:ignore
 
                     lines.append(line)
                     start_point = None
                 else:
                     start_point = (y, x)
+            elif event == cv.EVENT_RBUTTONDOWN:
+                start_point = None
 
-        imu.show(template, get_point, title="annotate the lines on the template")
+                # remove the last annotation
+                lines = lines[:-1]
+
+                template = np.copy(orig_template)
+
+                for line in lines:
+                    cv.line(
+                        template,
+                        (line[0], line[1]),
+                        (line[2], line[3]),
+                        (0, 255, 0),
+                        2,
+                        cv.LINE_AA,
+                    )
+
+                cv.imshow(constants.WINDOW, template)
+
+        print(ANNO_HELP)
+
+        imu.show(template, get_point, title="annotate the header")
 
         return HeaderTemplate(lines)
 
