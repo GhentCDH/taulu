@@ -238,6 +238,50 @@ class HeaderTemplate(TableIndexer):
 
         return HeaderTemplate(lines)
 
+    def crop_to_annotation(self, template: MatLike | str, margin: int = 10) -> MatLike:
+        """
+        Crop the image to contain only the annotations, such that it can be used as the header image in the taulu workflow.
+        """
+
+        if type(template) is str:
+            value = cv.imread(template)
+            template = value
+        template = cast(MatLike, template)
+
+        # points (x, y)
+        points = [rule._p0 for rule in self._rules] + [rule._p1 for rule in self._rules]
+
+        if not points:
+            raise ValueError("No annotation points found to crop around.")
+
+        # crop the image to contain all of the points (just crop rectangularly, x, y, w, h)
+        # Convert points to numpy array
+        points_np = np.array(points)
+
+        # Find bounding box
+        x_min = np.min(points_np[:, 0])
+        y_min = np.min(points_np[:, 1])
+        x_max = np.max(points_np[:, 0])
+        y_max = np.max(points_np[:, 1])
+
+        # Compute width and height
+        width = x_max - x_min
+        height = y_max - y_min
+
+        # Ensure integers and within image boundaries
+        x_min = max(int(x_min), 0)
+        y_min = max(int(y_min), 0)
+        width = int(width)
+        height = int(height)
+
+        # Crop the image
+        cropped = template[
+            y_min - margin : y_min + height + margin,
+            x_min - margin : x_min + width + margin,
+        ]
+
+        return cropped
+
     @staticmethod
     def from_vgg_annotation(annotation: str) -> "HeaderTemplate":
         """
