@@ -26,6 +26,11 @@ To undo the last line you drew, right-click anywhere on the image (you cannot re
 You should annotate all of the vertical lines that extend into the table body, as well as the top and bottom horizontal lines. 
 """
 
+CROP_HELP = """Crop the template to just the header
+
+You should annotate four points that make up the four corners of the header.
+"""
+
 
 class _Rule:
     def __init__(
@@ -173,17 +178,31 @@ class HeaderTemplate(TableIndexer):
         return len(self._h_rules) - 1
 
     @staticmethod
-    def annotate_image(template: MatLike | str) -> "HeaderTemplate":
+    def annotate_image(
+        template: MatLike | str, crop: str | None = None, margin: int = 10
+    ) -> "HeaderTemplate":
         """
         Utility method that allows users to create a template form a template image.
 
         The user is asked to click to annotate lines (two clicks per line).
+
+        Args:
+            template: the image on which to annotate the header lines
+            crop (str | None): if str, crop the template image first, then do the annotation.
+                The cropped image will be stored at the supplied path
+            margin (int): margin to add around the cropping of the header
         """
 
         if type(template) is str:
             value = cv.imread(template)
             template = value
         template = cast(MatLike, template)
+
+        print(crop)
+        if crop is not None:
+            cropped = HeaderTemplate._crop(template, margin)
+            cv.imwrite(crop, cropped)
+            template = cropped
 
         start_point = None
         lines: list[list[int]] = []
@@ -238,21 +257,58 @@ class HeaderTemplate(TableIndexer):
 
         return HeaderTemplate(lines)
 
-    def crop_to_annotation(self, template: MatLike | str, margin: int = 10) -> MatLike:
+    @staticmethod
+    def _crop(template: MatLike, margin: int = 10) -> MatLike:
         """
         Crop the image to contain only the annotations, such that it can be used as the header image in the taulu workflow.
         """
 
-        if type(template) is str:
-            value = cv.imread(template)
-            template = value
-        template = cast(MatLike, template)
+        points = []
+        orig_template = np.copy(template)
 
-        # points (x, y)
-        points = [rule._p0 for rule in self._rules] + [rule._p1 for rule in self._rules]
+        def get_point(event, x, y, flags, params):
+            nonlocal points, template
+            _ = flags
+            _ = params
+            if event == cv.EVENT_LBUTTONDOWN:
+                point = (x, y)
 
-        if not points:
-            raise ValueError("No annotation points found to crop around.")
+                cv.circle(  # type:ignore
+                    template,  # type:ignore
+                    (x, y),
+                    4,
+                    (0, 255, 0),
+                    2,
+                )
+                cv.imshow(constants.WINDOW, template)  # type:ignore
+
+                points.append(point)
+            elif event == cv.EVENT_RBUTTONDOWN:
+                # remove the last annotation
+                points = points[:-1]
+
+                template = np.copy(orig_template)
+
+                for p in points:
+                    cv.circle(
+                        template,
+                        p,
+                        4,
+                        (0, 255, 0),
+                        2,
+                    )
+
+                cv.imshow(constants.WINDOW, template)
+
+        print(CROP_HELP)
+
+        imu.show(template, get_point, title="crop the header")
+
+        print("WHAT")
+
+        assert len(points) == 4, (
+            "you need to annotate the four corners of the table in order to crop it"
+        )
 
         # crop the image to contain all of the points (just crop rectangularly, x, y, w, h)
         # Convert points to numpy array
