@@ -1,4 +1,3 @@
-from pathlib import Path
 import os
 
 from cv2 import imread
@@ -6,7 +5,7 @@ from taulu.img_util import show
 from taulu import HeaderAligner, HeaderTemplate, GridDetector
 
 
-def main():
+def main(template):
     aligner = HeaderAligner("header.png")
     filter = GridDetector(
         # these are the most important parameters to tune
@@ -16,7 +15,6 @@ def main():
         region=60,
         k=0.45,
     )
-    template = HeaderTemplate.from_saved("header.json")
 
     # crop the input image (this step is only necessary if the image contains more than just the table)
     table = imread("table.png")
@@ -51,21 +49,13 @@ def main():
 
 def setup():
     # annotate your header
-    template = HeaderTemplate.annotate_image("header.png")
-    template.save(Path("header.json"))
+    return HeaderTemplate.annotate_image("table.png", crop="header.png")
 
 
 if __name__ == "__main__":
-    if not os.path.exists("header.png"):
-        print("You need to supply your own header image (header.png)")
-        exit(1)
-
     if not os.path.exists("table.png"):
         print("You need to supply your own table image (table.png)")
         exit(1)
 
-    if not os.path.exists("header.json"):
-        print("Annotating your header.png image using OpenCV...")
-        setup()
-
-    main()
+    template = setup()
+    main(template)
