@@ -2,6 +2,8 @@ import cv2 as cv
 import numpy as np
 from cv2.typing import MatLike
 from numpy.typing import NDArray
+from pathlib import Path
+import json
 
 from . import img_util as imu
 from .constants import WINDOW
@@ -293,6 +295,16 @@ class TableGrid(TableIndexer):
         table_grid._right_offset = split_grids.left.cols
 
         return table_grid
+
+    def save(self, path: str | Path):
+        with open(path, "w") as f:
+            json.dump({"points": self.points}, f)
+
+    @staticmethod
+    def from_saved(path: str | Path) -> "TableGrid":
+        with open(path, "r") as f:
+            points = json.load(f)
+            return TableGrid(points)
 
     def add_left_col(self, width: int):
         for row in self._points:
