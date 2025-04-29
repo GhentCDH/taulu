@@ -200,7 +200,7 @@ class GridDetector:
         if cropped.shape != (region, region):
             return point, 1.0
 
-        weighted = cropped * self._gaussian_weights(region, 0.8)
+        weighted = cropped * self._gaussian_weights(region)
 
         best_match = np.argmax(weighted)
         best_match = np.unravel_index(best_match, cropped.shape)
@@ -245,7 +245,7 @@ class GridDetector:
         current = left_top
         row = [current]
 
-        N = 3
+        N = 1
 
         while True:
             while len(row) <= len(cell_widths):
