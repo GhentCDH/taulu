@@ -10,6 +10,48 @@ from .constants import WINDOW
 from .table_indexer import Point, TableIndexer
 from .header_template import _Rule
 from .split import Split
+from .error import TauluException
+
+class BTreeNode:
+    def __init__(self, value: float, point: Point):
+        self.value = value
+        self.point = point
+        self.naive: None | BTreeNode = None
+        self.match: None | BTreeNode = None
+
+    def score(self) -> float:
+        """Get the score of this node (the maximum sum of all of its paths)"""
+        naive_score = self.naive.score() if self.naive is not None else 0
+        match_score = self.match.score() if self.match is not None else 0
+
+        return max(naive_score, match_score) + self.value
+
+    # def 
+
+    def leafs(self) -> list["BTreeNode"]:
+        if self.naive is None or self.match is None:
+            return [self]
+        else:
+            return self.naive.leafs() + self.match.leafs()
+
+    def best(self) -> Point:
+        if self.naive is None or self.match is None:
+            raise TauluException("shouldn't call best on an uninitialised tree node")
+
+        if self.naive.score() > self.match.score():
+            return self.naive.point
+        else:
+            return self.match.point
+
+    def print(self, indent: int = 0):
+        print("  " * indent + f"Value: {self.value}, Point: {self.point}, Score: {self.score()}")
+        if self.naive:
+            print("  " * (indent + 1) + "Naive:")
+            self.naive.print(indent + 2)
+        if self.match:
+            print("  " * (indent + 1) + "Match:")
+            self.match.print(indent + 2)
+
 
 
 class GridDetector:
@@ -136,7 +178,7 @@ class GridDetector:
 
     def find_nearest(
         self, filtered: MatLike, point: Point, region: None | int = None
-    ) -> Point:
+    ) -> tuple[Point, float]:
         """
         Find the nearest 'corner match' in the image
 
@@ -156,9 +198,9 @@ class GridDetector:
         cropped = imu.safe_crop(filtered, x, y, region, region)
 
         if cropped.shape != (region, region):
-            return point
+            return point, 1.0
 
-        weighted = cropped * self._gaussian_weights(region)
+        weighted = cropped * self._gaussian_weights(region, 0.8)
 
         best_match = np.argmax(weighted)
         best_match = np.unravel_index(best_match, cropped.shape)
@@ -168,7 +210,7 @@ class GridDetector:
             int(y + best_match[0]),
         )
 
-        return result
+        return result, weighted[best_match]
 
     def find_table_points(
         self,
@@ -193,23 +235,24 @@ class GridDetector:
             a TableGrid object
         """
 
-        filtered = self.apply(img)
+        filtered = self.apply(img, visual)
         if visual:
             imu.show(filtered, window=window)
 
-        left_top = self.find_nearest(filtered, left_top, int(self._region * 3 / 2))
+        left_top, _ = self.find_nearest(filtered, left_top, int(self._region * 3 / 2))
 
         points: list[list[Point]] = []
         current = left_top
         row = [current]
 
+        N = 3
+
         while True:
             while len(row) <= len(cell_widths):
-                jump = cell_widths[len(row) - 1]
+                jumps = cell_widths[len(row) - 1 : len(row) - 1 + N]
 
-                match = self.find_nearest(filtered, (current[0] + jump, current[1]))
-
-                current = match
+                tree = self._grow_tree(filtered, current, jumps)
+                current = tree.best()
                 row.append(current)
 
             points.append(row)
@@ -219,10 +262,35 @@ class GridDetector:
             if current[1] > filtered.shape[0]:
                 break
 
-            current = self.find_nearest(filtered, current)
+            current, _ = self.find_nearest(filtered, current)
             row = [current]
 
         return TableGrid(points)
+
+    def _grow_tree(self, filtered: MatLike, start_point: Point, cell_widths: list[int]) -> BTreeNode:
+        """
+        Grow a search tree from the starting point and with given depth
+        """
+
+        tree = BTreeNode(0, start_point)
+
+        def grow_right(tree: BTreeNode, jump: int):
+            for leaf in tree.leafs():
+                naive_target = (leaf.point[0] + jump, leaf.point[1])
+                match, match_score = self.find_nearest(filtered, naive_target)
+
+                naive_node = BTreeNode(filtered[naive_target[1]][naive_target[0]], naive_target)
+                match_node = BTreeNode(match_score, match)
+
+                leaf.naive = naive_node
+                leaf.match = match_node
+
+        for jump in cell_widths:
+            grow_right(tree, jump)
+
+        tree.print()
+
+        return tree
 
 
 class TableGrid(TableIndexer):
