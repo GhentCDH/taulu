@@ -304,6 +304,7 @@ class TableGrid(TableIndexer):
     def from_saved(path: str | Path) -> "TableGrid":
         with open(path, "r") as f:
             points = json.load(f)
+            points = [[(p[0], p[1]) for p in pointes] for pointes in points["points"]]
             return TableGrid(points)
 
     def add_left_col(self, width: int):
