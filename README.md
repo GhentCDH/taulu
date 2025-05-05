@@ -74,7 +74,6 @@ The components are:
 - `HeaderAligner`: Uses template matching to identify the header's location in the input images.
 - `PageCropper`: An optional component that crops the image to a region containing a given color. This is useful if your image contains a lot of background, but can be skipped if the table occupies most of the image. Only works if your table has a distinct color from the background.
 - `HeaderTemplate`: Stores table template information by reading an annotation JSON file. You can create this file by running `HeaderTemplate.annotate_image` on a cropped image of your table’s header.
-You can make such a file by running `HeaderTemplate.annotate_image` on a cropped image of your table's header.
 - `GridDetector`: Processes the image to identify intersections of horizontal and vertical lines (borders).
 - `h`: A transformation matrix that maps points from the header template to the input image.
 - `s`: The starting point of the segmentation algorithm (typically the top-left intersection, just below the header).
