@@ -295,8 +295,6 @@ class GridDetector:
         for jump in cell_widths:
             grow_right(tree, jump)
 
-        tree.print()
-
         return tree
 
 
