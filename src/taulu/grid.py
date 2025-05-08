@@ -12,6 +12,7 @@ from .header_template import _Rule
 from .split import Split
 from .error import TauluException
 
+
 class BTreeNode:
     def __init__(self, value: float, point: Point):
         self.value = value
@@ -26,13 +27,13 @@ class BTreeNode:
 
         return max(naive_score, match_score) + self.value
 
-    # def 
+    # def
 
-    def leafs(self) -> list["BTreeNode"]:
+    def leaves(self) -> list["BTreeNode"]:
         if self.naive is None or self.match is None:
             return [self]
         else:
-            return self.naive.leafs() + self.match.leafs()
+            return self.naive.leaves() + self.match.leaves()
 
     def best(self) -> Point:
         if self.naive is None or self.match is None:
@@ -44,14 +45,16 @@ class BTreeNode:
             return self.match.point
 
     def print(self, indent: int = 0):
-        print("  " * indent + f"Value: {self.value}, Point: {self.point}, Score: {self.score()}")
+        print(
+            "  " * indent
+            + f"Value: {self.value}, Point: {self.point}, Score: {self.score()}"
+        )
         if self.naive:
             print("  " * (indent + 1) + "Naive:")
             self.naive.print(indent + 2)
         if self.match:
             print("  " * (indent + 1) + "Match:")
             self.match.print(indent + 2)
-
 
 
 class GridDetector:
@@ -267,7 +270,9 @@ class GridDetector:
 
         return TableGrid(points)
 
-    def _grow_tree(self, filtered: MatLike, start_point: Point, cell_widths: list[int]) -> BTreeNode:
+    def _grow_tree(
+        self, filtered: MatLike, start_point: Point, cell_widths: list[int]
+    ) -> BTreeNode:
         """
         Grow a search tree from the starting point and with given depth
         """
@@ -275,11 +280,13 @@ class GridDetector:
         tree = BTreeNode(0, start_point)
 
         def grow_right(tree: BTreeNode, jump: int):
-            for leaf in tree.leafs():
+            for leaf in tree.leaves():
                 naive_target = (leaf.point[0] + jump, leaf.point[1])
                 match, match_score = self.find_nearest(filtered, naive_target)
 
-                naive_node = BTreeNode(filtered[naive_target[1]][naive_target[0]], naive_target)
+                naive_node = BTreeNode(
+                    filtered[naive_target[1]][naive_target[0]], naive_target
+                )
                 match_node = BTreeNode(match_score, match)
 
                 leaf.naive = naive_node
