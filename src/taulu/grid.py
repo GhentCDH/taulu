@@ -183,7 +183,7 @@ class GridDetector:
         self, filtered: MatLike, point: Point, region: None | int = None
     ) -> tuple[Point, float]:
         """
-        Find the nearest 'corner match' in the image
+        Find the nearest 'corner match' in the image, along with its score [0,1]
 
         Args:
             filtered (MatLike): the filtered image (obtained through `apply`)
