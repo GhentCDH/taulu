@@ -304,8 +304,6 @@ class HeaderTemplate(TableIndexer):
 
         imu.show(template, get_point, title="crop the header")
 
-        print("WHAT")
-
         assert len(points) == 4, (
             "you need to annotate the four corners of the table in order to crop it"
         )
