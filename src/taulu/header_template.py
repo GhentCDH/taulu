@@ -198,7 +198,6 @@ class HeaderTemplate(TableIndexer):
             template = value
         template = cast(MatLike, template)
 
-        print(crop)
         if crop is not None:
             cropped = HeaderTemplate._crop(template, margin)
             cv.imwrite(crop, cropped)
