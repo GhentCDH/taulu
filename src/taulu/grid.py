@@ -284,9 +284,15 @@ class GridDetector:
                 naive_target = (leaf.point[0] + jump, leaf.point[1])
                 match, match_score = self.find_nearest(filtered, naive_target)
 
-                naive_node = BTreeNode(
-                    filtered[naive_target[1]][naive_target[0]], naive_target
-                )
+                x, y = naive_target
+
+                if y >= len(filtered):
+                    y = len(filtered) - 1
+
+                if x >= len(filtered[y]):
+                    x = len(filtered[y]) - 1
+
+                naive_node = BTreeNode(filtered[y][x], (x, y))
                 match_node = BTreeNode(match_score, match)
 
                 leaf.naive = naive_node
