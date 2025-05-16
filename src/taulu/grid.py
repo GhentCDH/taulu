@@ -248,13 +248,19 @@ class GridDetector:
         current = left_top
         row = [current]
 
-        N = 1
+        N = 3
 
         while True:
             while len(row) <= len(cell_widths):
                 jumps = cell_widths[len(row) - 1 : len(row) - 1 + N]
 
-                tree = self._grow_tree(filtered, current, jumps)
+                if len(points) == 0:
+                    previous_row_x = [current[0] + j for j in jumps]
+                else:
+                    idx = len(row)
+                    previous_row_x = [p[0] for p in points[-1][idx : idx + N]]
+
+                tree = self._grow_tree(filtered, current, jumps, previous_row_x)
                 current = tree.best()
                 row.append(current)
 
@@ -271,7 +277,11 @@ class GridDetector:
         return TableGrid(points)
 
     def _grow_tree(
-        self, filtered: MatLike, start_point: Point, cell_widths: list[int]
+        self,
+        filtered: MatLike,
+        start_point: Point,
+        cell_widths: list[int],
+        previous_row_x: list[int],
     ) -> BTreeNode:
         """
         Grow a search tree from the starting point and with given depth
@@ -279,7 +289,7 @@ class GridDetector:
 
         tree = BTreeNode(0, start_point)
 
-        def grow_right(tree: BTreeNode, jump: int):
+        def grow_right(tree: BTreeNode, jump: int, previous_x: int):
             for leaf in tree.leaves():
                 naive_target = (leaf.point[0] + jump, leaf.point[1])
 
@@ -293,6 +303,8 @@ class GridDetector:
 
                 naive_target = (x, y)
 
+                naive_target = (previous_x, leaf.point[1])
+
                 match, match_score = self.find_nearest(filtered, naive_target)
 
                 naive_node = BTreeNode(filtered[y][x], naive_target)
@@ -301,8 +313,8 @@ class GridDetector:
                 leaf.naive = naive_node
                 leaf.match = match_node
 
-        for jump in cell_widths:
-            grow_right(tree, jump)
+        for jump, previous_x in zip(cell_widths, previous_row_x):
+            grow_right(tree, jump, previous_x)
 
         return tree
 
