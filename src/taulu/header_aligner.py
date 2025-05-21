@@ -24,6 +24,7 @@ class HeaderAligner:
         match_fraction: float = 0.6,
         scale: float = 1.0,
         max_dist: float = 1.00,
+        k: float | None = None,
     ):
         """
         Args:
@@ -34,12 +35,14 @@ class HeaderAligner:
             scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
             max_dist (float): maximum distance (relative to image size) of matched features.
                 Increase this value if the warping between image and template needs to be more agressive
+            k (float | None): sauvola thresholding threshold value. If None, no sauvola thresholding is done
         """
 
         if type(template) is str:
             value = cv.imread(template)
             template = value
 
+        self._k = k
         self._template: MatLike = cast(MatLike, template)
         self._template_orig: None | MatLike = None
         self._preprocess_template()
@@ -63,19 +66,27 @@ class HeaderAligner:
             self._template = value
 
         # TODO: check if the image has the right properties (dimensions etc.)
-
         self._template = cast(MatLike, value)
 
         self._preprocess_template()
 
     def _preprocess_template(self):
         self._template_orig = cv.cvtColor(self._template, cv.COLOR_BGR2GRAY)
-        _, _, self._template = cv.split(self._template)
+        if self._k is not None:
+            self._template = imu.sauvola(self._template, self._k)
+            self._template = cv.bitwise_not(self._template)
+        else:
+            _, _, self._template = cv.split(self._template)
 
     def _preprocess_image(self, img: MatLike):
         if self._template_orig is None:
             raise TauluException("process the template first")
-        _, _, img = cv.split(img)
+
+        if self._k is not None:
+            img = imu.sauvola(img, self._k)
+            img = cv.bitwise_not(img)
+        else:
+            _, _, img = cv.split(img)
 
         return img
 

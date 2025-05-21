@@ -17,6 +17,19 @@ def test_aligner():
 
 
 @pytest.mark.visual
+def test_aligner_thresholded():
+    from taulu.header_aligner import HeaderAligner
+
+    im = cv2.imread(table_left_image_path(0))
+    header = cv2.imread(header_image_path(0))
+
+    aligner = HeaderAligner(header, k=0.10)
+    h = aligner.align(im, visual=True)
+
+    aligner.view_alignment(im, h)
+
+
+@pytest.mark.visual
 def test_aligner_transform():
     from taulu.header_aligner import HeaderAligner
     from taulu.img_util import show
