@@ -1,4 +1,6 @@
+from typing import cast
 import cv2 as cv
+import heapq
 import numpy as np
 from cv2.typing import MatLike
 from numpy.typing import NDArray
@@ -11,6 +13,18 @@ from .table_indexer import Point, TableIndexer
 from .header_template import _Rule
 from .split import Split
 from .error import TauluException
+from scipy.spatial import KDTree
+
+
+class HeuristicHelper:
+    def __init__(self, goals: list[tuple[int, int]]):
+        # Use KDTree for fast spatial querying (on Manhattan space)
+        self.tree = KDTree(goals, leafsize=16)
+
+    def heuristic(self, p: tuple[int, int]) -> float:
+        # Query nearest goal point using L1 (Manhattan) norm
+        dist, _ = self.tree.query(p, p=1)
+        return dist
 
 
 class BTreeNode:
@@ -243,6 +257,7 @@ class GridDetector:
             a TableGrid object
         """
 
+        gray = imu.ensure_gray(img)
         filtered = self.apply(img, visual)
         if visual:
             imu.show(filtered, window=window)
@@ -255,28 +270,60 @@ class GridDetector:
 
         N = 3
 
+        paths = []
+
         while True:
             while len(row) <= len(cell_widths):
-                jumps = cell_widths[len(row) - 1 : len(row) - 1 + N]
-
-                if len(points) == 0:
-                    previous_row_x = [current[0] + j for j in jumps]
+                jump = cell_widths[len(row) - 1]
+                if len(points) != 0:
+                    # grow top point down
+                    top_point = points[-1][len(row)]
+                    goals = [
+                        (current[0] - 30 + jump + x, current[1] + 10) for x in range(60)
+                    ]
+                    goals = self._astar(gray, top_point, goals, "down")
+                    if goals is None:
+                        raise TauluException("couldn't extend the top point downward")
+                    paths.extend(goals)
                 else:
-                    idx = len(row)
-                    previous_row_x = [p[0] for p in points[-1][idx : idx + N]]
+                    goals = [
+                        (current[0] + jump, current[1] - 30 + y) for y in range(60)
+                    ]
 
-                tree = self._grow_tree(filtered, current, jumps, previous_row_x)
-                current = tree.best()
+                # grow current point to the right
+                path = self._astar(gray, current, goals, "right")
+
+                if path is None:
+                    raise TauluException(
+                        "couldn't extend the current point to the right"
+                    )
+
+                paths.extend(path)
+                current, _ = self.find_nearest(filtered, path[-1], self._region)
+
                 row.append(current)
+
+                img = imu.draw_point(img, (path[-1][1], path[-1][0]))
+                img = imu.draw_point(img, (current[1], current[0]), color=(0, 255, 0))
+                drawn = imu.draw_points(img, paths)
+                imu.show(drawn, wait=False)
 
             points.append(row)
 
-            current = (row[0][0], row[0][1] + cell_height)
+            top_point = row[0]
+            goals = [
+                (top_point[0] - 30 + x, top_point[1] + cell_height) for x in range(60)
+            ]
 
-            if current[1] > filtered.shape[0]:
+            if top_point[1] + cell_height > filtered.shape[0]:
                 break
 
-            current, _ = self.find_nearest(filtered, current)
+            path = self._astar(gray, top_point, goals, "down")
+            if path is None:
+                raise TauluException("couldn't extend the top point downward")
+            paths.extend(path)
+
+            current, _ = self.find_nearest(filtered, path[-1])
             row = [current]
 
         return TableGrid(points)
@@ -322,6 +369,86 @@ class GridDetector:
             grow_right(tree, jump, previous_x)
 
         return tree
+
+    def _astar(
+        self,
+        img: MatLike,
+        start: Point,
+        goals: list[Point],
+        direction: str,
+    ) -> list[Point] | None:
+        h, w = img.shape
+        start = (start[1], start[0])
+        goals = [(g[1], g[0]) for g in goals]
+
+        visited = np.full((h, w), False)
+        came_from = {}
+        cost_so_far = {}
+
+        def cost(current: Point, neighbor: Point):
+            # Favor lighter pixels and penalize diagonals
+            pixel_intensity = img[neighbor]
+            intensity_cost = pixel_intensity / 255.0  # 0 = black, 1 = white
+
+            # path length
+            dx = abs(neighbor[0] - current[0])
+            dy = abs(neighbor[1] - current[1])
+            diagonal_penalty = 0.4 if dx == 1 and dy == 1 else 0.0
+
+            return 1 + 0.4 * intensity_cost + diagonal_penalty
+
+        if direction == "right":
+            neighbors = [
+                (-1, 1),
+                (0, 1),
+                (1, 1),
+            ]
+
+        elif direction == "down":
+            neighbors = [
+                (1, -1),
+                (1, 0),
+                (1, 1),
+            ]
+        else:
+            raise TauluException("Direction must be 'right' or 'down'")
+
+        goals = cast(list, goals)
+
+        heuristic = HeuristicHelper(goals)
+
+        # (heuristic, cost, point)
+        frontier = [(heuristic.heuristic(start), 0, start)]
+        cost_so_far[start] = 0
+
+        while frontier:
+            _, _, current = heapq.heappop(frontier)
+
+            if current in goals:
+                # Goal reached: reconstruct path
+                path = [current]
+                while current in came_from:
+                    current = came_from[current]
+                    path.append(current)
+                path.reverse()
+
+                return [(x, y) for y, x in path]
+
+            if visited[current]:
+                continue
+            visited[current] = True
+
+            for dy, dx in neighbors:
+                ny, nx = current[0] + dy, current[1] + dx
+                if 0 <= ny < h and 0 <= nx < w:
+                    neighbor = (ny, nx)
+                    new_cost = cost_so_far[current] + cost(current, neighbor)
+                    if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
+                        cost_so_far[neighbor] = new_cost
+                        priority = new_cost + heuristic.heuristic(neighbor)
+                        heapq.heappush(frontier, (priority, new_cost, neighbor))
+                        came_from[neighbor] = current
+        return None
 
 
 class TableGrid(TableIndexer):
