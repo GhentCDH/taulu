@@ -72,6 +72,7 @@ class GridDetector:
         region: int = 40,
         k: float = 0.04,
         w: int = 15,
+        distance_penalty: float = 0.4,
     ):
         """
         Args:
@@ -87,10 +88,11 @@ class GridDetector:
             region (int): area in which to search for a new max value in `find_nearest` etc.
             k (float): threshold parameter for sauvola thresholding
             w (int): window_size parameter for sauvola thresholding
+            distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
         """
-        assert kernel_size % 2 == 1, (
-            "GridDetector: kernel size (k) needs to be ann odd number"
-        )
+        assert (
+            kernel_size % 2 == 1
+        ), "GridDetector: kernel size (k) needs to be ann odd number"
 
         self._k = kernel_size
         self._w = cross_width
@@ -100,8 +102,9 @@ class GridDetector:
         self._k_thresh = k
         self._w_thresh = w
         self._cross_kernel = self._cross_kernel_uint8()
+        self._distance_penalty = distance_penalty
 
-    def _gaussian_weights(self, region: int, p: float = 0.4):
+    def _gaussian_weights(self, region: int):
         """
         Create a 2D Gaussian weight mask.
 
@@ -120,7 +123,7 @@ class GridDetector:
 
         # Scale so that center is 1 and edges are 1 - p
         sigma = np.sqrt(
-            -1 / (2 * np.log(1 - p))
+            -1 / (2 * np.log(1 - self._distance_penalty))
         )  # solves exp(-r^2 / (2 * sigma^2)) = 1 - p for r=1
         weights = np.exp(-dist_squared / (2 * sigma**2))
 
@@ -173,7 +176,9 @@ class GridDetector:
         )
 
         filtered = cv.matchTemplate(padded, self._cross_kernel, cv.TM_SQDIFF_NORMED)
-        filtered = 255 - cv.normalize(filtered, None, 0, 255, cv.NORM_MINMAX).astype(  # type:ignore
+        filtered = 255 - cv.normalize(
+            filtered, None, 0, 255, cv.NORM_MINMAX
+        ).astype(  # type:ignore
             np.uint8
         )
 
