@@ -11,6 +11,37 @@ from util import (
 import cv2
 
 
+# @pytest.mark.visual
+# def test_thumb():
+#     filter = GridDetector(
+#         kernel_size=41,
+#         cross_width=10,
+#         morph_size=7,
+#         region=30,
+#         k=0.05,
+#         distance_penalty=0.5,
+#     )
+#     im = cv2.imread(table_image_path(3))
+
+#     template = HeaderTemplate.from_saved(header_left_anno_path(0))
+
+#     filtered = filter.apply(im, True)
+
+#     show(filtered)
+
+#     # known start point (should be retrieved from template alignment)
+#     # start = (2937, 1531)
+#     # start = (838, 1585)
+#     start = (834, 1222)
+
+#     points = filter.find_table_points(
+#         im, start, template.cell_widths(0), template.cell_height()
+#     )
+
+#     points.visualize_points(im)
+#     points.show_cells(im)
+
+
 @pytest.mark.visual
 def test_filter():
     filter = GridDetector(
@@ -23,15 +54,15 @@ def test_filter():
     )
     im = cv2.imread(table_image_path(1))
 
-    template = HeaderTemplate.from_saved(header_left_anno_path(1))
+    template = HeaderTemplate.from_saved(header_right_anno_path(1))
 
     filtered = filter.apply(im, True)
 
     show(filtered)
 
     # known start point (should be retrieved from template alignment)
-    # start = (2937, 1531)
-    start = (838, 1585)
+    start = (2937, 1531)
+    # start = (838, 1585)
 
     points = filter.find_table_points(
         im, start, template.cell_widths(0), template.cell_height(0.44)
@@ -56,6 +87,8 @@ def test_text_regions():
     points = filter.find_table_points(
         im, start, template.cell_widths(0), template.cell_height()
     )
+
+    points.show_cells(im)
 
     regions: set[tuple[tuple[int, int], tuple[int, int]]] = set()
     for row in range(points.rows):
