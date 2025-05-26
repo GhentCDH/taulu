@@ -17,6 +17,6 @@ panic = "abort"
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 # "abi3-py39" tells pyo3 (and maturin) to build using the stable ABI with minimum Python version 3.9
 # used to be version = "0.22.4"
-pyo3 = { version = "0.25.0", features = ["extension-module", "abi3-py39"] }
+pyo3 = { version = "0.25.0", features = ["extension-module", "abi3-py39", "generate-import-lib"] }
 pathfinding = "4.14.0"
 numpy = "0.25.0"
