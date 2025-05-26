@@ -242,7 +242,7 @@ class GridDetector:
         img: MatLike,
         left_top: Point,
         cell_widths: list[int],
-        cell_height: int,
+        cell_heights: list[int] | int,
         visual: bool = False,
         window: str = WINDOW,
     ) -> "TableGrid":
@@ -254,7 +254,8 @@ class GridDetector:
             img (MatLike): the input image of a table
             left_top (tuple[int, int]): the starting point of the algorithm
             cell_widths (list[int]): the expected widths of the cells (based on a header template)
-            cell_height (int): the expected height of one row of data
+            cell_heights (list[int]): the expected height of the rows of data.
+                The last value from this list is used until the image has no more vertical space.
 
         Returns:
             a TableGrid object
@@ -265,13 +266,16 @@ class GridDetector:
         if visual:
             imu.show(filtered, window=window)
 
+        if type(cell_heights) is int:
+            cell_heights = [cell_heights]
+
+        cell_heights = cast(list, cell_heights)
+
         left_top, _ = self.find_nearest(filtered, left_top, int(self._region * 3 / 2))
 
         points: list[list[Point]] = []
         current = left_top
         row = [current]
-
-        N = 3
 
         paths = []
 
@@ -310,16 +314,20 @@ class GridDetector:
                 if visual:
                     drawn = imu.draw_points(gray, paths)
                     imu.show(drawn, wait=False)
-                    
 
             points.append(row)
 
             top_point = row[0]
+            if len(points) <= len(cell_heights):
+                row_height = cell_heights[len(points) - 1]
+            else:
+                row_height = cell_heights[-1]
+
             goals = [
-                (top_point[0] - 30 + x, top_point[1] + cell_height) for x in range(60)
+                (top_point[0] - 30 + x, top_point[1] + row_height) for x in range(60)
             ]
 
-            if top_point[1] + cell_height > filtered.shape[0]:
+            if top_point[1] + row_height > filtered.shape[0]:
                 break
 
             path = self._astar(gray, top_point, goals, "down")

@@ -30,15 +30,11 @@ def test_thumb():
 
     template = HeaderTemplate.from_saved(header_left_anno_path(0))
 
-    filtered = filter.apply(im, True)
-
-    show(filtered)
-
     # known start point (should be retrieved from template alignment)
     start = (834, 1222)
 
     points = filter.find_table_points(
-        im, start, template.cell_widths(0), template.cell_height()
+        im, start, template.cell_widths(0), template.cell_height(), visual=True
     )
 
     points.visualize_points(im)
@@ -63,16 +59,12 @@ def test_filter():
 
     template = HeaderTemplate.from_saved(header_right_anno_path(1))
 
-    filtered = filter.apply(im, True)
-
-    show(filtered)
-
     # known start point (should be retrieved from template alignment)
     start = (2937, 1531)
     # start = (838, 1585)
 
     points = filter.find_table_points(
-        im, start, template.cell_widths(0), template.cell_height(0.44)
+        im, start, template.cell_widths(0), template.cell_height(0.44), visual=True
     )
 
     points.visualize_points(im)
