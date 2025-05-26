@@ -17,3 +17,5 @@ examples/main.py
 examples/pyproject.toml
 examples/.python-version
 examples/uv.lock
+target
+src/taulu/_core.abi3.so

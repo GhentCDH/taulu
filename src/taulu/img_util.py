@@ -2,11 +2,18 @@ import cv2 as cv
 from skimage.filters import threshold_sauvola
 import numpy as np
 from cv2.typing import MatLike
+from .table_indexer import Point
 
 from .constants import WINDOW
 
 
-def show(image, click_event=None, title: str | None = None, window: str = WINDOW):
+def show(
+    image,
+    click_event=None,
+    title: str | None = None,
+    window: str = WINDOW,
+    wait: bool = True,
+):
     """
     shows an image to the user, who then gets the option to press q or n,
     determining the output of the function
@@ -41,8 +48,12 @@ def show(image, click_event=None, title: str | None = None, window: str = WINDOW
     if click_event:
         cv.setMouseCallback(window, click_event)
 
+    if not wait:
+        cv.waitKey(1)
+        return
+
     while True:
-        key = cv.waitKey(10)
+        key = cv.waitKey(1)
         if key == ord("q"):
             exit(0)
         if key == ord("n"):
@@ -163,3 +174,22 @@ def safe_crop(img: MatLike, x: int, y: int, w: int, h: int):
     ]
 
     return result
+
+
+def draw_points(img: MatLike, points: list[Point]):
+    if not (len(img.shape) == 3 and img.shape[2] == 3):
+        img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+
+    for x, y in points:
+        if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
+            img[y, x] = (0, 0, 255)
+
+    return img
+
+
+def draw_point(img: MatLike, point: Point, color=(255, 0, 0)):
+    if not (len(img.shape) == 3 and img.shape[2] == 3):
+        img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+
+    (x, y) = point
+    return cv.circle(img, (y, x), 4, color, -1)
