@@ -1,9 +1,13 @@
 import pytest
 from taulu.img_util import show
-from util import table_image_path
+from util import table_image_path, files_exist
 
 
 @pytest.mark.visual
+@pytest.mark.skipif(
+    not files_exist(table_image_path(0)),
+    reason="Files needed for test are missing",
+)
 def test_cropper_full():
     from taulu.page_cropper import PageCropper
 
@@ -23,6 +27,10 @@ def test_cropper_full():
 
 
 @pytest.mark.visual
+@pytest.mark.skipif(
+    not files_exist(table_image_path(0)),
+    reason="Files needed for test are missing",
+)
 def test_cropper_split():
     from taulu.page_cropper import PageCropper
 

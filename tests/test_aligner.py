@@ -1,9 +1,13 @@
 import pytest
-from util import header_image_path, table_left_image_path
+from util import header_image_path, table_left_image_path, files_exist
 import cv2
 
 
 @pytest.mark.visual
+@pytest.mark.skipif(
+    not files_exist(header_image_path(0), table_left_image_path(0)),
+    reason="Files needed for test are missing",
+)
 def test_aligner():
     from taulu.header_aligner import HeaderAligner
 
@@ -17,6 +21,10 @@ def test_aligner():
 
 
 @pytest.mark.visual
+@pytest.mark.skipif(
+    not files_exist(header_image_path(0), table_left_image_path(0)),
+    reason="Files needed for test are missing",
+)
 def test_aligner_thresholded():
     from taulu.header_aligner import HeaderAligner
 
@@ -30,6 +38,10 @@ def test_aligner_thresholded():
 
 
 @pytest.mark.visual
+@pytest.mark.skipif(
+    not files_exist(header_image_path(0), table_left_image_path(0)),
+    reason="Files needed for test are missing",
+)
 def test_aligner_transform():
     from taulu.header_aligner import HeaderAligner
     from taulu.img_util import show

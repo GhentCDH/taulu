@@ -13,11 +13,22 @@ from util import (
     header_right_anno_path,
     header_left_image_path,
     header_right_image_path,
+    files_exist,
 )
 import cv2
 
 
 @pytest.mark.visual
+@pytest.mark.skipif(
+    not files_exist(
+        header_left_anno_path(0),
+        header_right_anno_path(0),
+        header_left_image_path(0),
+        header_right_image_path(0),
+        table_image_path(0),
+    ),
+    reason="Files needed for test are missing",
+)
 def test_full():
     filter = GridDetector(
         kernel_size=41, cross_width=6, morph_size=4, region=60, k=0.05
