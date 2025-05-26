@@ -1,9 +1,4 @@
-name: Build Package
-
-on:
-  push:
-    tags:
-      - 'v*'  # or '*' to match all tags
+name: Build Package Old
 
 jobs:
   uv-build:
