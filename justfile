@@ -14,3 +14,6 @@ test-auto file='':
 
 build:
     uv build
+
+profile-astar:
+    timeout 10 uv run py-spy record --native -r 50 -o profile.svg -- python tests/test_rust.py
