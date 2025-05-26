@@ -22,4 +22,4 @@ def simple_bench_astar():
 
 
 if __name__ == "__main__":
-    simple_bench()
+    simple_bench_astar()
