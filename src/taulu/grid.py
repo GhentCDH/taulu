@@ -307,6 +307,11 @@ class GridDetector:
 
                 row.append(current)
 
+                if visual:
+                    drawn = imu.draw_points(gray, paths)
+                    imu.show(drawn, wait=False)
+                    
+
             points.append(row)
 
             top_point = row[0]
@@ -325,6 +330,9 @@ class GridDetector:
             current, _ = self.find_nearest(filtered, path[-1])
             row = [current]
 
+        if visual:
+            drawn = imu.draw_points(gray, paths)
+            imu.show(drawn, wait=True)
         return TableGrid(points)
 
     def _grow_tree(
