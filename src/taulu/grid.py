@@ -1,5 +1,4 @@
 from typing import cast
-from time import perf_counter
 import cv2 as cv
 import heapq
 import numpy as np
@@ -18,6 +17,7 @@ from .error import TauluException
 from scipy.spatial import KDTree
 
 PYTHON_ONLY = False
+
 
 class HeuristicHelper:
     def __init__(self, goals: list[tuple[int, int]]):
@@ -284,7 +284,7 @@ class GridDetector:
                     goals = [
                         (current[0] - 30 + jump + x, current[1] + 10) for x in range(60)
                     ]
-                    goals = self._astar_wrapper(gray, top_point, goals, "down")
+                    goals = self._astar(gray, top_point, goals, "down")
                     if goals is None:
                         raise TauluException("couldn't extend the top point downward")
                     paths.extend(goals)
@@ -295,7 +295,7 @@ class GridDetector:
                     ]
 
                 # grow current point to the right
-                path = self._astar_wrapper(gray, current, goals, "right")
+                path = self._astar(gray, current, goals, "right")
 
                 if path is None:
                     raise TauluException(
@@ -317,7 +317,7 @@ class GridDetector:
             if top_point[1] + cell_height > filtered.shape[0]:
                 break
 
-            path = self._astar_wrapper(gray, top_point, goals, "down")
+            path = self._astar(gray, top_point, goals, "down")
             if path is None:
                 raise TauluException("couldn't extend the top point downward")
             paths.extend(path)
@@ -325,8 +325,6 @@ class GridDetector:
             current, _ = self.find_nearest(filtered, path[-1])
             row = [current]
 
-        drawn = imu.draw_points(img, paths)
-        imu.show(drawn, wait=False)
         return TableGrid(points)
 
     def _grow_tree(
@@ -371,15 +369,19 @@ class GridDetector:
 
         return tree
 
-    def _astar_wrapper(self, 
+    def _astar(
+        self,
         img: np.ndarray,
         start: tuple[int, int],
         goals: list[tuple[int, int]],
         direction: str,
     ) -> list[tuple[int, int]] | None:
+        """
+        Find the best path between the start point and one of the goal points on the image
+        """
 
         if PYTHON_ONLY:
-            return self._astar(img, start, goals, direction)
+            return self._astar_python(img, start, goals, direction)
 
         xs = [g[0] for g in goals]
         xs.append(start[0])
@@ -392,7 +394,7 @@ class GridDetector:
 
         start = (start[0] - top_left[0], start[1] - top_left[1])
         goals = [(g[0] - top_left[0], g[1] - top_left[1]) for g in goals]
-        cropped = img[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
+        cropped = img[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]]
         path = astar(cropped, start, goals, direction)
 
         if path is None:
@@ -400,112 +402,75 @@ class GridDetector:
         else:
             return [(p[0] + top_left[0], p[1] + top_left[1]) for p in path]
 
-    def _astar(
+    def _astar_python(
         self,
         img: np.ndarray,
         start: tuple[int, int],
         goals: list[tuple[int, int]],
         direction: str,
     ) -> list[tuple[int, int]] | None:
-        total_start = perf_counter()
-    
+        """
+        All-Python implementation of astar pathfinding algorithm
+        """
         h, w = img.shape
         start = (start[1], start[0])
         goals = [(g[1], g[0]) for g in goals]
-    
+
         visited = np.full((h, w), False)
         came_from = {}
         cost_so_far = {}
-    
+
         def cost(current: tuple[int, int], neighbor: tuple[int, int]):
-            cost_start = perf_counter()
             pixel_intensity = img[neighbor]
             intensity_cost = pixel_intensity / 255.0
             dx = abs(neighbor[0] - current[0])
             dy = abs(neighbor[1] - current[1])
             diagonal_penalty = 0.4 if dx != 0 and dy != 0 else 0.0
             result = max(dx, dy) + 0.4 * intensity_cost + diagonal_penalty
-            nonlocal cost_time
-            cost_time += perf_counter() - cost_start
             return result
-    
+
         if direction == "right":
             neighbors = [(-1, 1), (0, 1), (1, 1)]
         elif direction == "down":
             neighbors = [(1, -1), (1, 0), (1, 1)]
         else:
             raise TauluException("Direction must be 'right' or 'down'")
-    
+
         goals = cast(list, goals)
-    
-        heuristic_start = perf_counter()
+
         heuristic = HeuristicHelper(goals)
-        heuristic_time = perf_counter() - heuristic_start
-    
+
         frontier = [(heuristic.heuristic(start), 0, start)]
         cost_so_far[start] = 0
-    
-        loop_start = perf_counter()
-        cost_time = 0.0
-        neighbor_eval_time = 0.0
-        heap_push_time = 0.0
-    
+
         while frontier:
             _, _, current = heapq.heappop(frontier)
-    
+
             if current in goals:
-                path_reconstruct_start = perf_counter()
                 path = [current]
                 while current in came_from:
                     current = came_from[current]
                     path.append(current)
                 path.reverse()
-                total_time = perf_counter() - total_start
-                path_reconstruct_time = perf_counter() - path_reconstruct_start
-    
-                print(f"\n--- Performance Summary ---")
-                print(f"Total time: {total_time:.4f} seconds")
-                print(f"Heuristic init time: {heuristic_time:.4f} s")
-                print(f"Main loop time: {perf_counter() - loop_start:.4f} s")
-                print(f"  Cost computation time: {cost_time:.4f} s")
-                print(f"  Neighbor eval time: {neighbor_eval_time:.4f} s")
-                print(f"  Heap push time: {heap_push_time:.4f} s")
-                print(f"Path reconstruction time: {path_reconstruct_time:.4f} s")
-                print(f"----------------------------\n")
-    
+
                 return [(x, y) for y, x in path]
-    
+
             if visited[current]:
                 continue
             visited[current] = True
-    
+
             for dy, dx in neighbors:
-                neighbor_eval_start = perf_counter()
                 ny, nx = current[0] + dy, current[1] + dx
                 if 0 <= ny < h and 0 <= nx < w:
                     neighbor = (ny, nx)
                     new_cost = cost_so_far[current] + cost(current, neighbor)
                     if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
                         cost_so_far[neighbor] = new_cost
-                        heap_push_start = perf_counter()
                         priority = new_cost + heuristic.heuristic(neighbor)
                         heapq.heappush(frontier, (priority, new_cost, neighbor))
                         came_from[neighbor] = current
-                        heap_push_time += perf_counter() - heap_push_start
-                neighbor_eval_time += perf_counter() - neighbor_eval_start
-    
-        total_time = perf_counter() - total_start
-        print(f"\n--- Performance Summary (no path found) ---")
-        print(f"Total time: {total_time:.4f} seconds")
-        print(f"Heuristic init time: {heuristic_time:.4f} s")
-        print(f"Main loop time: {perf_counter() - loop_start:.4f} s")
-        print(f"  Cost computation time: {cost_time:.4f} s")
-        print(f"  Neighbor eval time: {neighbor_eval_time:.4f} s")
-        print(f"  Heap push time: {heap_push_time:.4f} s")
-        print(f"----------------------------\n")
-    
-        return None
 
+        return None
 
 
 class TableGrid(TableIndexer):
