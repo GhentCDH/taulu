@@ -4,7 +4,9 @@
   <i>Segmentation of tables from images</i>
   <br>
   <br>
-  <img src="https://img.shields.io/pypi/v/taulu" alt="PyPi version of taulu" />
+  <a href="https://pypi.org/project/taulu/">
+    <img src="https://img.shields.io/pypi/v/taulu" alt="PyPi version of taulu" />
+  </a>
   <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/ghentcdh/taulu/maturin.yml">
 </p>
 
