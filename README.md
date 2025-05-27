@@ -17,14 +17,12 @@ For optimal segmentation, ensure that the tables are rotated so the borders are 
 
 ### Using pip
 ```sh
-pip install git+https://github.com/ghentcdh/taulu.git
+pip install taulu
 ```
 
 ### Using uv
 ```sh
-uv init my_taulu_project;
-cd my_taulu_project;
-uv add git+https://github.com/ghentcdh/taulu.git;
+uv add taulu
 ```
 
 ## Example
