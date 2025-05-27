@@ -2,6 +2,10 @@
   <img src="./data/banner.svg" alt="Banner" width="400"/>
   <br>
   <i>Segmentation of tables from images</i>
+  <br>
+  <br>
+  <img src="https://img.shields.io/pypi/v/taulu" alt="PyPi version of taulu" />
+  <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/ghentcdh/taulu/maturin.yml">
 </p>
 
 ## Data Requirements 
