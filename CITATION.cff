@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: taulu
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - given-names: Miel
+    family-names: Peeters
+    affiliation: GhentCDH
+  - name: GhentCDH
+    city: Gent
+    country: BE
+    website: 'https://www.ghentcdh.ugent.be/'
+repository-code: 'https://github.com/ghentcdh/taulu'
+abstract: "Taulu is a Python package designed to segment tabular data in scanned or photographed documents."
+keywords:
+  - OCR
+  - tabular data
+  - data extraction
+  - HTR
+  - historic documents
+commit: 5d672c9a1331f1b1f52006bc5cd51a678b3d2a93
+version: v0.7.2
+date-released: '2025-05-26'
