@@ -303,9 +303,9 @@ class HeaderTemplate(TableIndexer):
 
         imu.show(template, get_point, title="crop the header")
 
-        assert len(points) == 4, (
-            "you need to annotate the four corners of the table in order to crop it"
-        )
+        assert (
+            len(points) == 4
+        ), "you need to annotate the four corners of the table in order to crop it"
 
         # crop the image to contain all of the points (just crop rectangularly, x, y, w, h)
         # Convert points to numpy array
@@ -368,6 +368,11 @@ class HeaderTemplate(TableIndexer):
 
     def cell_height(self, header_factor: float = 0.8) -> int:
         return int((self._h_rules[1]._y - self._h_rules[0]._y) * header_factor)
+
+    def cell_heights(self, header_factors: list[float]) -> list[int]:
+        return [
+            int((self._h_rules[1]._y - self._h_rules[0]._y) * f) for f in header_factors
+        ]
 
     def intersection(self, index: tuple[int, int]) -> tuple[float, float]:
         """

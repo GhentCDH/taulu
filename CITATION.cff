@@ -18,6 +18,5 @@ keywords:
   - data extraction
   - HTR
   - historic documents
-commit: 5d672c9a1331f1b1f52006bc5cd51a678b3d2a93
-version: v0.7.2
-date-released: '2025-05-26'
+version: v0.7.3
+date-released: '2025-05-28'
