@@ -13,7 +13,7 @@ from .constants import WINDOW
 from .table_indexer import Point, TableIndexer
 from .header_template import _Rule
 from .split import Split
-from .error import TauluException
+from .error import TauluException, printe
 from scipy.spatial import KDTree
 
 PYTHON_ONLY = False
@@ -245,6 +245,7 @@ class GridDetector:
         cell_heights: list[int] | int,
         visual: bool = False,
         window: str = WINDOW,
+        goals_width: int = 60,
     ) -> "TableGrid":
         """
         Parse the image to a `TableGrid` structure that holds all of the
@@ -279,64 +280,67 @@ class GridDetector:
 
         paths = []
 
-        while True:
-            while len(row) <= len(cell_widths):
-                jump = cell_widths[len(row) - 1]
-                if len(points) != 0:
-                    # grow top point down
-                    top_point = points[-1][len(row)]
-                    goals = [
-                        (current[0] - 30 + jump + x, current[1] + 10) for x in range(60)
-                    ]
-                    goals = self._astar(gray, top_point, goals, "down")
-                    if goals is None:
-                        raise TauluException("couldn't extend the top point downward")
-                    paths.extend(goals)
-                    goals = goals[-30:]
+        try:
+            while True:
+                while len(row) <= len(cell_widths):
+                    jump = cell_widths[len(row) - 1]
+                    if len(points) != 0:
+                        # grow top point down
+                        top_point = points[-1][len(row)]
+                        goals = [
+                            (current[0] - goals_width // 2 + jump + x, current[1] + 10) for x in range(goals_width)
+                        ]
+                        goals = self._astar(gray, top_point, goals, "down")
+                        if goals is None:
+                            raise TauluException("couldn't extend the top point downward")
+                        paths.extend(goals)
+                        goals = goals[-goals_width//2:]
+                    else:
+                        goals = [
+                            (current[0] + jump, current[1] - goals_width//2 + y) for y in range(goals_width)
+                        ]
+
+                    # grow current point to the right
+                    path = self._astar(gray, current, goals, "right")
+
+                    if path is None:
+                        raise TauluException(
+                            "couldn't extend the current point to the right"
+                        )
+
+                    paths.extend(path)
+                    current, _ = self.find_nearest(filtered, path[-1], self._region)
+
+                    row.append(current)
+
+                    if visual:
+                        drawn = imu.draw_points(gray, paths)
+                        imu.show(drawn, wait=False)
+
+                points.append(row)
+
+                top_point = row[0]
+                if len(points) <= len(cell_heights):
+                    row_height = cell_heights[len(points) - 1]
                 else:
-                    goals = [
-                        (current[0] + jump, current[1] - 30 + y) for y in range(60)
-                    ]
+                    row_height = cell_heights[-1]
 
-                # grow current point to the right
-                path = self._astar(gray, current, goals, "right")
+                goals = [
+                    (top_point[0] - goals_width//2 + x, top_point[1] + row_height) for x in range(goals_width)
+                ]
 
+                if top_point[1] + row_height > filtered.shape[0]:
+                    break
+
+                path = self._astar(gray, top_point, goals, "down")
                 if path is None:
-                    raise TauluException(
-                        "couldn't extend the current point to the right"
-                    )
-
+                    raise TauluException("couldn't extend the top point downward")
                 paths.extend(path)
-                current, _ = self.find_nearest(filtered, path[-1], self._region)
 
-                row.append(current)
-
-                if visual:
-                    drawn = imu.draw_points(gray, paths)
-                    imu.show(drawn, wait=False)
-
-            points.append(row)
-
-            top_point = row[0]
-            if len(points) <= len(cell_heights):
-                row_height = cell_heights[len(points) - 1]
-            else:
-                row_height = cell_heights[-1]
-
-            goals = [
-                (top_point[0] - 30 + x, top_point[1] + row_height) for x in range(60)
-            ]
-
-            if top_point[1] + row_height > filtered.shape[0]:
-                break
-
-            path = self._astar(gray, top_point, goals, "down")
-            if path is None:
-                raise TauluException("couldn't extend the top point downward")
-            paths.extend(path)
-
-            current, _ = self.find_nearest(filtered, path[-1])
-            row = [current]
+                current, _ = self.find_nearest(filtered, path[-1])
+                row = [current]
+        except TauluException as e:
+            printe(e)
 
         if visual:
             drawn = imu.draw_points(gray, paths)

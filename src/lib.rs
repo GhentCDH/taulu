@@ -25,10 +25,10 @@ impl Point {
             Some(*img.get((p.1 as usize, p.0 as usize))? as u32 / 25)
         }
 
-        fn step_cost(x: i32, y: i32, nx: i32, ny: i32) -> u32 {
+        fn step_cost(x: i32, y: i32, nx: i32, ny: i32, dir: &Direction) -> u32 {
             let dx = (x - nx).abs();
             let dy = (y - ny).abs();
-            if dx != 0 && dy != 0 {
+            if (dx != 0 && dy != 0) || dir.perpendicular(dx, dy) {
                 2
             } else {
                 1
@@ -36,8 +36,20 @@ impl Point {
         }
 
         match dir {
-            Direction::Right => vec![Self(x + 1, y), Self(x + 1, y - 1), Self(x + 1, y + 1)],
-            Direction::Down => vec![Self(x - 1, y + 1), Self(x, y + 1), Self(x + 1, y + 1)],
+            Direction::Right => vec![
+                Self(x + 1, y),
+                Self(x + 1, y - 1),
+                Self(x + 1, y + 1),
+                Self(x, y - 1),
+                Self(x, y + 1),
+            ],
+            Direction::Down => vec![
+                Self(x - 1, y + 1),
+                Self(x, y + 1),
+                Self(x + 1, y + 1),
+                Self(x + 1, y),
+                Self(x - 1, y),
+            ],
             Direction::Any => vec![
                 Self(x + 1, y),
                 Self(x + 1, y + 1),
@@ -52,7 +64,7 @@ impl Point {
         .into_iter()
         .map(|n| {
             image_cost(img, &n).map(|icost| {
-                let cost = icost + 15 * step_cost(x, y, n.0, n.1);
+                let cost = icost + 15 * step_cost(x, y, n.0, n.1, dir);
                 (n, cost)
             })
         })
@@ -74,6 +86,16 @@ enum Direction {
     Right,
     Down,
     Any,
+}
+
+impl Direction {
+    fn perpendicular(&self, dx: i32, dy: i32) -> bool {
+        match self {
+            Direction::Right => dx == 0 && dy != 0,
+            Direction::Down => dy == 0 && dx != 0,
+            Direction::Any => false,
+        }
+    }
 }
 
 impl TryFrom<&str> for Direction {
