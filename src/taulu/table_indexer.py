@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Generator, Tuple
 
 import cv2 as cv
 from cv2.typing import MatLike
@@ -91,6 +91,11 @@ class TableIndexer(ABC):
     def rows(self) -> int:
         pass
 
+    def cells(self) -> Generator[tuple[int, int], None, None]:
+        for row in range(self.rows):
+            for col in range(self.cols):
+                yield (row, col)
+
     def _check_row_idx(self, row: int):
         if row < 0:
             raise TauluException("row number needs to be positive or zero")
@@ -123,10 +128,16 @@ class TableIndexer(ABC):
         """returns the polygon (used in e.g. opencv) that enscribes the cell at the given cell position"""
         pass
 
-    def _highlight_cell(self, image: MatLike, cell: tuple[int, int]):
+    def _highlight_cell(
+        self,
+        image: MatLike,
+        cell: tuple[int, int],
+        color: tuple[int, int, int] = (0, 0, 255),
+        thickness: int = 2,
+    ):
         polygon = self.cell_polygon(cell)
         points = np.int32(list(polygon))  # type:ignore
-        cv.polylines(image, [points], True, (0, 0, 255), 2, cv.LINE_AA)  # type:ignore
+        cv.polylines(image, [points], True, color, thickness, cv.LINE_AA)  # type:ignore
         cv.putText(
             image,
             str(cell),
@@ -136,6 +147,47 @@ class TableIndexer(ABC):
             (255, 255, 255),
             2,
         )
+
+    def highlight_all_cells(
+        self,
+        image: MatLike,
+        color: tuple[int, int, int] = (0, 0, 255),
+        thickness: int = 1,
+    ) -> MatLike:
+        img = np.copy(image)
+
+        for cell in self.cells():
+            self._highlight_cell(img, cell, color, thickness)
+
+        return img
+
+    def select_one_cell(
+        self,
+        image: MatLike,
+        window: str = WINDOW,
+        color: tuple[int, int, int] = (255, 0, 0),
+        thickness: int = 2,
+    ) -> tuple[int, int] | None:
+        clicked = None
+
+        def click_event(event, x, y, flags, params):
+            nonlocal clicked
+
+            img = np.copy(image)
+            _ = flags
+            _ = params
+            if event == cv.EVENT_LBUTTONDOWN:
+                cell = self.cell((x, y))
+                if cell[0] >= 0:
+                    clicked = cell
+                else:
+                    return
+                self._highlight_cell(img, cell, color, thickness)
+                cv.imshow(window, img)
+
+        imu.show(image, click_event=click_event, title="select one cell", window=window)
+
+        return clicked
 
     def show_cells(self, image: MatLike, window: str = WINDOW) -> list[tuple[int, int]]:
         img = np.copy(image)

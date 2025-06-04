@@ -4,6 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import Iterable, cast
 from cv2.typing import MatLike
+from pathlib import Path
 
 from .constants import WINDOW
 from .error import TauluException
@@ -18,7 +19,7 @@ class HeaderAligner:
 
     def __init__(
         self,
-        template: None | MatLike | str = None,
+        template: None | MatLike | str | Path = None,
         max_features: int = 25_000,
         patch_size: int = 31,
         match_fraction: float = 0.6,
@@ -38,7 +39,7 @@ class HeaderAligner:
             k (float | None): sauvola thresholding threshold value. If None, no sauvola thresholding is done
         """
 
-        if type(template) is str:
+        if type(template) is str or type(template) is Path:
             value = cv.imread(template)
             template = value
 

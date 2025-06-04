@@ -13,7 +13,8 @@ def show(
     title: str | None = None,
     window: str = WINDOW,
     wait: bool = True,
-):
+    key_callback: None | dict[str, int] = None,
+) -> int | None:
     """
     shows an image to the user, who then gets the option to press q or n,
     determining the output of the function
@@ -58,6 +59,8 @@ def show(
             exit(0)
         if key == ord("n"):
             break
+        if key_callback is not None and key in [ord(k) for k in key_callback.keys()]:
+            return key_callback[chr(key)]
         elif (
             key == -1 and cv.getWindowProperty(window, cv.WND_PROP_VISIBLE) < 1
         ):  # Check if the window is actually closed
