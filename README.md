@@ -45,7 +45,7 @@ During this example, you will need to annotate the header image. You do this by 
 
 Below is an example of table cell identification using the `Taulu` package:
 
-![Table Cell Identification Example](./data/example_segmentation.png)
+![Table Cell Identification Example](./data/example_segmentation.gif)
 
 
 ## Workflow
