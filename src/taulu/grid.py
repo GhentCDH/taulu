@@ -323,7 +323,14 @@ class GridDetector:
 
         for row_idx in range(200):  # bound loop with reasonable max
             row_points = self._build_table_row(
-                gray, filtered, current, cell_widths, row_idx, goals_width, visual
+                gray,
+                filtered,
+                current,
+                cell_widths,
+                row_idx,
+                goals_width,
+                points[-1] if len(points) > 0 else None,
+                visual,
             )
 
             if not row_points:
@@ -362,6 +369,7 @@ class GridDetector:
         cell_widths: List[int],
         row_idx: int,
         goals_width: int,
+        previous_row_points: Optional[List[Point]] = None,
         visual: bool = False,
     ) -> List[Point]:
         """Build a single row of table points."""
@@ -370,7 +378,14 @@ class GridDetector:
 
         for col_idx, width in enumerate(cell_widths):
             next_point = self._find_next_column_point(
-                gray, filtered, current, width, goals_width, visual
+                gray,
+                filtered,
+                current,
+                width,
+                goals_width,
+                visual,
+                previous_row_points,
+                col_idx,
             )
             if next_point is None:
                 logger.warning(
@@ -382,6 +397,12 @@ class GridDetector:
 
         return row
 
+    def _clamp_point_to_img(self, point: Point, img: MatLike) -> Point:
+        """Clamp a point to be within the image bounds."""
+        x = max(0, min(point[0], img.shape[1] - 1))
+        y = max(0, min(point[1], img.shape[0] - 1))
+        return (x, y)
+
     @log_calls(level=logging.DEBUG, include_return=True)
     def _find_next_column_point(
         self,
@@ -391,53 +412,68 @@ class GridDetector:
         width: int,
         goals_width: int,
         visual: bool = False,
+        previous_row_points: Optional[List[Point]] = None,
+        current_col_idx: int = 0,
     ) -> Optional[Point]:
         """Find the next point in the current row."""
-        goals = [
-            (current[0] + width, current[1] - goals_width // 2 + y)
-            for y in range(goals_width)
-        ]
+
+        if previous_row_points is not None and current_col_idx + 1 < len(
+            previous_row_points
+        ):
+            # grow an astar path downwards from the previous row point that is
+            # above and to the right of current
+            # and ensure all points are within image bounds
+            bottom_right = [
+                self._clamp_point_to_img(
+                    (
+                        current[0] + width - goals_width // 2 + x,
+                        current[1] + goals_width,
+                    ),
+                    gray,
+                )
+                for x in range(goals_width)
+            ]
+            goals = self._astar(
+                gray, previous_row_points[current_col_idx + 1], bottom_right, "down"
+            )
+
+            if goals is None:
+                logger.warning(bottom_right)
+                imu.show(
+                    imu.draw_points(gray, bottom_right, color=(255, 0, 0), thickness=2)
+                )
+                logger.warning(
+                    f"A* failed to find path going downwards from previous row's point at idx {current_col_idx + 1}"
+                )
+                return None
+        else:
+            goals = [
+                self._clamp_point_to_img(
+                    (current[0] + width, current[1] - goals_width // 2 + y), gray
+                )
+                for y in range(goals_width)
+            ]
 
         path = self._astar(gray, current, goals, "right")
+
         if path is None:
+            logger.warning(
+                f"A* failed to find path going rightward from {current} to goals"
+            )
             return None
 
         next_point, _ = self.find_nearest(filtered, path[-1], self._search_region)
 
         # show the point and the search region on the image for debugging
         if visual:
-            screen = imu.pop()
-            # if gray, convert to BGR
-            if len(screen.shape) == 2 or screen.shape[2] == 1:
-                debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
-            else:
-                debug_img = cast(MatLike, screen)
-
-            debug_img = imu.draw_points(
-                debug_img, path, color=(200, 200, 0), thickness=3
+            self._visualize_path_finding(
+                goals + path,
+                current,
+                next_point,
+                current,
+                path[-1],
+                self._search_region,
             )
-            debug_img = imu.draw_points(
-                debug_img, [current], color=(0, 255, 0), thickness=3
-            )
-            debug_img = imu.draw_points(
-                debug_img, [next_point], color=(0, 0, 255), thickness=2
-            )
-            debug_img = cv.rectangle(
-                debug_img,
-                (
-                    next_point[0] - self._search_region // 2,
-                    next_point[1] - self._search_region // 2,
-                ),
-                (
-                    next_point[0] + self._search_region // 2,
-                    next_point[1] + self._search_region // 2,
-                ),
-                (255, 0, 0),
-                2,
-            )
-            imu.push(debug_img)
-            imu.show(debug_img, title="Next column point", wait=False)
-            time.sleep(0.01)
 
         return next_point
 
@@ -473,47 +509,71 @@ class GridDetector:
         next_point, _ = self.find_nearest(filtered, path[-1])
 
         if visual:
-            screen = imu.pop()
-            # if gray, convert to BGR
-            if len(screen.shape) == 2 or screen.shape[2] == 1:
-                debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
-            else:
-                debug_img = cast(MatLike, screen)
-
-            debug_img = imu.draw_points(
-                debug_img, path, color=(200, 200, 0), thickness=3
+            self._visualize_path_finding(
+                path, top_point, next_point, top_point, path[-1], self._search_region
             )
-            debug_img = imu.draw_points(
-                debug_img, [top_point], color=(0, 255, 0), thickness=3
-            )
-            debug_img = imu.draw_points(
-                debug_img, [next_point], color=(0, 0, 255), thickness=2
-            )
-            debug_img = cv.rectangle(
-                debug_img,
-                (
-                    next_point[0] - self._search_region // 2,
-                    next_point[1] - self._search_region // 2,
-                ),
-                (
-                    next_point[0] + self._search_region // 2,
-                    next_point[1] + self._search_region // 2,
-                ),
-                (255, 0, 0),
-                2,
-            )
-            imu.push(debug_img)
-            imu.show(debug_img, wait=False)
-            time.sleep(0.01)
 
         return next_point
 
-    @log_calls(level=logging.DEBUG, include_return=True)
     def _visualize_grid(self, img: MatLike, points: List[List[Point]]) -> None:
         """Visualize the detected grid points."""
         all_points = [point for row in points for point in row]
         drawn = imu.draw_points(img, all_points)
         imu.show(drawn, wait=True)
+
+    def _visualize_path_finding(
+        self,
+        path: List[Point],
+        current: Point,
+        next_point: Point,
+        previous_row_target: Optional[Point] = None,
+        region_center: Optional[Point] = None,
+        region_size: Optional[int] = None,
+    ) -> None:
+        """Visualize the path finding process for debugging."""
+        screen = imu.pop()
+        # if gray, convert to BGR
+        if len(screen.shape) == 2 or screen.shape[2] == 1:
+            debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
+        else:
+            debug_img = cast(MatLike, screen)
+
+        debug_img = imu.draw_points(debug_img, path, color=(200, 200, 0), thickness=2)
+        debug_img = imu.draw_points(
+            debug_img, [current], color=(0, 255, 0), thickness=3
+        )
+        debug_img = imu.draw_points(
+            debug_img, [next_point], color=(0, 0, 255), thickness=2
+        )
+
+        # Draw previous row target if available
+        if previous_row_target is not None:
+            debug_img = imu.draw_points(
+                debug_img, [previous_row_target], color=(255, 0, 255), thickness=2
+            )
+
+        # Draw search region if available
+        if region_center is not None and region_size is not None:
+            top_left = (
+                max(0, region_center[0] - region_size // 2),
+                max(0, region_center[1] - region_size // 2),
+            )
+            bottom_right = (
+                min(debug_img.shape[1], region_center[0] + region_size // 2),
+                min(debug_img.shape[0], region_center[1] + region_size // 2),
+            )
+            cv.rectangle(
+                debug_img,
+                top_left,
+                bottom_right,
+                color=(255, 0, 0),
+                thickness=2,
+                lineType=cv.LINE_AA,
+            )
+
+        imu.push(debug_img)
+        imu.show(debug_img, title="Next column point", wait=False)
+        time.sleep(0.01)
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def _astar(

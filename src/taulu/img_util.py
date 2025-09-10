@@ -4,9 +4,6 @@ from skimage.filters import threshold_sauvola
 import numpy as np
 from cv2.typing import MatLike
 from .table_indexer import Point
-import logging
-from .decorators import log_calls
-
 from .constants import WINDOW
 
 stored = []
@@ -198,7 +195,6 @@ def safe_crop(img: MatLike, x: int, y: int, w: int, h: int):
     return result
 
 
-@log_calls(level=logging.DEBUG, include_return=True)
 def draw_points(
     img: MatLike,
     points: list[Point],
@@ -212,7 +208,7 @@ def draw_points(
         if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
             if thickness > 1:
                 # with antialiasing
-                cv.circle(img, (x, y), thickness, color, -1, lineType=cv.LINE_AA)
+                cv.circle(img, (x, y), thickness // 2, color, -1, lineType=cv.LINE_AA)
             else:
                 img[y, x] = color
 

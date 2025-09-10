@@ -88,7 +88,7 @@ def test_text_regions():
     start = (240, 419)
 
     points = filter.find_table_points(
-        im, start, template.cell_widths(0), template.cell_height(), visual=False
+        im, start, template.cell_widths(0), template.cell_height(), visual=True
     )
 
     points.show_cells(im)
