@@ -17,6 +17,10 @@ taulu = "taulu:main"
 
 [tool.pytest.ini_options]
 markers = ["visual: marks tests that require visual confirmation"]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_auto_indent = true
 
 [tool.maturin]
 module-name = "taulu._core"

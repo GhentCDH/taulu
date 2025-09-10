@@ -6,6 +6,9 @@ alias b := build
 test-all file='':
     uv run pytest {{file}}
 
+test-debug file='':
+    uv run pytest {{file}} --log-cli-level=DEBUG -v -s
+
 test-visual file='':
     uv run pytest -m visual {{file}}
 
