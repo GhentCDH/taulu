@@ -2,17 +2,21 @@ from pathlib import Path
 from typing import Iterable, Optional, cast
 import csv
 import json
-
+import logging
 import math
 
 import cv2 as cv
 from cv2.typing import MatLike
 import numpy as np
+from taulu.decorators import log_calls
 from .table_indexer import Point, TableIndexer
 
 from .error import TauluException
 from . import img_util as imu
 from . import constants
+
+
+logger = logging.getLogger(__name__)
 
 # angle tolerance for horizontal or vertical clasification (radians)
 TOLERANCE = math.pi / 6
@@ -118,6 +122,7 @@ class _Rule:
     def intersection(self, other: "_Rule") -> Optional[tuple[float, float]]:
         """Calculates the intersection point of two lines."""
         if self._slope == other._slope:
+            logger.warning("trying to intersect parallel lines")
             return None  # Parallel lines
 
         x = (
@@ -150,6 +155,7 @@ class HeaderTemplate(TableIndexer):
             [rule for rule in self._rules if rule._is_vertical()], key=lambda r: r._x
         )
 
+    @log_calls(level=logging.DEBUG)
     def save(self, path: Path):
         """
         Save the HeaderTemplate to the given path, as a json
@@ -161,6 +167,7 @@ class HeaderTemplate(TableIndexer):
             json.dump(data, f)
 
     @staticmethod
+    @log_calls(level=logging.DEBUG)
     def from_saved(path: str) -> "HeaderTemplate":
         with open(path, "r") as f:
             data = json.load(f)
@@ -178,6 +185,7 @@ class HeaderTemplate(TableIndexer):
         return len(self._h_rules) - 1
 
     @staticmethod
+    @log_calls(level=logging.DEBUG)
     def annotate_image(
         template: MatLike | str, crop: str | None = None, margin: int = 10
     ) -> "HeaderTemplate":
@@ -257,6 +265,7 @@ class HeaderTemplate(TableIndexer):
         return HeaderTemplate(lines)
 
     @staticmethod
+    @log_calls(level=logging.DEBUG, include_return=True)
     def _crop(template: MatLike, margin: int = 10) -> MatLike:
         """
         Crop the image to contain only the annotations, such that it can be used as the header image in the taulu workflow.

@@ -5,7 +5,9 @@ from numpy.typing import NDArray
 from typing import Iterable, cast
 from cv2.typing import MatLike
 from pathlib import Path
+import logging
 
+from .decorators import log_calls
 from .constants import WINDOW
 from .error import TauluException
 from . import img_util as imu
@@ -91,6 +93,7 @@ class HeaderAligner:
 
         return img
 
+    @log_calls(logging.DEBUG, include_return=True)
     def _find_transform_of_template_on(
         self, im: MatLike, visual: bool = False, window: str = WINDOW
     ):
@@ -175,6 +178,7 @@ class HeaderAligner:
 
         return imu.show(merged)
 
+    @log_calls(logging.DEBUG, include_return=True)
     def align(
         self, img: MatLike | str, visual: bool = False, window: str = WINDOW
     ) -> NDArray:
