@@ -114,11 +114,6 @@ impl TryFrom<&str> for Direction {
 }
 
 #[pyfunction]
-fn hello_from_bin() -> String {
-    "Hello from rust!".to_string()
-}
-
-#[pyfunction]
 fn astar(
     img: PyReadonlyArray2<'_, u8>, // NumPy 2D uint8 image
     start: Point,                  // start point
@@ -141,7 +136,6 @@ fn astar(
 /// import the module.
 #[pymodule]
 fn _core<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(hello_from_bin, m)?)?;
     m.add_function(wrap_pyfunction!(astar, m)?)?;
     Ok(())
 }

@@ -1,6 +1,5 @@
 import numpy as np
 
-def hello_from_bin() -> str: ...
 def astar(
     img: np.ndarray,
     start: tuple[int, int],
