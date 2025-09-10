@@ -1,77 +1,23 @@
+import time
 from typing import cast
 import cv2 as cv
-import heapq
 import numpy as np
 from cv2.typing import MatLike
 from numpy.typing import NDArray
 from pathlib import Path
 import json
+from typing import Optional, List, Tuple
+import logging
 
-from taulu._core import astar
+from taulu._core import astar as rust_astar
 from . import img_util as imu
 from .constants import WINDOW
+from .decorators import log_calls
 from .table_indexer import Point, TableIndexer
 from .header_template import _Rule
 from .split import Split
-from .error import TauluException, printe
-from scipy.spatial import KDTree
 
-PYTHON_ONLY = False
-
-
-class HeuristicHelper:
-    def __init__(self, goals: list[tuple[int, int]]):
-        # Use KDTree for fast spatial querying (on Manhattan space)
-        self.tree = KDTree(goals, leafsize=16)
-
-    def heuristic(self, p: tuple[int, int]) -> float:
-        # Query nearest goal point using L1 (Manhattan) norm
-        dist, _ = self.tree.query(p, p=1)
-        return dist
-
-
-class BTreeNode:
-    def __init__(self, value: float, point: Point):
-        self.value = value
-        self.point = point
-        self.naive: None | BTreeNode = None
-        self.match: None | BTreeNode = None
-
-    def score(self) -> float:
-        """Get the score of this node (the maximum sum of all of its paths)"""
-        naive_score = self.naive.score() if self.naive is not None else 0
-        match_score = self.match.score() if self.match is not None else 0
-
-        return max(naive_score, match_score) + self.value
-
-    # def
-
-    def leaves(self) -> list["BTreeNode"]:
-        if self.naive is None or self.match is None:
-            return [self]
-        else:
-            return self.naive.leaves() + self.match.leaves()
-
-    def best(self) -> Point:
-        if self.naive is None or self.match is None:
-            raise TauluException("shouldn't call best on an uninitialised tree node")
-
-        if self.naive.score() > self.match.score():
-            return self.naive.point
-        else:
-            return self.match.point
-
-    def print(self, indent: int = 0):
-        print(
-            "  " * indent
-            + f"Value: {self.value}, Point: {self.point}, Score: {self.score()}"
-        )
-        if self.naive:
-            print("  " * (indent + 1) + "Naive:")
-            self.naive.print(indent + 2)
-        if self.match:
-            print("  " * (indent + 1) + "Match:")
-            self.match.print(indent + 2)
+logger = logging.getLogger(__name__)
 
 
 class GridDetector:
@@ -84,11 +30,11 @@ class GridDetector:
         self,
         kernel_size: int = 21,
         cross_width: int = 6,
-        cross_height: int | None = None,
-        morph_size: int | None = None,
-        region: int = 40,
-        k: float = 0.04,
-        w: int = 15,
+        cross_height: Optional[int] = None,
+        morph_size: Optional[int] = None,
+        search_region: int = 40,
+        sauvola_k: float = 0.04,
+        sauvola_window: int = 15,
         distance_penalty: float = 0.4,
     ):
         """
@@ -102,26 +48,64 @@ class GridDetector:
                 have different sizes
             morph_size (int | None (default)): the size of the morphology operators that are applied before
                 the cross kernel. 'bridges the gaps' of broken-up lines
-            region (int): area in which to search for a new max value in `find_nearest` etc.
-            k (float): threshold parameter for sauvola thresholding
-            w (int): window_size parameter for sauvola thresholding
+            search_region (int): area in which to search for a new max value in `find_nearest` etc.
+            sauvola_k (float): threshold parameter for sauvola thresholding
+            sauvola_window (int): window_size parameter for sauvola thresholding
             distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
         """
-        assert (
-            kernel_size % 2 == 1
-        ), "GridDetector: kernel size (k) needs to be ann odd number"
+        self._validate_parameters(
+            kernel_size,
+            cross_width,
+            cross_height,
+            morph_size,
+            search_region,
+            sauvola_k,
+            sauvola_window,
+            distance_penalty,
+        )
 
-        self._k = kernel_size
-        self._w = cross_width
-        self._h = cross_width if cross_height is None else cross_height
-        self._m = morph_size if morph_size is not None else cross_width
-        self._region = region
-        self._k_thresh = k
-        self._w_thresh = w
-        self._cross_kernel = self._cross_kernel_uint8()
+        self._kernel_size = kernel_size
+        self._cross_width = cross_width
+        self._cross_height = cross_width if cross_height is None else cross_height
+        self._morph_size = morph_size if morph_size is not None else cross_width
+        self._search_region = search_region
+        self._sauvola_k = sauvola_k
+        self._sauvola_window = sauvola_window
         self._distance_penalty = distance_penalty
 
-    def _gaussian_weights(self, region: int):
+        self._cross_kernel = self._create_cross_kernel()
+
+    def _validate_parameters(
+        self,
+        kernel_size: int,
+        cross_width: int,
+        cross_height: Optional[int],
+        morph_size: Optional[int],
+        search_region: int,
+        sauvola_k: float,
+        sauvola_window: int,
+        distance_penalty: float,
+    ) -> None:
+        """Validate initialization parameters."""
+        if kernel_size % 2 == 0:
+            raise ValueError("kernel_size must be odd")
+        if (
+            kernel_size <= 0
+            or cross_width <= 0
+            or search_region <= 0
+            or sauvola_window <= 0
+        ):
+            raise ValueError("Size parameters must be positive")
+        if cross_height is not None and cross_height <= 0:
+            raise ValueError("cross_height must be positive")
+        if morph_size is not None and morph_size <= 0:
+            raise ValueError("morph_size must be positive")
+        if not 0 <= distance_penalty <= 1:
+            raise ValueError("distance_penalty must be in [0, 1]")
+        if sauvola_k <= 0:
+            raise ValueError("sauvola_k must be positive")
+
+    def _create_gaussian_weights(self, region_size: int) -> NDArray:
         """
         Create a 2D Gaussian weight mask.
 
@@ -132,78 +116,86 @@ class GridDetector:
         Returns:
             NDArray: Gaussian weight mask
         """
-        h, w = region, region
-        y = np.linspace(-1, 1, h)
-        x = np.linspace(-1, 1, w)
+        if self._distance_penalty == 0:
+            return np.ones((region_size, region_size), dtype=np.float32)
+
+        y = np.linspace(-1, 1, region_size)
+        x = np.linspace(-1, 1, region_size)
         xv, yv = np.meshgrid(x, y)
         dist_squared = xv**2 + yv**2
 
-        # Scale so that center is 1 and edges are 1 - p
-        sigma = np.sqrt(
-            -1 / (2 * np.log(1 - self._distance_penalty))
-        )  # solves exp(-r^2 / (2 * sigma^2)) = 1 - p for r=1
+        # Prevent log(0) when distance_penalty is 1
+        if self._distance_penalty >= 0.999:
+            sigma = 0.1  # Small sigma for very sharp peak
+        else:
+            sigma = np.sqrt(-1 / (2 * np.log(1 - self._distance_penalty)))
+
         weights = np.exp(-dist_squared / (2 * sigma**2))
 
-        return weights
+        return weights.astype(np.float32)
 
-    def _cross_kernel_uint8(self) -> NDArray:
-        kernel = np.zeros((self._k, self._k), dtype=np.uint8)
+    def _create_cross_kernel(self) -> NDArray:
+        kernel = np.zeros((self._kernel_size, self._kernel_size), dtype=np.uint8)
+        center = self._kernel_size // 2
 
-        # Define the center
-        center = self._k // 2
+        # Create horizontal bar
+        h_start = max(0, center - self._cross_height // 2)
+        h_end = min(self._kernel_size, center + (self._cross_height + 1) // 2)
+        kernel[h_start:h_end, :] = 255
 
-        # Create horizontal and vertical bars of width y
-        kernel[center - self._h // 2 : center + (self._h + 1) // 2, :] = (
-            255  # Horizontal line
-        )
-        kernel[:, center - self._w // 2 : center + (self._w + 1) // 2] = (
-            255  # Vertical line
-        )
+        # Create vertical bar
+        v_start = max(0, center - self._cross_width // 2)
+        v_end = min(self._kernel_size, center + (self._cross_width + 1) // 2)
+        kernel[:, v_start:v_end] = 255
 
         return kernel
 
-    def apply(self, img: MatLike, visual: bool = False) -> MatLike:
-        binary = imu.sauvola(img, k=self._k_thresh, window_size=self._w_thresh)
-
-        if visual:
-            imu.show(binary, title="thresholded")
-
+    def _apply_morphology(self, binary: MatLike) -> MatLike:
         # Define a horizontal kernel (adjust width as needed)
-        kernel_hor = cv.getStructuringElement(cv.MORPH_RECT, (self._m, 1))
-        kernel_ver = cv.getStructuringElement(cv.MORPH_RECT, (1, self._m))
+        kernel_hor = cv.getStructuringElement(cv.MORPH_RECT, (self._morph_size, 1))
+        kernel_ver = cv.getStructuringElement(cv.MORPH_RECT, (1, self._morph_size))
 
         # Apply dilation
         dilated = cv.dilate(binary, kernel_hor, iterations=1)
         dilated = cv.dilate(dilated, kernel_ver, iterations=1)
 
-        if visual:
-            imu.show(dilated, title="dilated")
+        return dilated
 
+    def _apply_cross_matching(self, img: MatLike) -> MatLike:
+        """Apply cross kernel template matching."""
         pad_y = self._cross_kernel.shape[0] // 2
         pad_x = self._cross_kernel.shape[1] // 2
 
         padded = cv.copyMakeBorder(
-            dilated,
-            pad_y,
-            pad_y,  # top, bottom
-            pad_x,
-            pad_x,  # left, right
-            borderType=cv.BORDER_CONSTANT,
-            value=[0, 0, 0],  # black padding (BGR)
+            img, pad_y, pad_y, pad_x, pad_x, borderType=cv.BORDER_CONSTANT, value=0
         )
 
         filtered = cv.matchTemplate(padded, self._cross_kernel, cv.TM_SQDIFF_NORMED)
-        filtered = 255 - cv.normalize(
-            filtered, None, 0, 255, cv.NORM_MINMAX
-        ).astype(  # type:ignore
-            np.uint8
-        )
+        # Invert and normalize to 0-255 range
+        filtered = cv.normalize(1.0 - filtered, None, 0, 255, cv.NORM_MINMAX)
+        return filtered.astype(np.uint8)
+
+    def apply(self, img: MatLike, visual: bool = False) -> MatLike:
+        if img is None or img.size == 0:
+            raise ValueError("Input image is empty or None")
+
+        binary = imu.sauvola(img, k=self._sauvola_k, window_size=self._sauvola_window)
+
+        if visual:
+            imu.show(binary, title="thresholded")
+
+        binary = self._apply_morphology(binary)
+
+        if visual:
+            imu.show(binary, title="dilated")
+
+        filtered = self._apply_cross_matching(binary)
 
         return filtered
 
     def find_nearest(
-        self, filtered: MatLike, point: Point, region: None | int = None
-    ) -> tuple[Point, float]:
+        self, filtered: MatLike, point: Point, region: Optional[int] = None
+    ) -> Tuple[Point, float]:
         """
         Find the nearest 'corner match' in the image, along with its score [0,1]
 
@@ -214,28 +206,67 @@ class GridDetector:
                 overwriting the `__init__` parameter `region`
         """
 
-        if region is None:
-            region = self._region
+        if filtered is None or filtered.size == 0:
+            raise ValueError("Filtered image is empty or None")
 
-        x = point[0] - region // 2
-        y = point[1] - region // 2
+        region_size = region if region is not None else self._search_region
+        x, y = point
 
-        cropped = imu.safe_crop(filtered, x, y, region, region)
+        # Calculate crop boundaries
+        crop_x = max(0, x - region_size // 2)
+        crop_y = max(0, y - region_size // 2)
+        crop_width = min(region_size, filtered.shape[1] - crop_x)
+        crop_height = min(region_size, filtered.shape[0] - crop_y)
 
-        if cropped.shape != (region, region):
-            return point, 1.0
+        # Handle edge cases
+        if crop_width <= 0 or crop_height <= 0:
+            logger.warning(f"Point {point} is outside image bounds")
+            return point, 0.0
 
-        weighted = cropped * self._gaussian_weights(region)
+        cropped = filtered[crop_y : crop_y + crop_height, crop_x : crop_x + crop_width]
 
-        best_match = np.argmax(weighted)
-        best_match = np.unravel_index(best_match, cropped.shape)
+        if cropped.size == 0:
+            return point, 0.0
 
-        result = (
-            int(x + best_match[1]),
-            int(y + best_match[0]),
+        # Always apply Gaussian weighting by extending crop if needed
+        if cropped.shape[0] == region_size and cropped.shape[1] == region_size:
+            # Perfect size - apply weights directly
+            weights = self._create_gaussian_weights(region_size)
+            weighted = cropped.astype(np.float32) * weights
+        else:
+            # Extend crop to match region_size, apply weights, then restore
+            extended = np.zeros((region_size, region_size), dtype=cropped.dtype)
+
+            # Calculate offset to center the cropped region in extended array
+            offset_y = (region_size - cropped.shape[0]) // 2
+            offset_x = (region_size - cropped.shape[1]) // 2
+
+            # Place cropped region in center of extended array
+            extended[
+                offset_y : offset_y + cropped.shape[0],
+                offset_x : offset_x + cropped.shape[1],
+            ] = cropped
+
+            # Apply Gaussian weights to extended array
+            weights = self._create_gaussian_weights(region_size)
+            weighted_extended = extended.astype(np.float32) * weights
+
+            # Extract the original region back out
+            weighted = weighted_extended[
+                offset_y : offset_y + cropped.shape[0],
+                offset_x : offset_x + cropped.shape[1],
+            ]
+
+        best_idx = np.argmax(weighted)
+        best_y, best_x = np.unravel_index(best_idx, cropped.shape)
+
+        result_point = (
+            int(crop_x + best_x),
+            int(crop_y + best_y),
         )
+        result_confidence = float(weighted[best_y, best_x]) / 255.0
 
-        return result, weighted[best_match]
+        return result_point, result_confidence
 
     def find_table_points(
         self,
@@ -262,235 +293,279 @@ class GridDetector:
             a TableGrid object
         """
 
+        if not cell_widths:
+            raise ValueError("cell_widths must contain at least one value")
+
         gray = imu.ensure_gray(img)
+
+        if visual:
+            imu.push(img)
+
         filtered = self.apply(img, visual)
+
         if visual:
             imu.show(filtered, window=window)
 
-        if type(cell_heights) is int:
+        if isinstance(cell_heights, int):
             cell_heights = [cell_heights]
 
-        cell_heights = cast(list, cell_heights)
+        left_top, confidence = self.find_nearest(
+            filtered, left_top, int(self._search_region * 1.5)
+        )
 
-        left_top, _ = self.find_nearest(filtered, left_top, int(self._region * 3 / 2))
+        if confidence < 0.1:
+            logger.warning(
+                f"Low confidence for the starting point: {confidence} at {left_top}"
+            )
 
-        points: list[list[Point]] = []
+        points = []
         current = left_top
-        row = [current]
 
-        paths = []
+        for row_idx in range(200):  # bound loop with reasonable max
+            row_points = self._build_table_row(
+                gray, filtered, current, cell_widths, row_idx, goals_width, visual
+            )
 
-        try:
-            while True:
-                while len(row) <= len(cell_widths):
-                    jump = cell_widths[len(row) - 1]
-                    if len(points) != 0:
-                        # grow top point down
-                        top_point = points[-1][len(row)]
-                        goals = [
-                            (current[0] - goals_width // 2 + jump + x, current[1] + 10) for x in range(goals_width)
-                        ]
-                        goals = self._astar(gray, top_point, goals, "down")
-                        if goals is None:
-                            raise TauluException("couldn't extend the top point downward")
-                        paths.extend(goals)
-                        goals = goals[-goals_width//2:]
-                    else:
-                        goals = [
-                            (current[0] + jump, current[1] - goals_width//2 + y) for y in range(goals_width)
-                        ]
+            if not row_points:
+                logger.info(f"Stopped at row {row_idx}, no more points found")
+                break
 
-                    # grow current point to the right
-                    path = self._astar(gray, current, goals, "right")
+            points.append(row_points)
+            next_row_point = self._find_next_row_start(
+                gray,
+                filtered,
+                row_points[0],
+                row_idx,
+                cell_heights,
+                goals_width,
+                visual,
+            )
 
-                    if path is None:
-                        raise TauluException(
-                            "couldn't extend the current point to the right"
-                        )
+            if next_row_point is None:
+                logger.info(f"Stopped at row {row_idx}, no more rows found")
+                break
 
-                    paths.extend(path)
-                    current, _ = self.find_nearest(filtered, path[-1], self._region)
+            current = next_row_point
 
-                    row.append(current)
+        if visual and points:
+            screen = imu.pop()
+            self._visualize_grid(screen, points)
 
-                    if visual:
-                        drawn = imu.draw_points(gray, paths)
-                        imu.show(drawn, wait=False)
-
-                points.append(row)
-
-                top_point = row[0]
-                if len(points) <= len(cell_heights):
-                    row_height = cell_heights[len(points) - 1]
-                else:
-                    row_height = cell_heights[-1]
-
-                goals = [
-                    (top_point[0] - goals_width//2 + x, top_point[1] + row_height) for x in range(goals_width)
-                ]
-
-                if top_point[1] + row_height > filtered.shape[0]:
-                    break
-
-                path = self._astar(gray, top_point, goals, "down")
-                if path is None:
-                    raise TauluException("couldn't extend the top point downward")
-                paths.extend(path)
-
-                current, _ = self.find_nearest(filtered, path[-1])
-                row = [current]
-        except TauluException as e:
-            printe(e)
-
-        if visual:
-            drawn = imu.draw_points(gray, paths)
-            imu.show(drawn, wait=True)
         return TableGrid(points)
 
-    def _grow_tree(
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _build_table_row(
         self,
+        gray: MatLike,
         filtered: MatLike,
         start_point: Point,
-        cell_widths: list[int],
-        previous_row_x: list[int],
-    ) -> BTreeNode:
-        """
-        Grow a search tree from the starting point and with given depth
-        """
+        cell_widths: List[int],
+        row_idx: int,
+        goals_width: int,
+        visual: bool = False,
+    ) -> List[Point]:
+        """Build a single row of table points."""
+        row = [start_point]
+        current = start_point
 
-        tree = BTreeNode(0, start_point)
+        for col_idx, width in enumerate(cell_widths):
+            next_point = self._find_next_column_point(
+                gray, filtered, current, width, goals_width, visual
+            )
+            if next_point is None:
+                logger.warning(
+                    f"Could not find point for row {row_idx}, col {col_idx + 1}"
+                )
+                return []  # Return empty list to signal failure
+            row.append(next_point)
+            current = next_point
 
-        def grow_right(tree: BTreeNode, jump: int, previous_x: int):
-            for leaf in tree.leaves():
-                naive_target = (leaf.point[0] + jump, leaf.point[1])
+        return row
 
-                x, y = naive_target
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _find_next_column_point(
+        self,
+        gray: MatLike,
+        filtered: MatLike,
+        current: Point,
+        width: int,
+        goals_width: int,
+        visual: bool = False,
+    ) -> Optional[Point]:
+        """Find the next point in the current row."""
+        goals = [
+            (current[0] + width, current[1] - goals_width // 2 + y)
+            for y in range(goals_width)
+        ]
 
-                if y >= len(filtered):
-                    y = len(filtered) - 1
+        path = self._astar(gray, current, goals, "right")
+        if path is None:
+            return None
 
-                if x >= len(filtered[y]):
-                    x = len(filtered[y]) - 1
+        next_point, _ = self.find_nearest(filtered, path[-1], self._search_region)
 
-                naive_target = (x, y)
+        # show the point and the search region on the image for debugging
+        if visual:
+            screen = imu.pop()
+            # if gray, convert to BGR
+            if len(screen.shape) == 2 or screen.shape[2] == 1:
+                debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
+            else:
+                debug_img = cast(MatLike, screen)
 
-                naive_target = (previous_x, leaf.point[1])
+            debug_img = imu.draw_points(
+                debug_img, path, color=(200, 200, 0), thickness=3
+            )
+            debug_img = imu.draw_points(
+                debug_img, [current], color=(0, 255, 0), thickness=3
+            )
+            debug_img = imu.draw_points(
+                debug_img, [next_point], color=(0, 0, 255), thickness=2
+            )
+            debug_img = cv.rectangle(
+                debug_img,
+                (
+                    next_point[0] - self._search_region // 2,
+                    next_point[1] - self._search_region // 2,
+                ),
+                (
+                    next_point[0] + self._search_region // 2,
+                    next_point[1] + self._search_region // 2,
+                ),
+                (255, 0, 0),
+                2,
+            )
+            imu.push(debug_img)
+            imu.show(debug_img, title="Next column point", wait=False)
+            time.sleep(0.01)
 
-                match, match_score = self.find_nearest(filtered, naive_target)
+        return next_point
 
-                naive_node = BTreeNode(filtered[y][x], naive_target)
-                match_node = BTreeNode(match_score, match)
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _find_next_row_start(
+        self,
+        gray: MatLike,
+        filtered: MatLike,
+        top_point: Point,
+        row_idx: int,
+        cell_heights: List[int],
+        goals_width: int,
+        visual: bool = False,
+    ) -> Optional[Point]:
+        """Find the starting point of the next row."""
+        if row_idx < len(cell_heights):
+            row_height = cell_heights[row_idx]
+        else:
+            row_height = cell_heights[-1]
 
-                leaf.naive = naive_node
-                leaf.match = match_node
+        if top_point[1] + row_height >= filtered.shape[0] - 10:  # Near bottom
+            return None
 
-        for jump, previous_x in zip(cell_widths, previous_row_x):
-            grow_right(tree, jump, previous_x)
+        goals = [
+            (top_point[0] - goals_width // 2 + x, top_point[1] + row_height)
+            for x in range(goals_width)
+        ]
 
-        return tree
+        path = self._astar(gray, top_point, goals, "down")
+        if path is None:
+            return None
 
+        next_point, _ = self.find_nearest(filtered, path[-1])
+
+        if visual:
+            screen = imu.pop()
+            # if gray, convert to BGR
+            if len(screen.shape) == 2 or screen.shape[2] == 1:
+                debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
+            else:
+                debug_img = cast(MatLike, screen)
+
+            debug_img = imu.draw_points(
+                debug_img, path, color=(200, 200, 0), thickness=3
+            )
+            debug_img = imu.draw_points(
+                debug_img, [top_point], color=(0, 255, 0), thickness=3
+            )
+            debug_img = imu.draw_points(
+                debug_img, [next_point], color=(0, 0, 255), thickness=2
+            )
+            debug_img = cv.rectangle(
+                debug_img,
+                (
+                    next_point[0] - self._search_region // 2,
+                    next_point[1] - self._search_region // 2,
+                ),
+                (
+                    next_point[0] + self._search_region // 2,
+                    next_point[1] + self._search_region // 2,
+                ),
+                (255, 0, 0),
+                2,
+            )
+            imu.push(debug_img)
+            imu.show(debug_img, wait=False)
+            time.sleep(0.01)
+
+        return next_point
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _visualize_grid(self, img: MatLike, points: List[List[Point]]) -> None:
+        """Visualize the detected grid points."""
+        all_points = [point for row in points for point in row]
+        drawn = imu.draw_points(img, all_points)
+        imu.show(drawn, wait=True)
+
+    @log_calls(level=logging.DEBUG, include_return=True)
     def _astar(
         self,
         img: np.ndarray,
         start: tuple[int, int],
         goals: list[tuple[int, int]],
         direction: str,
-    ) -> list[tuple[int, int]] | None:
+    ) -> Optional[List[Point]]:
         """
         Find the best path between the start point and one of the goal points on the image
         """
 
-        if PYTHON_ONLY:
-            return self._astar_python(img, start, goals, direction)
+        if not goals:
+            return None
 
-        xs = [g[0] for g in goals]
-        xs.append(start[0])
-        ys = [g[1] for g in goals]
-        ys.append(start[1])
+        # calculate bounding box with margin
+        all_points = goals + [start]
+        xs = [p[0] for p in all_points]
+        ys = [p[1] for p in all_points]
 
         margin = 30
-        top_left = (min(xs) - margin, min(ys) - margin)
-        bottom_right = (max(xs) + margin, max(ys) + margin)
+        top_left = (max(0, min(xs) - margin), max(0, min(ys) - margin))
+        bottom_right = (
+            min(img.shape[1], max(xs) + margin),
+            min(img.shape[0], max(ys) + margin),
+        )
 
-        start = (start[0] - top_left[0], start[1] - top_left[1])
-        goals = [(g[0] - top_left[0], g[1] - top_left[1]) for g in goals]
+        # check bounds
+        if (
+            top_left[0] >= bottom_right[0]
+            or top_left[1] >= bottom_right[1]
+            or top_left[0] >= img.shape[1]
+            or top_left[1] >= img.shape[0]
+        ):
+            return None
+
+        # transform coordinates to cropped image
+        start_local = (start[0] - top_left[0], start[1] - top_left[1])
+        goals_local = [(g[0] - top_left[0], g[1] - top_left[1]) for g in goals]
+
         cropped = img[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]]
-        path = astar(cropped, start, goals, direction)
+
+        if cropped.size == 0:
+            return None
+
+        path = rust_astar(cropped, start_local, goals_local, direction)
 
         if path is None:
             return None
-        else:
-            return [(p[0] + top_left[0], p[1] + top_left[1]) for p in path]
 
-    def _astar_python(
-        self,
-        img: np.ndarray,
-        start: tuple[int, int],
-        goals: list[tuple[int, int]],
-        direction: str,
-    ) -> list[tuple[int, int]] | None:
-        """
-        All-Python implementation of astar pathfinding algorithm
-        """
-        h, w = img.shape
-        start = (start[1], start[0])
-        goals = [(g[1], g[0]) for g in goals]
-
-        visited = np.full((h, w), False)
-        came_from = {}
-        cost_so_far = {}
-
-        def cost(current: tuple[int, int], neighbor: tuple[int, int]):
-            pixel_intensity = img[neighbor]
-            intensity_cost = pixel_intensity / 255.0
-            dx = abs(neighbor[0] - current[0])
-            dy = abs(neighbor[1] - current[1])
-            diagonal_penalty = 0.4 if dx != 0 and dy != 0 else 0.0
-            result = max(dx, dy) + 0.4 * intensity_cost + diagonal_penalty
-            return result
-
-        if direction == "right":
-            neighbors = [(-1, 1), (0, 1), (1, 1)]
-        elif direction == "down":
-            neighbors = [(1, -1), (1, 0), (1, 1)]
-        else:
-            raise TauluException("Direction must be 'right' or 'down'")
-
-        goals = cast(list, goals)
-
-        heuristic = HeuristicHelper(goals)
-
-        frontier = [(heuristic.heuristic(start), 0, start)]
-        cost_so_far[start] = 0
-
-        while frontier:
-            _, _, current = heapq.heappop(frontier)
-
-            if current in goals:
-                path = [current]
-                while current in came_from:
-                    current = came_from[current]
-                    path.append(current)
-                path.reverse()
-
-                return [(x, y) for y, x in path]
-
-            if visited[current]:
-                continue
-            visited[current] = True
-
-            for dy, dx in neighbors:
-                ny, nx = current[0] + dy, current[1] + dx
-                if 0 <= ny < h and 0 <= nx < w:
-                    neighbor = (ny, nx)
-                    new_cost = cost_so_far[current] + cost(current, neighbor)
-                    if neighbor not in cost_so_far or new_cost < cost_so_far[neighbor]:
-                        cost_so_far[neighbor] = new_cost
-                        priority = new_cost + heuristic.heuristic(neighbor)
-                        heapq.heappush(frontier, (priority, new_cost, neighbor))
-                        came_from[neighbor] = current
-
-        return None
+        return [(p[0] + top_left[0], p[1] + top_left[1]) for p in path]
 
 
 class TableGrid(TableIndexer):

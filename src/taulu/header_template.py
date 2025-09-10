@@ -303,9 +303,9 @@ class HeaderTemplate(TableIndexer):
 
         imu.show(template, get_point, title="crop the header")
 
-        assert (
-            len(points) == 4
-        ), "you need to annotate the four corners of the table in order to crop it"
+        assert len(points) == 4, (
+            "you need to annotate the four corners of the table in order to crop it"
+        )
 
         # crop the image to contain all of the points (just crop rectangularly, x, y, w, h)
         # Convert points to numpy array

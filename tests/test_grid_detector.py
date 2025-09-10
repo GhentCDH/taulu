@@ -22,8 +22,8 @@ def test_thumb():
         kernel_size=41,
         cross_width=10,
         morph_size=7,
-        region=30,
-        k=0.05,
+        search_region=30,
+        sauvola_k=0.05,
         distance_penalty=0.5,
     )
     im = cv2.imread(table_image_path(3))
@@ -51,8 +51,8 @@ def test_filter():
         kernel_size=41,
         cross_width=10,
         morph_size=7,
-        region=40,
-        k=0.05,
+        search_region=40,
+        sauvola_k=0.05,
         distance_penalty=0.8,
     )
     im = cv2.imread(table_image_path(1))
@@ -78,17 +78,17 @@ def test_filter():
 )
 def test_text_regions():
     filter = GridDetector(
-        kernel_size=41, cross_width=6, morph_size=4, region=60, k=0.05
+        kernel_size=41, cross_width=6, morph_size=4, search_region=60, sauvola_k=0.05
     )
     im = cv2.imread(table_left_image_path(0))
 
     template = HeaderTemplate.from_saved(header_anno_path(0))
 
     # known start point (should be retrieved from template alignment)
-    start = (240, 426)
+    start = (240, 419)
 
     points = filter.find_table_points(
-        im, start, template.cell_widths(0), template.cell_height()
+        im, start, template.cell_widths(0), template.cell_height(), visual=False
     )
 
     points.show_cells(im)

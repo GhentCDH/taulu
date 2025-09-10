@@ -1,10 +1,15 @@
+from typing import Tuple
 import cv2 as cv
 from skimage.filters import threshold_sauvola
 import numpy as np
 from cv2.typing import MatLike
 from .table_indexer import Point
+import logging
+from .decorators import log_calls
 
 from .constants import WINDOW
+
+stored = []
 
 
 def show(
@@ -21,6 +26,8 @@ def show(
 
     pressing 'q' exits with code 0, 'n' returns from this function
     """
+
+    global stored
 
     try:
         cv.namedWindow(window, cv.WINDOW_NORMAL)
@@ -65,6 +72,18 @@ def show(
             key == -1 and cv.getWindowProperty(window, cv.WND_PROP_VISIBLE) < 1
         ):  # Check if the window is actually closed
             break
+
+
+def push(img: MatLike):
+    global stored
+    stored.append(img)
+
+
+def pop() -> MatLike:
+    global stored
+    if len(stored) == 0:
+        raise ValueError("No images stored")
+    return stored.pop()
 
 
 def vertical_edges(img, x=6):
@@ -179,13 +198,23 @@ def safe_crop(img: MatLike, x: int, y: int, w: int, h: int):
     return result
 
 
-def draw_points(img: MatLike, points: list[Point]):
+@log_calls(level=logging.DEBUG, include_return=True)
+def draw_points(
+    img: MatLike,
+    points: list[Point],
+    color: Tuple[int, int, int] = (0, 0, 255),
+    thickness: int = 1,
+):
     if not (len(img.shape) == 3 and img.shape[2] == 3):
         img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
 
     for x, y in points:
         if 0 <= x < img.shape[1] and 0 <= y < img.shape[0]:
-            img[y, x] = (0, 0, 255)
+            if thickness > 1:
+                # with antialiasing
+                cv.circle(img, (x, y), thickness, color, -1, lineType=cv.LINE_AA)
+            else:
+                img[y, x] = color
 
     return img
 
