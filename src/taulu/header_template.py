@@ -1,7 +1,9 @@
+from os import PathLike
 from pathlib import Path
 from typing import Iterable, Optional, cast
 import csv
 import json
+import os
 import logging
 import math
 
@@ -156,7 +158,7 @@ class HeaderTemplate(TableIndexer):
         )
 
     @log_calls(level=logging.DEBUG)
-    def save(self, path: Path):
+    def save(self, path: PathLike[str]):
         """
         Save the HeaderTemplate to the given path, as a json
         """
@@ -168,7 +170,7 @@ class HeaderTemplate(TableIndexer):
 
     @staticmethod
     @log_calls(level=logging.DEBUG)
-    def from_saved(path: str) -> "HeaderTemplate":
+    def from_saved(path: PathLike[str]) -> "HeaderTemplate":
         with open(path, "r") as f:
             data = json.load(f)
             rules = data["rules"]
@@ -187,7 +189,7 @@ class HeaderTemplate(TableIndexer):
     @staticmethod
     @log_calls(level=logging.DEBUG)
     def annotate_image(
-        template: MatLike | str, crop: str | None = None, margin: int = 10
+        template: MatLike | str, crop: Optional[PathLike[str]] = None, margin: int = 10
     ) -> "HeaderTemplate":
         """
         Utility method that allows users to create a template form a template image.
@@ -208,7 +210,7 @@ class HeaderTemplate(TableIndexer):
 
         if crop is not None:
             cropped = HeaderTemplate._crop(template, margin)
-            cv.imwrite(crop, cropped)
+            cv.imwrite(os.fspath(crop), cropped)
             template = cropped
 
         start_point = None
@@ -378,7 +380,10 @@ class HeaderTemplate(TableIndexer):
     def cell_height(self, header_factor: float = 0.8) -> int:
         return int((self._h_rules[1]._y - self._h_rules[0]._y) * header_factor)
 
-    def cell_heights(self, header_factors: list[float]) -> list[int]:
+    def cell_heights(self, header_factors: list[float] | float) -> list[int]:
+        if isinstance(header_factors, float):
+            header_factors = [header_factors]
+        header_factors = cast(list, header_factors)
         return [
             int((self._h_rules[1]._y - self._h_rules[0]._y) * f) for f in header_factors
         ]

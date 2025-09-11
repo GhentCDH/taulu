@@ -1,5 +1,6 @@
 import time
 from typing import cast
+import os
 import cv2 as cv
 import numpy as np
 from cv2.typing import MatLike
@@ -8,6 +9,7 @@ from pathlib import Path
 import json
 from typing import Optional, List, Tuple
 import logging
+from os import PathLike
 
 from taulu._core import astar as rust_astar
 from . import img_util as imu
@@ -36,6 +38,7 @@ class GridDetector:
         sauvola_k: float = 0.04,
         sauvola_window: int = 15,
         distance_penalty: float = 0.4,
+        scale: float = 1.0,
     ):
         """
         Args:
@@ -52,6 +55,7 @@ class GridDetector:
             sauvola_k (float): threshold parameter for sauvola thresholding
             sauvola_window (int): window_size parameter for sauvola thresholding
             distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
+            scale(float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
         """
         self._validate_parameters(
             kernel_size,
@@ -72,6 +76,7 @@ class GridDetector:
         self._sauvola_k = sauvola_k
         self._sauvola_window = sauvola_window
         self._distance_penalty = distance_penalty
+        self._scale = scale
 
         self._cross_kernel = self._create_cross_kernel()
 
@@ -193,6 +198,7 @@ class GridDetector:
 
         return filtered
 
+    @log_calls(level=logging.DEBUG, include_return=True)
     def find_nearest(
         self, filtered: MatLike, point: Point, region: Optional[int] = None
     ) -> Tuple[Point, float]:
@@ -270,7 +276,7 @@ class GridDetector:
 
     def find_table_points(
         self,
-        img: MatLike,
+        img: MatLike | PathLike[str],
         left_top: Point,
         cell_widths: list[int],
         cell_heights: list[int] | int,
@@ -295,6 +301,9 @@ class GridDetector:
 
         if not cell_widths:
             raise ValueError("cell_widths must contain at least one value")
+
+        if not isinstance(img, np.ndarray):
+            img = cv.imread(os.fspath(img))
 
         gray = imu.ensure_gray(img)
 
@@ -438,7 +447,6 @@ class GridDetector:
             )
 
             if goals is None:
-                logger.warning(bottom_right)
                 imu.show(
                     imu.draw_points(gray, bottom_right, color=(255, 0, 0), thickness=2)
                 )
@@ -573,7 +581,7 @@ class GridDetector:
 
         imu.push(debug_img)
         imu.show(debug_img, title="Next column point", wait=False)
-        time.sleep(0.01)
+        # time.sleep(0.003)
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def _astar(
@@ -589,6 +597,11 @@ class GridDetector:
 
         if not goals:
             return None
+
+        if self._scale != 1.0:
+            img = cv.resize(img, None, fx=self._scale, fy=self._scale)
+            start = (int(start[0] * self._scale), int(start[1] * self._scale))
+            goals = [(int(g[0] * self._scale), int(g[1] * self._scale)) for g in goals]
 
         # calculate bounding box with margin
         all_points = goals + [start]
@@ -624,6 +637,10 @@ class GridDetector:
 
         if path is None:
             return None
+
+        if self._scale != 1.0:
+            path = [(int(p[0] / self._scale), int(p[1] / self._scale)) for p in path]
+            top_left = (int(top_left[0] / self._scale), int(top_left[1] / self._scale))
 
         return [(p[0] + top_left[0], p[1] + top_left[1]) for p in path]
 

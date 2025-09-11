@@ -1,8 +1,9 @@
+from os import PathLike, fspath
 import cv2 as cv
 import pandas as pd
 import numpy as np
 from numpy.typing import NDArray
-from typing import Iterable, cast
+from typing import Iterable, Optional, cast
 from cv2.typing import MatLike
 from pathlib import Path
 import logging
@@ -11,6 +12,8 @@ from .decorators import log_calls
 from .constants import WINDOW
 from .error import TauluException
 from . import img_util as imu
+
+logger = logging.getLogger(__name__)
 
 
 class HeaderAligner:
@@ -21,7 +24,7 @@ class HeaderAligner:
 
     def __init__(
         self,
-        template: None | MatLike | str | Path = None,
+        template: None | MatLike | PathLike[str] | str = None,
         max_features: int = 25_000,
         patch_size: int = 31,
         match_fraction: float = 0.6,
@@ -41,19 +44,45 @@ class HeaderAligner:
             k (float | None): sauvola thresholding threshold value. If None, no sauvola thresholding is done
         """
 
-        if type(template) is str or type(template) is Path:
-            value = cv.imread(template)
+        if type(template) is str or type(template) is PathLike:
+            value = cv.imread(fspath(template))
             template = value
 
         self._k = k
-        self._template: MatLike = cast(MatLike, template)
+        if scale > 1.0:
+            raise TauluException(
+                "Scaling up the image for header alignment is useless. Use 0 < scale <= 1.0"
+            )
+        if scale == 0:
+            raise TauluException("Use 0 < scale <= 1.0")
+
+        self._scale = scale
+        self._template = self._scale_img(cast(MatLike, template))
         self._template_orig: None | MatLike = None
         self._preprocess_template()
         self._max_features = max_features
         self._patch_size = patch_size
         self._match_fraction = match_fraction
-        self._scale = scale
         self._max_dist = max_dist
+
+    def _scale_img(self, img: MatLike) -> MatLike:
+        if self._scale == 1.0:
+            return img
+
+        return cv.resize(img, None, fx=self._scale, fy=self._scale)
+
+    def _unscale_img(self, img: MatLike) -> MatLike:
+        if self._scale == 1.0:
+            return img
+
+        return cv.resize(img, None, fx=1 / self._scale, fy=1 / self._scale)
+
+    def _unscale_homography(self, h: np.ndarray) -> np.ndarray:
+        if self._scale == 1.0:
+            return h
+
+        scale_matrix = np.diag([1.0 / self._scale, 1.0 / self._scale, 1.0])
+        return scale_matrix @ h @ np.linalg.inv(scale_matrix)
 
     @property
     def template(self):
@@ -93,10 +122,11 @@ class HeaderAligner:
 
         return img
 
-    @log_calls(logging.DEBUG, include_return=True)
+    @log_calls(level=logging.DEBUG, include_return=True)
     def _find_transform_of_template_on(
         self, im: MatLike, visual: bool = False, window: str = WINDOW
     ):
+        im = self._scale_img(im)
         # Detect ORB features and compute descriptors.
         orb = cv.ORB_create(
             self._max_features,  # type:ignore
@@ -152,7 +182,7 @@ class HeaderAligner:
         # Find homography
         h, _ = cv.findHomography(points1, points2, cv.RANSAC)
 
-        return h
+        return self._unscale_homography(h)
 
     def view_alignment(self, img: MatLike, h: NDArray):
         """
@@ -178,7 +208,7 @@ class HeaderAligner:
 
         return imu.show(merged)
 
-    @log_calls(logging.DEBUG, include_return=True)
+    @log_calls(level=logging.DEBUG, include_return=True)
     def align(
         self, img: MatLike | str, visual: bool = False, window: str = WINDOW
     ) -> NDArray:
@@ -186,6 +216,8 @@ class HeaderAligner:
         Calculates a homogeneous transformation matrix that maps pixels of
         the template to the given image
         """
+
+        logger.info("Aligning header with supplied table image")
 
         if type(img) is str:
             img = cv.imread(img)

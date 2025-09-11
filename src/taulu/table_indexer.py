@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Generator, Tuple
+import os
 
 import cv2 as cv
 from cv2.typing import MatLike
@@ -189,7 +190,12 @@ class TableIndexer(ABC):
 
         return clicked
 
-    def show_cells(self, image: MatLike, window: str = WINDOW) -> list[tuple[int, int]]:
+    def show_cells(
+        self, image: MatLike | os.PathLike[str] | str, window: str = WINDOW
+    ) -> list[tuple[int, int]]:
+        if not isinstance(image, np.ndarray):
+            image = cv.imread(os.fspath(image))
+
         img = np.copy(image)
 
         cells = []

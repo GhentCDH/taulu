@@ -3,11 +3,6 @@ import functools
 import datetime
 from typing import Any, Callable, Optional
 
-# Configure logging format
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-
 
 def log_calls(
     logger: Optional[logging.Logger] = None,

@@ -5,6 +5,7 @@ from .header_template import HeaderTemplate
 from .table_indexer import TableIndexer
 from .split import Split
 from .main import main
+from .taulu import Taulu
 
 __all__ = [
     "GridDetector",
@@ -14,4 +15,5 @@ __all__ = [
     "HeaderTemplate",
     "TableIndexer",
     "Split",
+    "Taulu",
 ]
