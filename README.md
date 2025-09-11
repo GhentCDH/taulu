@@ -31,14 +31,50 @@ pip install taulu
 uv add taulu
 ```
 
-## Example
+## Usage
 
-```bash
-git clone https://github.com/GhentCDH/taulu.git
-cd taulu/examples
-bash run.bash
+```python
+from taulu import Taulu
+import os
+
+
+def setup():
+    # create an Annotation file of the headers in the image
+    # (one for the left header, one for the right)
+    # and store them in the examples directory
+    print("Annotating the LEFT header...")
+    Taulu.annotate("../data/table_00.png", "table_00_header_left.png")
+
+    print("Annotating the RIGHT header...")
+    Taulu.annotate("../data/table_00.png", "table_00_header_right.png")
+
+
+def main():
+    taulu = Taulu(("table_00_header_left.png", "table_00_header_right.png"))
+    table = taulu.segment_table("../data/table_00.png", 0.8, debug_view=True)
+
+    table.show_cells("../data/table_00.png")
+
+
+if __name__ == "__main__":
+    if os.path.exists("table_00_header_left.png") and os.path.exists(
+        "table_00_header_right.png"
+    ):
+        main()
+    else:
+        setup()
+        main()
 ```
 
+This file can be found at `examples/example.py`. To run it, clone this repository, create a uv 
+project, and run the script:
+
+```
+git clone git@github.com:GhentCDH/taulu.git
+cd taulu
+uv init --no-workspace --bare
+uv run example.py
+```
 During this example, you will need to annotate the header image. You do this by simply clicking twice per line, once for each endpoint. It does not matter in which order you annotate the lines. Example:
 
 ![Table Header Annotation Example](./data/header_annotation.png)
@@ -51,6 +87,8 @@ Below is an example of table cell identification using the `Taulu` package:
 ## Workflow
 
 This package is structured in a modular way, with several components that work together.
+
+The Taulu class combines the components into one simple API, as seen in [Usage](#usage)
 
 The algorithm identifies the header's location in the input image, which provides a starting point. From there, it scans the image to find intersections of the rules (borders) and segments the image into cells accordingly.
 
@@ -87,28 +125,33 @@ The components are:
 The taulu algorithm has a few parameters which you might need to tune in order for it to fit your data's characteristics.
 The following is a summary of the most important parameters and how you could tune them to your data.
 
-### `GridDetector`
+### `Taulu`
 
-- `kernel_size`, `cross_width`, `cross_height`: The GridDetector uses a kernel to detect intersections of rules in the image. By default, `cross_height` follows the value of `cross_width`. The kernel looks like this:
+- `header_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a tuple of the left and right header images. 
+- `kernel_size`, `cross_width`: The GridDetector uses a kernel to detect intersections of rules in the image. The kernel looks like this:
 
   ![kernel diagram](./data/kernel.svg)
 
-  The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result, which you can use to estimate the `cross_width` and `cross_height` values that fit your image.
+  The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result (because `debug_view=True`), which you can use to estimate the `cross_width` and `kernel_size` values that fit your image.
   Note that the optimal values will depend on the `morph_size` parameter too.
-- `morph_size`: The GridDetector uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `morph_size`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As such, this parameter affects the optimal `cross_width` and `cross_height`.
-- `region`: This parameter influences the search algorithm. The algorithm starts at an already-detected intersection, and jumps right with a distance that is derived from the annotated header template. At the new location, the algorithm then finds the best corner-match that is within a square of size `region` around that point, and selects that as the detected corner. Visualized:
+- `morph_size`: The GridDetector uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `morph_size`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As a result, this parameter affects the optimal `cross_width` and `cross_height`.
+- `region`: This parameter influences the search algorithm. The algorithm has a rough idea of where the next corner point should be. At that location, the algorithm then finds the best match that is within a square of size `region` around that point, and selects that as the detected corner. Visualized:
 
   ![search algorithm region](./data/search.svg)
 
-  A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too.
-- `k`, `w`: These parameters affect the thresholding algorithm that's used in the `GridDetector`. `k` adjusts the threshold. Larger values of `k` correspond with a larger threshold, meaning more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table. `w` is less important, but adjusts the window size of the sauvola thresholding algorithm that is used under the hood.
+  A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too. You can see this region as blue squares when running the segmentation with `debug_view=True`
+- `sauvola_k`: This parameter adjusts the threshold that is used when binarizing the image. The larger `sauvola_k` more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table.
 
-### `HeaderTemplate`
+### `TableGrid`
 
-- `intersection((row, height))`: this method calculates the intersection of a horizontal and vertical line in the annotated header template. For example, running `template.intersection((1, 1))` corresponds with this intersection:
+`Taulu.segment_table` returns a `TableGrid` instance, which you can use to get information about the location and bounding box of cells in your image. 
 
-  ![intersection diagram](./data/intersect.svg)
-
-  This point can then be transformed to the image using the aligner, and this can serve as the starting point of the search algorithm. Note that in this case, the first column is skipped. This can often be useful since the `GridDetector` kernel looks for crosses, and the left-most intersection often only has a T shape (the left leg of the cross might be missing).
-  If that is the case with your data too, it is a good idea to set the starting point to the (1, 1) intersection, and add in the first row later using the `add_left_col(width)` function. When doing this, you also need to set the parameter of the `cell_widths` function to `1`. See [this example](./examples/example.py).
-- `cell_height(fraction: float)`: this method defines a single cell height for all of the rows. The fraction is multiplied with the height of the annotated header template to get the cell height relative to it.
+These methods are the most useful:
+- `save`: save the `TableGrid` object as a `json` file
+- `from_saved`: restore a `TableGrid` object from a `json` file
+- `cell`: given a location in the image (`(tuple[float, float]`), return the cell index `(row, column)`
+- `cell_polygon`: get the polygon (left top, right top, right bottom, left bottom) of the cell in the image 
+- `region`: given a start and end cell, get the polygon that surrounds all cells in between (inclusive range)
+- `highlight_all_cells`: highlight all cell edges on an image
+- `show_cells`: interactively highlight cells you click on in the image (in an OpenCV window)
+- `crop_cell` and `crop_region`: crop the image to the supplied cell or region

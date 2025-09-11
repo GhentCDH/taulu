@@ -1,4 +1,3 @@
-import time
 from typing import cast
 import os
 import cv2 as cv

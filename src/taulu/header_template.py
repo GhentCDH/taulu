@@ -25,16 +25,21 @@ TOLERANCE = math.pi / 6
 
 ANNO_HELP = """Start annotating the header
 
-To draw a line, click on the image twice (the line will be drawn between your two clicks).
+\x1b[1;32mTo draw a line, click on the image twice (the line will be drawn between your two clicks).
 
 To undo the last line you drew, right-click anywhere on the image (you cannot redo the undo).
 
-You should annotate all of the vertical lines that extend into the table body, as well as the top and bottom horizontal lines. 
+You should annotate all of the vertical lines that extend into the table body, as well as the top and bottom horizontal lines.
+
+\x1b[31mPress 'n' when you are done.
+\x1b[0m
 """
 
 CROP_HELP = """Crop the template to just the header
 
-You should annotate four points that make up the four corners of the header.
+\x1b[1;32mClick just outside the four corners of the header, such that the entire header is contained within the rectangle you define.
+\x1b[31mPress 'n' when you are done.
+\x1b[0m
 """
 
 
