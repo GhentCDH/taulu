@@ -446,9 +446,6 @@ class GridDetector:
             )
 
             if goals is None:
-                imu.show(
-                    imu.draw_points(gray, bottom_right, color=(255, 0, 0), thickness=2)
-                )
                 logger.warning(
                     f"A* failed to find path going downwards from previous row's point at idx {current_col_idx + 1}"
                 )
