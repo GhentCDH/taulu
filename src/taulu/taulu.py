@@ -9,7 +9,6 @@ from os.path import exists
 from typing import Dict, List, Tuple
 import cv2
 from cv2.typing import MatLike
-from numpy import isin
 from pathlib import Path
 import logging
 
@@ -26,6 +25,13 @@ logger = logging.getLogger(__name__)
 
 
 class Taulu:
+    """
+    The Taulu class is a convenience class that hides the inner workings of taulu as much as possible.
+
+    For more advanced use cases, it might be useful to implement the workflow directly yourself,
+    in order to have control over the intermediate steps.
+    """
+
     def __init__(
         self,
         header_path: PathLike[str]
@@ -100,6 +106,10 @@ class Taulu:
 
         Saves the annotated header image and a json file containing the
         header template to the output path.
+
+        Args:
+            image_path (PathLike[str]): the path of the image which you want to annotate
+            output_path (PathLike[str]): the path where the output files should go (image files and json files)
         """
 
         if not exists(image_path):
@@ -129,6 +139,24 @@ class Taulu:
 
         Returns a TableGrid object, which has methods with which you can find
         the location of cells in the table
+
+        Args:
+            image (MatLike | PathLike[str]):
+                The image to segment (path or np.ndarray)
+
+            cell_height_factor (float | list[float] | dict[str, float | list[float]]):
+                The height factor of a row. This factor is the fraction of the header height each row is.
+                If your header has height 12 and your rows are of height 8, you should pass 8/12 as this argument.
+                Also accepts a list of heights, useful if your row heights are not constant (often, the first row is
+                higher than the others). The last entry in the list is used repeatedly when there are more
+                rows in the image than there are entries in your list.
+
+                By passing a dictionary with keys "left" and "right", you can specify a different cell_height_factor
+                for the different sides of your table.
+
+            debug_view (bool):
+                By setting this setting to True, an OpenCV window will open and show the results of intermediate steps.
+                Press `n` for advancing to the next image, and `q` to quit.
         """
 
         if isinstance(image, PathLike):
