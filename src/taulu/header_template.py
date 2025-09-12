@@ -221,10 +221,10 @@ class HeaderTemplate(TableIndexer):
         start_point = None
         lines: list[list[int]] = []
 
-        orig_template = np.copy(template)
+        anno_template = np.copy(template)
 
         def get_point(event, x, y, flags, params):
-            nonlocal lines, start_point, template
+            nonlocal lines, start_point, anno_template
             _ = flags
             _ = params
             if event == cv.EVENT_LBUTTONDOWN:
@@ -232,14 +232,14 @@ class HeaderTemplate(TableIndexer):
                     line: list[int] = [start_point[1], start_point[0], x, y]
 
                     cv.line(  # type:ignore
-                        template,  # type:ignore
+                        anno_template,  # type:ignore
                         (start_point[1], start_point[0]),
                         (x, y),
                         (0, 255, 0),
                         2,
                         cv.LINE_AA,
                     )
-                    cv.imshow(constants.WINDOW, template)  # type:ignore
+                    cv.imshow(constants.WINDOW, anno_template)  # type:ignore
 
                     lines.append(line)
                     start_point = None
@@ -251,7 +251,7 @@ class HeaderTemplate(TableIndexer):
                 # remove the last annotation
                 lines = lines[:-1]
 
-                template = np.copy(orig_template)
+                anno_template = np.copy(anno_template)
 
                 for line in lines:
                     cv.line(
@@ -267,7 +267,7 @@ class HeaderTemplate(TableIndexer):
 
         print(ANNO_HELP)
 
-        imu.show(template, get_point, title="annotate the header")
+        imu.show(anno_template, get_point, title="annotate the header")
 
         return HeaderTemplate(lines)
 
@@ -279,45 +279,45 @@ class HeaderTemplate(TableIndexer):
         """
 
         points = []
-        orig_template = np.copy(template)
+        anno_template = np.copy(template)
 
         def get_point(event, x, y, flags, params):
-            nonlocal points, template
+            nonlocal points, anno_template
             _ = flags
             _ = params
             if event == cv.EVENT_LBUTTONDOWN:
                 point = (x, y)
 
                 cv.circle(  # type:ignore
-                    template,  # type:ignore
+                    anno_template,  # type:ignore
                     (x, y),
                     4,
                     (0, 255, 0),
                     2,
                 )
-                cv.imshow(constants.WINDOW, template)  # type:ignore
+                cv.imshow(constants.WINDOW, anno_template)  # type:ignore
 
                 points.append(point)
             elif event == cv.EVENT_RBUTTONDOWN:
                 # remove the last annotation
                 points = points[:-1]
 
-                template = np.copy(orig_template)
+                anno_template = np.copy(anno_template)
 
                 for p in points:
                     cv.circle(
-                        template,
+                        anno_template,
                         p,
                         4,
                         (0, 255, 0),
                         2,
                     )
 
-                cv.imshow(constants.WINDOW, template)
+                cv.imshow(constants.WINDOW, anno_template)
 
         print(CROP_HELP)
 
-        imu.show(template, get_point, title="crop the header")
+        imu.show(anno_template, get_point, title="crop the header")
 
         assert len(points) == 4, (
             "you need to annotate the four corners of the table in order to crop it"
