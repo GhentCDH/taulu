@@ -159,7 +159,7 @@ class Taulu:
                 Press `n` for advancing to the next image, and `q` to quit.
         """
 
-        if isinstance(image, PathLike):
+        if not isinstance(image, MatLike):
             image = cv2.imread(os.fspath(image))
 
         # TODO: perform checks on the image

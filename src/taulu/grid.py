@@ -1,3 +1,4 @@
+import math
 from typing import cast
 import os
 import cv2 as cv
@@ -11,14 +12,105 @@ import logging
 from os import PathLike
 
 from taulu._core import astar as rust_astar
+from taulu.types import PointFloat, Point
 from . import img_util as imu
 from .constants import WINDOW
 from .decorators import log_calls
-from .table_indexer import Point, TableIndexer
+from .table_indexer import TableIndexer
 from .header_template import _Rule
 from .split import Split
+from ._core import median_slope as _core_median_slope
+
+show_time = 0
 
 logger = logging.getLogger(__name__)
+
+
+"""inclusive clamping"""
+
+
+def clamp(
+    num: float | int, min_bound: float | int, max_bound: float | int
+) -> float | int:
+    return max(min(num, max_bound), min_bound)
+
+
+def vector_average_slope(lines: List[Tuple[PointFloat, PointFloat]]) -> float:
+    sin_sum = 0
+    cos_sum = 0
+    for left, right in lines:
+        dx = right[0] - left[0]
+        dy = right[1] - left[1]
+        angle = math.atan2(dy, dx)
+
+        sin_sum += math.sin(angle)
+        cos_sum += math.cos(angle)
+
+    avg_angle = math.atan2(sin_sum, cos_sum)
+
+    # Convert back to slope
+    if math.isclose(math.cos(avg_angle), 0.0, abs_tol=1e-9):
+        return float("inf")  # vertical line
+    else:
+        return math.tan(avg_angle)
+
+
+def circular_median_angle(angles):
+    """Return the circular median of angles in radians."""
+    import math
+
+    def circular_distance(a, b):
+        diff = abs(a - b) % (2 * math.pi)
+        return min(diff, 2 * math.pi - diff)
+
+    angles = [angle % (2 * math.pi) for angle in angles]
+    n = len(angles)
+
+    best_median = None
+    min_total_distance = float("inf")
+
+    # Try each angle as a potential "cut point" for linearization
+    for cut_point in angles:
+        # Reorder angles relative to this cut point
+        reordered = sorted(angles, key=lambda x: (x - cut_point) % (2 * math.pi))
+
+        # Find median in this ordering
+        if n % 2 == 1:
+            candidate = reordered[n // 2]
+        else:
+            a1, a2 = reordered[n // 2 - 1], reordered[n // 2]
+            # Take circular average of the two middle angles
+            diff = (a2 - a1) % (2 * math.pi)
+            if diff > math.pi:
+                diff = diff - 2 * math.pi
+            candidate = (a1 + diff / 2) % (2 * math.pi)
+
+        # Calculate total circular distance to all points
+        total_distance = sum(circular_distance(candidate, angle) for angle in angles)
+
+        if total_distance < min_total_distance:
+            min_total_distance = total_distance
+            best_median = candidate
+
+    return best_median
+
+
+def median_slope(lines: List[Tuple[PointFloat, PointFloat]]) -> float:
+    angles = []
+
+    for (x1, y1), (x2, y2) in lines:
+        dx = x2 - x1
+        dy = y2 - y1
+        angle = math.atan2(dy, dx)
+        angles.append(angle)
+
+    median_angle = circular_median_angle(angles)
+
+    # Convert back to slope
+    if math.isclose(math.cos(median_angle), 0.0, abs_tol=1e-9):
+        return float("inf")  # Vertical
+    else:
+        return math.tan(median_angle)
 
 
 class GridDetector:
@@ -281,7 +373,7 @@ class GridDetector:
         cell_heights: list[int] | int,
         visual: bool = False,
         window: str = WINDOW,
-        goals_width: int = 60,
+        goals_width: Optional[int] = None,
     ) -> "TableGrid":
         """
         Parse the image to a `TableGrid` structure that holds all of the
@@ -297,6 +389,9 @@ class GridDetector:
         Returns:
             a TableGrid object
         """
+
+        if goals_width is None:
+            goals_width = self._search_region * 3 // 2
 
         if not cell_widths:
             raise ValueError("cell_widths must contain at least one value")
@@ -510,7 +605,9 @@ class GridDetector:
         if path is None:
             return None
 
-        next_point, _ = self.find_nearest(filtered, path[-1])
+        next_point, _ = self.find_nearest(
+            filtered, path[-1], region=self._search_region * 3 // 2
+        )
 
         if visual:
             self._visualize_path_finding(
@@ -535,7 +632,10 @@ class GridDetector:
         region_size: Optional[int] = None,
     ) -> None:
         """Visualize the path finding process for debugging."""
+        global show_time
+
         screen = imu.pop()
+
         # if gray, convert to BGR
         if len(screen.shape) == 2 or screen.shape[2] == 1:
             debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
@@ -576,6 +676,11 @@ class GridDetector:
             )
 
         imu.push(debug_img)
+
+        show_time += 1
+        if show_time % 10 != 1:
+            return
+
         imu.show(debug_img, title="Next column point", wait=False)
         # time.sleep(0.003)
 
@@ -648,12 +753,13 @@ class TableGrid(TableIndexer):
 
     _right_offset: int | None = None
 
-    def __init__(self, points: list[list[Point]]):
+    def __init__(self, points: list[list[Point]], right_offset: Optional[int] = None):
         """
         Args:
             points: a 2D list of intersections between hor. and vert. rules
         """
         self._points = points
+        self._right_offset = right_offset
 
     @property
     def points(self) -> list[list[Point]]:
@@ -707,21 +813,21 @@ class TableGrid(TableIndexer):
 
             points.append(row_points)
 
-        table_grid = TableGrid(points)
-        table_grid._right_offset = split_grids.left.cols
+        table_grid = TableGrid(points, split_grids.left.cols)
 
         return table_grid
 
     def save(self, path: str | Path):
         with open(path, "w") as f:
-            json.dump({"points": self.points}, f)
+            json.dump({"points": self.points, "right_offset": self._right_offset}, f)
 
     @staticmethod
     def from_saved(path: str | Path) -> "TableGrid":
         with open(path, "r") as f:
             points = json.load(f)
+            right_offset = points.get("right_offset", None)
             points = [[(p[0], p[1]) for p in pointes] for pointes in points["points"]]
-            return TableGrid(points)
+            return TableGrid(points, right_offset)
 
     def add_left_col(self, width: int):
         for row in self._points:
@@ -875,3 +981,102 @@ class TableGrid(TableIndexer):
             result.append(((row, start), (row, self.cols - 1)))
 
         return result
+
+    def anneal(
+        self, img: MatLike, look_distance_main: int = 3, look_distance_alt: int = 3
+    ):
+        # how far to look in the main direction of the line
+        # that is currently being examined
+        LOOK_MAIN = look_distance_main
+
+        # how far to look in the perpendicular direction of the line
+        # that is currently being examined
+        LOOK_ALT = look_distance_alt
+
+        def _left_at(col: int, offset: int = LOOK_ALT) -> int:
+            if self._right_offset is not None and col > self._right_offset:
+                return int(clamp(col - offset, self._right_offset + 1, self.cols + 1))
+            else:
+                return int(clamp(col - offset, 0, self.cols + 1))
+
+        def _right_at(col: int, offset: int = LOOK_ALT) -> int:
+            if self._right_offset is not None and col <= self._right_offset:
+                return int(clamp(col + offset, 0, self._right_offset))
+            else:
+                return int(clamp(col + offset, 0, self.cols + 1))
+
+        def _median_slope(index: Point) -> Optional[float]:
+            (r, c) = index
+
+            left = _left_at(c)
+            right = _right_at(c)
+
+            if left == right:
+                return None
+
+            lines = []
+            for row in range(r - LOOK_MAIN, r + LOOK_MAIN):
+                if row < 0 or row == r or row >= len(self.points):
+                    continue
+
+                left_point = self.points[row][int(left)]
+                right_point = self.points[row][int(right)]
+
+                lines.append((left_point, right_point))
+
+            return _core_median_slope(lines)
+
+        new_points = []
+        for row in self.points:
+            new_points.append(row.copy())
+
+        for row in range(len(self.points)):
+            for col in range(len(self.points[0])):
+                slope = _median_slope((row, col))
+
+                if slope is None:
+                    continue
+
+                left = _left_at(col, 1)
+                left_point = self.points[row][int(left)]
+
+                right = _right_at(col, 1)
+                right_point = self.points[row][int(right)]
+
+                # img_ = np.copy(img)
+                # # draw a line through the left point with that slope
+                # cv.line(
+                #     img_,
+                #     (int(left_point[0]), int(left_point[1])),
+                #     (
+                #         int(right_point[0]),
+                #         int(slope * (right_point[0] - left_point[0]) + left_point[1]),
+                #     ),
+                #     (0, 255, 0),
+                #     3,
+                #     cv.LINE_AA,
+                # )
+                # imu.show(img_)
+
+                # extrapolate left point to this points x coordinate
+                new_y = (
+                    slope * (self.points[row][col][0] - left_point[0]) + left_point[1]
+                )
+
+                new_y = (
+                    new_y / 2
+                    + (
+                        slope * (right_point[0] - self.points[row][col][0])
+                        + right_point[1]
+                    )
+                    / 2
+                )
+
+                movement = new_y - self.points[row][col][1]
+
+                new_points[row][col] = (
+                    self.points[row][col][0],
+                    self.points[row][col][1] + movement * 0.8,
+                )
+
+        self._points = new_points

@@ -9,8 +9,7 @@ import numpy as np
 from . import img_util as imu
 from .constants import WINDOW
 from .error import TauluException
-
-Point = Tuple[int, int]
+from .types import Point
 
 
 def _add(left: Point, right: Point) -> Point:
