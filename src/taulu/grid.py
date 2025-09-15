@@ -14,12 +14,13 @@ from os import PathLike
 from taulu._core import astar as rust_astar
 from taulu.types import PointFloat, Point
 from . import img_util as imu
+from .img_util import ensure_gray
 from .constants import WINDOW
 from .decorators import log_calls
 from .table_indexer import TableIndexer
 from .header_template import _Rule
 from .split import Split
-from ._core import median_slope as _core_median_slope
+from ._core import TableGrower, median_slope as _core_median_slope
 
 show_time = 0
 
@@ -420,6 +421,20 @@ class GridDetector:
             logger.warning(
                 f"Low confidence for the starting point: {confidence} at {left_top}"
             )
+
+        while True:
+            table_grower = TableGrower(
+                ensure_gray(img),
+                ensure_gray(filtered),
+                cell_widths,
+                cell_heights,
+                left_top,
+                self._search_region,
+                self._distance_penalty,
+            )
+
+            table_grower.grow_point(ensure_gray(img), ensure_gray(filtered))
+            print(table_grower.get_all_corners())
 
         points = []
         current = left_top

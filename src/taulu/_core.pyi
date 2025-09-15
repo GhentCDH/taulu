@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 from .types import PointFloat
 
@@ -10,3 +11,23 @@ def astar(
 def median_slope(
     lines: list[tuple[PointFloat, PointFloat]],
 ) -> float: ...
+
+class TableGrower:
+    """
+    Grow a table using this omni directional method
+    """
+
+    def __init__(
+        self,
+        table_image: np.ndarray,
+        cross_correlation: np.ndarray,
+        column_widths: list[float | int],
+        row_heights: list[float | int],
+        start_point: tuple[float, float],
+        search_region: int,
+        distance_penalty: float,
+    ): ...
+    def get_corner(self, coord: tuple[int, int]) -> Optional[PointFloat]: ...
+    def all_rows_complete(self) -> bool: ...
+    def get_all_corners(self) -> list[list[Optional[PointFloat]]]: ...
+    def grow_point(self, table_image: np.ndarray, cross_correlation: np.ndarray): ...
