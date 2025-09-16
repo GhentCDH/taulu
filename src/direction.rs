@@ -1,5 +1,6 @@
 use crate::point::Point;
 
+#[derive(Debug)]
 pub enum Direction {
     Right,
     RightStrict,

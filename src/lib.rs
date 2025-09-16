@@ -7,6 +7,7 @@ use pyo3::prelude::*;
 mod direction;
 mod growgrid;
 mod point;
+mod traits;
 
 pub use direction::Direction;
 pub use growgrid::TableGrower;

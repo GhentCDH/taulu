@@ -215,9 +215,8 @@ def draw_points(
     return img
 
 
-def draw_point(img: MatLike, point: Point, color=(255, 0, 0)):
+def draw_point(img: MatLike, point: Point, color=(255, 0, 0), thickness=1):
     if not (len(img.shape) == 3 and img.shape[2] == 3):
         img = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
 
-    (x, y) = point
-    return cv.circle(img, (y, x), 4, color, -1)
+    cv.circle(img, point, max(1, thickness // 2), color, -1)

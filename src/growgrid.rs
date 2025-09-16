@@ -1,36 +1,66 @@
 use std::collections::HashMap;
 use std::ops::{Add, Index};
 
-use numpy::PyReadonlyArray2;
+use numpy::{PyReadonlyArray2, PyUntypedArrayMethods as _};
 use pathfinding::prelude::astar;
 use pyo3::prelude::*;
-use pyo3::{exceptions::PyException, FromPyObject, PyErr, PyResult};
+use pyo3::{FromPyObject, PyResult};
 
-use crate::Direction;
+use crate::traits::Xy;
+use crate::{Direction, Point};
 
 // A coordinate of the grid (row, col)
+// This struct is used to make clear that the order is (row, col) not (x, y)
 #[derive(FromPyObject, Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Coord(usize, usize);
 
-#[derive(FromPyObject, IntoPyObject, Clone, Copy, PartialEq, PartialOrd, Debug)]
-pub struct Corner(pub f64, pub f64);
+impl Xy<usize> for Coord {
+    #[inline]
+    fn x(&self) -> usize {
+        self.1
+    }
+
+    #[inline]
+    fn y(&self) -> usize {
+        self.0
+    }
+}
+
+impl Coord {
+    pub fn new(x: usize, y: usize) -> Self {
+        Self(y, x)
+    }
+}
+
+impl From<Coord> for Point {
+    fn from(val: Coord) -> Self {
+        Point(val.x() as i32, val.y() as i32)
+    }
+}
+
+impl From<Point> for Coord {
+    fn from(val: Point) -> Self {
+        Coord(val.1 as usize, val.0 as usize)
+    }
+}
 
 /// A selection of rows of points that make up the corners of a table.
 #[pyclass]
+#[derive(Debug)]
 pub struct TableGrower {
     /// The points in the grid, indexed by (row, col)
-    corners: Vec<Vec<Option<Corner>>>,
+    corners: Vec<Vec<Option<Point>>>,
     /// The number of columns in the grid, being columns of the table + 1
     #[pyo3(get)]
     columns: usize,
     /// Edge of the table grid, where new points can be grown from
-    edge: HashMap<Coord, (Corner, f64)>,
+    edge: HashMap<Coord, (Point, f64)>,
     /// The size of the search region to use when finding the best corner match
     search_region: usize,
     /// The distance penalty to use when finding the best corner match
     distance_penalty: f64,
-    column_widths: Vec<f64>,
-    row_heights: Vec<f64>,
+    column_widths: Vec<i32>,
+    row_heights: Vec<i32>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -54,21 +84,17 @@ impl Add<Step> for Coord {
     }
 }
 
-impl From<Corner> for crate::Point {
-    fn from(val: Corner) -> Self {
-        crate::Point(val.1 as i32, val.0 as i32)
-    }
-}
-
 #[pymethods]
 impl TableGrower {
     #[new]
+    #[allow(clippy::too_many_arguments)]
+    /// Notice that the start_point is given as (x, y), both being integers
     fn new(
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
-        column_widths: Vec<f64>,
-        row_heights: Vec<f64>,
-        start_point: Corner,
+        column_widths: Vec<i32>,
+        row_heights: Vec<i32>,
+        start_point: Point,
         search_region: usize,
         distance_penalty: f64,
     ) -> PyResult<Self> {
@@ -83,22 +109,12 @@ impl TableGrower {
             distance_penalty,
         };
 
-        let start_corner = find_best_corner_match(
-            &cross_correlation,
-            &start_point,
-            search_region,
-            distance_penalty,
-        )
-        .ok_or(PyErr::new::<PyException, _>(
-            "Couldn't find corner match in search region",
-        ))?;
-
-        table_grower.add_corner(table_image, cross_correlation, start_corner.0, Coord(0, 0));
+        table_grower.add_corner(table_image, cross_correlation, start_point, Coord(0, 0));
 
         Ok(table_grower)
     }
 
-    fn get_corner(&self, coord: Coord) -> Option<Corner> {
+    fn get_corner(&self, coord: Coord) -> Option<Point> {
         if coord.0 >= self.corners.len() || coord.1 >= self.corners[coord.0].len() {
             return None;
         }
@@ -110,8 +126,12 @@ impl TableGrower {
         self.corners.iter().all(|row| row.len() == self.columns)
     }
 
-    fn get_all_corners(&self) -> Vec<Vec<Option<Corner>>> {
+    fn get_all_corners(&self) -> Vec<Vec<Option<Point>>> {
         self.corners.clone()
+    }
+
+    fn get_edge_points(&self) -> Vec<(Point, f64)> {
+        self.edge.values().cloned().collect()
     }
 
     /// Grow a grid of points starting from start and growing according to the given
@@ -121,24 +141,20 @@ impl TableGrower {
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
-    ) -> PyResult<()> {
+    ) -> PyResult<Option<f64>> {
         // find the edge point with the highest confidence
         // without emptying the edge
-        let (&coord, &(corner, confidence)) = self
+        let Some((&coord, &(corner, confidence))) = self
             .edge
             .iter()
             .max_by(|a, b| a.1 .1.partial_cmp(&b.1 .1).unwrap())
-            .unwrap();
+        else {
+            return Ok(None);
+        };
 
-        // print to python
-        println!(
-            "Growing point at coord {:?} with confidence {}",
-            coord, confidence
-        );
+        let _ = self.add_corner(table_image, cross_correlation, corner, coord);
 
-        self.add_corner(table_image, cross_correlation, corner, coord);
-
-        Ok(())
+        Ok(Some(confidence))
     }
 }
 
@@ -147,36 +163,38 @@ impl TableGrower {
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
-        corner: Corner,
+        corner_point: Point,
         coord: Coord,
-    ) {
-        assert!(coord.1 < self.columns);
+    ) -> bool {
+        assert!(coord.x() < self.columns);
 
-        while coord.0 >= self.corners.len() {
+        while self.corners.len() <= coord.y() {
             self.corners.push(Vec::with_capacity(self.columns));
         }
         let row = &mut self.corners[coord.0];
 
-        while row.len() < coord.1 {
+        while row.len() < coord.x() {
             row.push(None); // Placeholder points
         }
 
-        if row.len() == coord.1 {
-            row.push(Some(corner));
+        if row.len() == coord.x() {
+            row.push(Some(corner_point));
         } else {
-            row[coord.1] = Some(corner);
+            row[coord.x()] = Some(corner_point);
         }
 
         // Update edge
         // Remove current point from edge
         self.edge.remove(&coord);
 
+        let mut edge_added = false;
         // Add new edge points
         if (coord + Step::Right).1 < self.columns && self[coord + Step::Right].is_none() {
             if let Some((corner, confidence)) =
                 self.step_from_coord(&table_image, &cross_correlation, coord, Step::Right)
             {
                 self.update_edge(coord + Step::Right, corner, confidence);
+                edge_added = true;
             }
         }
 
@@ -186,6 +204,7 @@ impl TableGrower {
                 self.step_from_coord(&table_image, &cross_correlation, coord, Step::Down)
             {
                 self.update_edge(coord + Step::Down, corner, confidence);
+                edge_added = true;
             }
         }
 
@@ -194,6 +213,7 @@ impl TableGrower {
                 self.step_from_coord(&table_image, &cross_correlation, coord, Step::Left)
             {
                 self.update_edge(coord + Step::Left, corner, confidence);
+                edge_added = true;
             }
         }
 
@@ -202,8 +222,11 @@ impl TableGrower {
                 self.step_from_coord(&table_image, &cross_correlation, coord, Step::Up)
             {
                 self.update_edge(coord + Step::Up, corner, confidence);
+                edge_added = true;
             }
         }
+
+        edge_added
     }
 
     fn step_from_coord(
@@ -212,98 +235,106 @@ impl TableGrower {
         cross_correlation: &PyReadonlyArray2<'_, u8>,
         coord: Coord,
         step: Step,
-    ) -> Option<(Corner, f64)> {
+    ) -> Option<(Point, f64)> {
         // construct the goals based on the step direction,
         // known column widths and row heights, and existing points
-        let current_corner = self.get_corner(coord)?;
+        let current_point = self.get_corner(coord)?;
+
+        let image_size = table_image.shape();
+        let height = image_size[0];
+        let width = image_size[1];
 
         let (direction, goals) = match step {
             Step::Right => {
-                if coord.1 + 1 >= self.columns {
+                if coord.x() + 1 >= self.columns {
                     return None;
                 }
 
-                let next_x = current_corner.0 + self.column_widths[coord.1];
-                let goals = (0..self.search_region)
+                let next_x = current_point.x() + self.column_widths[coord.x()];
+                let goals: Vec<crate::Point> = (0..(self.search_region as i32))
                     .map(|i| {
-                        Corner(
+                        Point(
                             next_x,
-                            current_corner.1 + (i as f64) - (self.search_region as f64) / 2.0,
+                            current_point.y() + i - self.search_region as i32 / 2,
                         )
-                        .into()
                     })
-                    .collect::<Vec<_>>();
+                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
+                    .collect();
 
                 (Direction::RightStrict, goals)
             }
             Step::Down => {
                 // extend row heights with last value if necessary
-                let h = if coord.0 + 1 >= self.row_heights.len() {
+                let h = if coord.y() >= self.row_heights.len() {
                     *self.row_heights.last().unwrap()
                 } else {
-                    self.row_heights[coord.0]
+                    self.row_heights[coord.y()]
                 };
 
-                let next_y = current_corner.1 + h;
-                let goals = (0..self.search_region)
+                let next_y = current_point.y() + h;
+                let goals = (0..(self.search_region as i32))
                     .map(|i| {
-                        Corner(
-                            current_corner.0 + (i as f64) - (self.search_region as f64) / 2.0,
+                        Point(
+                            current_point.x() + i - self.search_region as i32 / 2,
                             next_y,
                         )
-                        .into()
                     })
+                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
                     .collect::<Vec<_>>();
 
                 (Direction::DownStrict, goals)
             }
             Step::Left => {
-                if coord.1 == 0 {
+                if coord.x() == 0 {
                     return None;
                 }
 
-                let next_x = current_corner.0 - self.column_widths[coord.1 - 1];
-                let goals = (0..self.search_region)
+                let next_x = current_point.x() - self.column_widths[coord.x() - 1];
+                let goals = (0..(self.search_region as i32))
                     .map(|i| {
-                        Corner(
+                        Point(
                             next_x,
-                            current_corner.1 + (i as f64) - (self.search_region as f64) / 2.0,
+                            current_point.y() + i - self.search_region as i32 / 2,
                         )
-                        .into()
                     })
+                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
                     .collect::<Vec<_>>();
 
                 (Direction::LeftStrict, goals)
             }
             Step::Up => {
-                if coord.0 == 0 {
+                if coord.y() == 0 {
                     return None;
                 }
 
                 // extend row heights with last value if necessary
-                let h = if coord.0 > self.row_heights.len() {
+                let h = if coord.y() > self.row_heights.len() {
                     *self.row_heights.last().unwrap()
                 } else {
-                    self.row_heights[coord.0]
+                    self.row_heights[coord.y() - 1]
                 };
 
-                let next_y = current_corner.1 - h;
-                let goals = (0..self.search_region)
+                let next_y = current_point.1 - h;
+                let goals = (0..(self.search_region as i32))
                     .map(|i| {
-                        Corner(
-                            current_corner.0 + (i as f64) - (self.search_region as f64) / 2.0,
+                        Point(
+                            current_point.x() + i - self.search_region as i32 / 2,
                             next_y,
                         )
-                        .into()
                     })
+                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
                     .collect::<Vec<_>>();
 
                 (Direction::UpStrict, goals)
             }
         };
 
+        if goals.is_empty() {
+            return None;
+        }
+
         let path: Vec<(i32, i32)> = astar::<crate::Point, u32, _, _, _, _>(
-            &current_corner.into(),
+            &current_point,
             |p| p.successors(&direction, table_image).unwrap_or_default(),
             |p| p.min_distance(&goals),
             |p| p.at_goal(&goals),
@@ -312,7 +343,7 @@ impl TableGrower {
 
         let approx = {
             let last = path.last().unwrap();
-            Corner(last.0 as f64, last.1 as f64)
+            Point(last.0, last.1)
         };
 
         find_best_corner_match(
@@ -323,7 +354,7 @@ impl TableGrower {
         )
     }
 
-    fn update_edge(&mut self, coord: Coord, corner: Corner, confidence: f64) {
+    fn update_edge(&mut self, coord: Coord, corner: Point, confidence: f64) {
         self.edge
             .entry(coord)
             .and_modify(|entry| {
@@ -337,7 +368,7 @@ impl TableGrower {
 }
 
 impl Index<Coord> for TableGrower {
-    type Output = Option<Corner>;
+    type Output = Option<Point>;
 
     fn index(&self, index: Coord) -> &Self::Output {
         if index.0 >= self.corners.len() || index.1 >= self.corners[index.0].len() {
@@ -380,10 +411,10 @@ fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec
 
 fn find_best_corner_match(
     cross_correlation: &PyReadonlyArray2<'_, u8>,
-    approx: &Corner,
+    approx: &Point,
     search_region: usize,
     distance_penalty: f64, // This parameter isn't used in the Python version
-) -> Option<(Corner, f64)> {
+) -> Option<(Point, f64)> {
     let filtered = cross_correlation.as_array();
 
     // Check if image is empty
@@ -392,10 +423,10 @@ fn find_best_corner_match(
     }
 
     let (height, width) = filtered.dim();
-    let x = approx.0.round() as i32;
-    let y = approx.1.round() as i32;
+    let x = approx.x();
+    let y = approx.y();
 
-    // Calculate crop boundaries (equivalent to Python logic)
+    // Calculate crop boundaries
     let crop_x = std::cmp::max(0, x - (search_region as i32) / 2) as usize;
     let crop_y = std::cmp::max(0, y - (search_region as i32) / 2) as usize;
     let crop_width = std::cmp::min(search_region, width.saturating_sub(crop_x));
@@ -479,8 +510,13 @@ fn find_best_corner_match(
     }
 
     // Convert back to global coordinates
-    let result_x = (crop_x + best_x) as f64;
-    let result_y = (crop_y + best_y) as f64;
+    let result_x = crop_x + best_x;
+    let result_y = crop_y + best_y;
 
-    Some((Corner(result_x, result_y), best_value as f64))
+    let best_value_normalized = best_value / 255.0;
+
+    Some((
+        Point(result_x as i32, result_y as i32),
+        best_value_normalized as f64,
+    ))
 }

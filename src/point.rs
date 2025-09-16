@@ -1,16 +1,23 @@
 use std::ops::Add;
 
 use numpy::PyReadonlyArray2;
-use pyo3::FromPyObject;
+use pyo3::{FromPyObject, IntoPyObject};
 
-use crate::Direction;
+use crate::{traits, Direction};
 
-#[derive(FromPyObject, PartialEq, PartialOrd, Eq, Hash, Clone)]
+/// x, y
+#[derive(FromPyObject, IntoPyObject, PartialEq, PartialOrd, Eq, Hash, Clone, Copy, Debug)]
 pub struct Point(pub i32, pub i32);
 
 impl Point {
     fn distance(&self, other: &Point) -> u32 {
         ((self.0 - other.0).abs() + (self.1 - other.1).abs()) as u32
+    }
+
+    // Rect given in (x1, y1, x2, y2) format
+    pub fn within(&self, rect: (i32, i32, i32, i32)) -> bool {
+        let (x1, y1, x2, y2) = rect;
+        self.0 >= x1 && self.0 < x2 && self.1 >= y1 && self.1 < y2
     }
 
     pub fn min_distance(&self, others: &[Point]) -> u32 {
@@ -66,5 +73,14 @@ impl<'a> Add<&'a Point> for &'_ Point {
 impl From<Point> for (i32, i32) {
     fn from(value: Point) -> Self {
         (value.0, value.1)
+    }
+}
+
+impl traits::Xy<i32> for Point {
+    fn x(&self) -> i32 {
+        self.0
+    }
+    fn y(&self) -> i32 {
+        self.1
     }
 }

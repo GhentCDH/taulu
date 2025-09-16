@@ -1,6 +1,6 @@
 from typing import Optional
 import numpy as np
-from .types import PointFloat
+from .types import Point
 
 def astar(
     img: np.ndarray,
@@ -21,13 +21,16 @@ class TableGrower:
         self,
         table_image: np.ndarray,
         cross_correlation: np.ndarray,
-        column_widths: list[float | int],
-        row_heights: list[float | int],
-        start_point: tuple[float, float],
+        column_widths: list[int],
+        row_heights: list[int],
+        start_point: tuple[int, int],
         search_region: int,
         distance_penalty: float,
     ): ...
-    def get_corner(self, coord: tuple[int, int]) -> Optional[PointFloat]: ...
+    def get_corner(self, coord: tuple[int, int]) -> Optional[Point]: ...
     def all_rows_complete(self) -> bool: ...
-    def get_all_corners(self) -> list[list[Optional[PointFloat]]]: ...
-    def grow_point(self, table_image: np.ndarray, cross_correlation: np.ndarray): ...
+    def get_all_corners(self) -> list[list[Optional[Point]]]: ...
+    def get_edge_points(self) -> list[tuple[Point, float]]: ...
+    def grow_point(
+        self, table_image: np.ndarray, cross_correlation: np.ndarray
+    ) -> Optional[float]: ...
