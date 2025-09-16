@@ -424,6 +424,14 @@ class GridDetector:
                 f"Low confidence for the starting point: {confidence} at {left_top}"
             )
 
+        # resize all parameters according to scale
+        img = cv.resize(img, None, fx=self._scale, fy=self._scale)
+        filtered = cv.resize(filtered, None, fx=self._scale, fy=self._scale)
+        cell_widths = [int(w * self._scale) for w in cell_widths]
+        cell_heights = [int(h * self._scale) for h in cell_heights]
+        left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
+        self._search_region = int(self._search_region * self._scale)
+
         table_grower = TableGrower(
             ensure_gray(img),
             ensure_gray(filtered),
@@ -434,48 +442,62 @@ class GridDetector:
             self._distance_penalty,
         )
 
-        # conf = None
-        # while True:
-        #     img_orig = np.copy(img)
-        #     confidence = table_grower.grow_point(
-        #         ensure_gray(img), ensure_gray(filtered)
-        #     )
+        if visual:
+            conf = None
+            while True:
+                confidence = table_grower.grow_point(
+                    ensure_gray(img), ensure_gray(filtered)
+                )
 
-        #     if confidence is None:
-        #         print("\nTable growth complete")
-        #         break
+                if confidence is None:
+                    imu.show(img_orig, wait=True)
+                    break
 
-        #     if visual:
-        #         if conf is None:
-        #             conf = confidence
-        #         conf = 0.8 * conf + 0.2 * confidence
-        #         print(
-        #             f"Confidence: {conf * 100:>5.1f}%",
-        #             end="\r",
-        #         )
-        #         corners = table_grower.get_all_corners()
-        #         for y in range(len(corners)):
-        #             for x in range(len(corners[y])):
-        #                 if corners[y][x] is not None:
-        #                     img_orig = imu.draw_points(
-        #                         img_orig,
-        #                         [corners[y][x]],
-        #                         color=(0, 0, 255),
-        #                         thickness=30,
-        #                     )
+                img_orig = np.copy(img)
 
-        #         edge = table_grower.get_edge_points()
+                if conf is None:
+                    conf = confidence
+                conf = 0.8 * conf + 0.2 * confidence
+                print(
+                    f"Confidence: {conf * 100:>5.1f}%",
+                    end="\r",
+                )
+                corners = table_grower.get_all_corners()
+                for y in range(len(corners)):
+                    for x in range(len(corners[y])):
+                        if corners[y][x] is not None:
+                            img_orig = imu.draw_points(
+                                img_orig,
+                                [corners[y][x]],
+                                color=(0, 0, 255),
+                                thickness=30,
+                            )
 
-        #         for point, score in edge:
-        #             color = (100, int(clamp(score * 255, 0, 255)), 100)
-        #             imu.draw_point(img_orig, point, color=color, thickness=20)
+                edge = table_grower.get_edge_points()
 
-        #         imu.show(img_orig, wait=False)
+                for point, score in edge:
+                    color = (100, int(clamp(score * 255, 0, 255)), 100)
+                    imu.draw_point(img_orig, point, color=color, thickness=20)
 
-        table_grower.grow_points(ensure_gray(img), ensure_gray(filtered))
+                imu.show(img_orig, wait=False)
+        else:
+            table_grower.grow_points(ensure_gray(img), ensure_gray(filtered))
 
         if table_grower.all_rows_complete():
-            return TableGrid(table_grower.get_all_corners())
+            corners = table_grower.get_all_corners()
+            logger.info(
+                f"Table growth complete, found {len(corners)} rows and {len(corners[0])} columns"
+            )
+            # rescale corners back to original size
+            if self._scale != 1.0:
+                for y in range(len(corners)):
+                    for x in range(len(corners[y])):
+                        if corners[y][x] is not None:
+                            corners[y][x] = (
+                                int(corners[y][x][0] / self._scale),
+                                int(corners[y][x][1] / self._scale),
+                            )
+            return TableGrid(corners)
 
         points = []
         current = left_top
