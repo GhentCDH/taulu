@@ -81,8 +81,11 @@ class HeaderAligner:
         if self._scale == 1.0:
             return h
 
-        scale_matrix = np.diag([1.0 / self._scale, 1.0 / self._scale, 1.0])
-        return scale_matrix @ h @ np.linalg.inv(scale_matrix)
+        scale_matrix = np.diag([self._scale, self._scale, 1.0])
+        # inv_scale_matrix = np.linalg.inv(scale_matrix)
+        inv_scale_matrix = np.diag([1.0 / self._scale, 1.0 / self._scale, 1.0])
+        # return inv_scale_matrix @ h @ scale_matrix
+        return inv_scale_matrix @ h @ scale_matrix
 
     @property
     def template(self):
@@ -196,7 +199,7 @@ class HeaderAligner:
         """
 
         im = imu.ensure_gray(img)
-        header = imu.ensure_gray(self._template)
+        header = imu.ensure_gray(self._unscale_img(self._template))
         height, width = im.shape
 
         header_warped = cv.warpPerspective(header, h, (width, height))
@@ -225,7 +228,12 @@ class HeaderAligner:
 
         img = self._preprocess_image(img)
 
-        return self._find_transform_of_template_on(img, visual, window)
+        h = self._find_transform_of_template_on(img, visual, window)
+
+        if visual:
+            self.view_alignment(img, h)
+
+        return h
 
     def template_to_img(self, h: NDArray, point: Iterable[int]) -> tuple[int, int]:
         """
