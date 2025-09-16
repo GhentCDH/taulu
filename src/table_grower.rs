@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use std::ops::{Add, Index};
 
-use numpy::{PyReadonlyArray2, PyUntypedArrayMethods as _};
+use numpy::PyReadonlyArray2;
 use pathfinding::prelude::astar;
 use pyo3::prelude::*;
 use pyo3::{FromPyObject, PyResult};
+use rayon::prelude::*;
 
 use crate::traits::Xy;
-use crate::{Direction, Point};
+use crate::{Direction, Image, Point};
 
 // A coordinate of the grid (row, col)
 // This struct is used to make clear that the order is (row, col) not (x, y)
@@ -109,7 +110,12 @@ impl TableGrower {
             distance_penalty,
         };
 
-        table_grower.add_corner(&table_image, &cross_correlation, start_point, Coord(0, 0));
+        table_grower.add_corner(
+            &table_image.as_array(),
+            &cross_correlation.as_array(),
+            start_point,
+            Coord(0, 0),
+        );
 
         Ok(table_grower)
     }
@@ -142,7 +148,7 @@ impl TableGrower {
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
     ) -> PyResult<Option<f64>> {
-        self.grow_point_internal(&table_image, &cross_correlation)
+        self.grow_point_internal(&table_image.as_array(), &cross_correlation.as_array())
     }
 
     fn grow_points(
@@ -152,7 +158,7 @@ impl TableGrower {
     ) -> PyResult<()> {
         loop {
             if self
-                .grow_point_internal(&table_image, &cross_correlation)?
+                .grow_point_internal(&table_image.as_array(), &cross_correlation.as_array())?
                 .is_none()
             {
                 break Ok(());
@@ -167,8 +173,8 @@ impl TableGrower {
     /// using the cross_correlation image to find the best positions for the grid points.
     fn grow_point_internal(
         &mut self,
-        table_image: &PyReadonlyArray2<'_, u8>,
-        cross_correlation: &PyReadonlyArray2<'_, u8>,
+        table_image: &Image,
+        cross_correlation: &Image,
     ) -> PyResult<Option<f64>> {
         // find the edge point with the highest confidence
         // without emptying the edge
@@ -187,8 +193,8 @@ impl TableGrower {
 
     fn add_corner(
         &mut self,
-        table_image: &PyReadonlyArray2<'_, u8>,
-        cross_correlation: &PyReadonlyArray2<'_, u8>,
+        table_image: &Image,
+        cross_correlation: &Image,
         corner_point: Point,
         coord: Coord,
     ) -> bool {
@@ -200,7 +206,7 @@ impl TableGrower {
         let row = &mut self.corners[coord.0];
 
         while row.len() < coord.x() {
-            row.push(None); // Placeholder points
+            row.push(None);
         }
 
         if row.len() == coord.x() {
@@ -209,47 +215,42 @@ impl TableGrower {
             row[coord.x()] = Some(corner_point);
         }
 
-        // Update edge
-        // Remove current point from edge
+        // Update edge: Remove current point from edge
         self.edge.remove(&coord);
 
+        let directions = [
+            (
+                Step::Right,
+                coord + Step::Right,
+                (coord + Step::Right).x() < self.columns,
+            ),
+            (Step::Down, coord + Step::Down, true),
+            (Step::Left, coord + Step::Left, coord.x() > 0),
+            (Step::Up, coord + Step::Up, coord.y() > 0),
+        ];
+
+        let step_results: Vec<Option<(Coord, Point, f32)>> = directions
+            .par_iter()
+            .map(|(step, new_coord, condition)| {
+                if *condition && self[*new_coord].is_none() {
+                    if let Some((corner, confidence)) =
+                        self.step_from_coord(&table_image, &cross_correlation, coord, *step)
+                    {
+                        Some((*new_coord, corner, confidence as f32))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect();
+
         let mut edge_added = false;
-        // Add new edge points
-        if (coord + Step::Right).1 < self.columns && self[coord + Step::Right].is_none() {
-            if let Some((corner, confidence)) =
-                self.step_from_coord(table_image, cross_correlation, coord, Step::Right)
-            {
-                self.update_edge(coord + Step::Right, corner, confidence);
-                edge_added = true;
-            }
-        }
 
-        // FIX: prevent unlimited growth downwards by some kind of end condition
-        if self[coord + Step::Down].is_none() {
-            if let Some((corner, confidence)) =
-                self.step_from_coord(table_image, cross_correlation, coord, Step::Down)
-            {
-                self.update_edge(coord + Step::Down, corner, confidence);
-                edge_added = true;
-            }
-        }
-
-        if coord.1 > 0 && self[coord + Step::Left].is_none() {
-            if let Some((corner, confidence)) =
-                self.step_from_coord(table_image, cross_correlation, coord, Step::Left)
-            {
-                self.update_edge(coord + Step::Left, corner, confidence);
-                edge_added = true;
-            }
-        }
-
-        if coord.0 > 0 && self[coord + Step::Up].is_none() {
-            if let Some((corner, confidence)) =
-                self.step_from_coord(table_image, cross_correlation, coord, Step::Up)
-            {
-                self.update_edge(coord + Step::Up, corner, confidence);
-                edge_added = true;
-            }
+        for (new_coord, corner, confidence) in step_results.iter().flatten().copied() {
+            self.update_edge(new_coord, corner, confidence as f64);
+            edge_added = true;
         }
 
         edge_added
@@ -257,8 +258,8 @@ impl TableGrower {
 
     fn step_from_coord(
         &self,
-        table_image: &PyReadonlyArray2<'_, u8>,
-        cross_correlation: &PyReadonlyArray2<'_, u8>,
+        table_image: &Image,
+        cross_correlation: &Image,
         coord: Coord,
         step: Step,
     ) -> Option<(Point, f64)> {
@@ -436,19 +437,17 @@ fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec
 }
 
 fn find_best_corner_match(
-    cross_correlation: &PyReadonlyArray2<'_, u8>,
+    cross_correlation: &Image,
     approx: &Point,
     search_region: usize,
     distance_penalty: f64, // This parameter isn't used in the Python version
 ) -> Option<(Point, f64)> {
-    let filtered = cross_correlation.as_array();
-
     // Check if image is empty
-    if filtered.is_empty() {
+    if cross_correlation.is_empty() {
         return None;
     }
 
-    let (height, width) = filtered.dim();
+    let (height, width) = cross_correlation.dim();
     let x = approx.x();
     let y = approx.y();
 
@@ -467,7 +466,7 @@ fn find_best_corner_match(
     let mut cropped = vec![vec![0u8; crop_width]; crop_height];
     for i in 0..crop_height {
         for j in 0..crop_width {
-            cropped[i][j] = filtered[[crop_y + i, crop_x + j]];
+            cropped[i][j] = cross_correlation[[crop_y + i, crop_x + j]];
         }
     }
 

@@ -1,8 +1,8 @@
 use std::ops::Add;
 
-use numpy::PyReadonlyArray2;
 use pyo3::{FromPyObject, IntoPyObject};
 
+use crate::Image;
 use crate::{traits, Direction};
 
 /// x, y
@@ -24,15 +24,11 @@ impl Point {
         others.iter().map(|o| self.distance(o)).min().unwrap()
     }
 
-    pub fn successors(
-        &self,
-        dir: &Direction,
-        img: &PyReadonlyArray2<'_, u8>,
-    ) -> Option<Vec<(Self, u32)>> {
+    pub fn successors(&self, dir: &Direction, img: &Image) -> Option<Vec<(Self, u32)>> {
         let &Self(x, y) = self;
 
-        fn image_cost(img: &PyReadonlyArray2<'_, u8>, p: &Point) -> Option<u32> {
-            Some(*img.get((p.1 as usize, p.0 as usize))? as u32 / 25)
+        fn image_cost(img: &Image, p: &Point) -> Option<u32> {
+            Some(img.get((p.1 as usize, p.0 as usize)).copied()? as u32 / 25)
         }
 
         fn step_cost(x: i32, y: i32, nx: i32, ny: i32, dir: &Direction) -> u32 {

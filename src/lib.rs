@@ -1,6 +1,9 @@
 use std::f64::consts::PI;
 
-use numpy::PyReadonlyArray2;
+use numpy::{
+    ndarray::{ArrayBase, Dim, ViewRepr},
+    PyReadonlyArray2,
+};
 use pathfinding::prelude::astar as astar_rust;
 use pyo3::prelude::*;
 
@@ -13,6 +16,8 @@ pub use direction::Direction;
 pub use point::Point;
 pub use table_grower::TableGrower;
 
+type Image<'a> = ArrayBase<ViewRepr<&'a u8>, Dim<[usize; 2]>>;
+
 #[pyfunction]
 fn astar(
     img: PyReadonlyArray2<'_, u8>,
@@ -24,7 +29,10 @@ fn astar(
 
     Ok(astar_rust(
         &start,
-        |p| p.successors(&direction, &img).unwrap_or_default(),
+        |p| {
+            p.successors(&direction, &img.as_array())
+                .unwrap_or_default()
+        },
         |p| p.min_distance(&goals),
         |p| p.at_goal(&goals),
     )
