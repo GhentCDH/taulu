@@ -109,7 +109,7 @@ impl TableGrower {
             distance_penalty,
         };
 
-        table_grower.add_corner(table_image, cross_correlation, start_point, Coord(0, 0));
+        table_grower.add_corner(&table_image, &cross_correlation, start_point, Coord(0, 0));
 
         Ok(table_grower)
     }
@@ -142,6 +142,34 @@ impl TableGrower {
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
     ) -> PyResult<Option<f64>> {
+        self.grow_point_internal(&table_image, &cross_correlation)
+    }
+
+    fn grow_points(
+        &mut self,
+        table_image: PyReadonlyArray2<'_, u8>,
+        cross_correlation: PyReadonlyArray2<'_, u8>,
+    ) -> PyResult<()> {
+        loop {
+            if self
+                .grow_point_internal(&table_image, &cross_correlation)?
+                .is_none()
+            {
+                break Ok(());
+            }
+        }
+    }
+}
+
+impl TableGrower {
+    /// Grow a grid of points starting from start and growing according to the given
+    /// column widths and row heights. The table_image is used to guide the growth
+    /// using the cross_correlation image to find the best positions for the grid points.
+    fn grow_point_internal(
+        &mut self,
+        table_image: &PyReadonlyArray2<'_, u8>,
+        cross_correlation: &PyReadonlyArray2<'_, u8>,
+    ) -> PyResult<Option<f64>> {
         // find the edge point with the highest confidence
         // without emptying the edge
         let Some((&coord, &(corner, confidence))) = self
@@ -156,13 +184,11 @@ impl TableGrower {
 
         Ok(Some(confidence))
     }
-}
 
-impl TableGrower {
     fn add_corner(
         &mut self,
-        table_image: PyReadonlyArray2<'_, u8>,
-        cross_correlation: PyReadonlyArray2<'_, u8>,
+        table_image: &PyReadonlyArray2<'_, u8>,
+        cross_correlation: &PyReadonlyArray2<'_, u8>,
         corner_point: Point,
         coord: Coord,
     ) -> bool {
@@ -191,7 +217,7 @@ impl TableGrower {
         // Add new edge points
         if (coord + Step::Right).1 < self.columns && self[coord + Step::Right].is_none() {
             if let Some((corner, confidence)) =
-                self.step_from_coord(&table_image, &cross_correlation, coord, Step::Right)
+                self.step_from_coord(table_image, cross_correlation, coord, Step::Right)
             {
                 self.update_edge(coord + Step::Right, corner, confidence);
                 edge_added = true;
@@ -201,7 +227,7 @@ impl TableGrower {
         // FIX: prevent unlimited growth downwards by some kind of end condition
         if self[coord + Step::Down].is_none() {
             if let Some((corner, confidence)) =
-                self.step_from_coord(&table_image, &cross_correlation, coord, Step::Down)
+                self.step_from_coord(table_image, cross_correlation, coord, Step::Down)
             {
                 self.update_edge(coord + Step::Down, corner, confidence);
                 edge_added = true;
@@ -210,7 +236,7 @@ impl TableGrower {
 
         if coord.1 > 0 && self[coord + Step::Left].is_none() {
             if let Some((corner, confidence)) =
-                self.step_from_coord(&table_image, &cross_correlation, coord, Step::Left)
+                self.step_from_coord(table_image, cross_correlation, coord, Step::Left)
             {
                 self.update_edge(coord + Step::Left, corner, confidence);
                 edge_added = true;
@@ -219,7 +245,7 @@ impl TableGrower {
 
         if coord.0 > 0 && self[coord + Step::Up].is_none() {
             if let Some((corner, confidence)) =
-                self.step_from_coord(&table_image, &cross_correlation, coord, Step::Up)
+                self.step_from_coord(table_image, cross_correlation, coord, Step::Up)
             {
                 self.update_edge(coord + Step::Up, corner, confidence);
                 edge_added = true;

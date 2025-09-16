@@ -5,13 +5,13 @@ use pathfinding::prelude::astar as astar_rust;
 use pyo3::prelude::*;
 
 mod direction;
-mod growgrid;
 mod point;
+mod table_grower;
 mod traits;
 
 pub use direction::Direction;
-pub use growgrid::TableGrower;
 pub use point::Point;
+pub use table_grower::TableGrower;
 
 #[pyfunction]
 fn astar(

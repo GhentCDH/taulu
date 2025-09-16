@@ -434,45 +434,45 @@ class GridDetector:
             self._distance_penalty,
         )
 
-        conf = None
+        # conf = None
+        # while True:
+        #     img_orig = np.copy(img)
+        #     confidence = table_grower.grow_point(
+        #         ensure_gray(img), ensure_gray(filtered)
+        #     )
 
-        print("")
-        while True:
-            img_orig = np.copy(img)
-            confidence = table_grower.grow_point(
-                ensure_gray(img), ensure_gray(filtered)
-            )
+        #     if confidence is None:
+        #         print("\nTable growth complete")
+        #         break
 
-            if confidence is None:
-                print("\nTable growth complete")
-                break
+        #     if visual:
+        #         if conf is None:
+        #             conf = confidence
+        #         conf = 0.8 * conf + 0.2 * confidence
+        #         print(
+        #             f"Confidence: {conf * 100:>5.1f}%",
+        #             end="\r",
+        #         )
+        #         corners = table_grower.get_all_corners()
+        #         for y in range(len(corners)):
+        #             for x in range(len(corners[y])):
+        #                 if corners[y][x] is not None:
+        #                     img_orig = imu.draw_points(
+        #                         img_orig,
+        #                         [corners[y][x]],
+        #                         color=(0, 0, 255),
+        #                         thickness=30,
+        #                     )
 
-            if visual:
-                if conf is None:
-                    conf = confidence
-                conf = 0.8 * conf + 0.2 * confidence
-                print(
-                    f"Confidence: {conf * 100:>5.1f}%",
-                    end="\r",
-                )
-                corners = table_grower.get_all_corners()
-                for y in range(len(corners)):
-                    for x in range(len(corners[y])):
-                        if corners[y][x] is not None:
-                            img_orig = imu.draw_points(
-                                img_orig,
-                                [corners[y][x]],
-                                color=(0, 0, 255),
-                                thickness=30,
-                            )
+        #         edge = table_grower.get_edge_points()
 
-                edge = table_grower.get_edge_points()
+        #         for point, score in edge:
+        #             color = (100, int(clamp(score * 255, 0, 255)), 100)
+        #             imu.draw_point(img_orig, point, color=color, thickness=20)
 
-                for point, score in edge:
-                    color = (100, int(clamp(score * 255, 0, 255)), 100)
-                    imu.draw_point(img_orig, point, color=color, thickness=20)
+        #         imu.show(img_orig, wait=False)
 
-                imu.show(img_orig, wait=False)
+        table_grower.grow_points(ensure_gray(img), ensure_gray(filtered))
 
         if table_grower.all_rows_complete():
             return TableGrid(table_grower.get_all_corners())
