@@ -1,19 +1,22 @@
-use std::f64::consts::PI;
+use std::{convert::Into, f64::consts::PI};
 
 use numpy::{
-    ndarray::{ArrayBase, Dim, ViewRepr},
     PyReadonlyArray2,
+    ndarray::{ArrayBase, Dim, ViewRepr},
 };
 use pathfinding::prelude::astar as astar_rust;
 use pyo3::prelude::*;
 
 mod direction;
+mod geom_util;
+mod invert;
 mod point;
 mod table_grower;
 mod traits;
 
 pub use direction::Direction;
 pub use point::Point;
+pub use table_grower::Coord;
 pub use table_grower::TableGrower;
 
 type Image<'a> = ArrayBase<ViewRepr<&'a u8>, Dim<[usize; 2]>>;
@@ -36,7 +39,7 @@ fn astar(
         |p| p.min_distance(&goals),
         |p| p.at_goal(&goals),
     )
-    .map(|r| r.0.into_iter().map(|p| p.into()).collect()))
+    .map(|r| r.0.into_iter().map(Into::into).collect()))
 }
 
 /// Return the circular median of angles in radians.
@@ -48,10 +51,10 @@ fn circular_median_angle(angles: Vec<f64>) -> PyResult<f64> {
     }
 
     // Helper function to calculate circular distance between two angles
-    fn circular_distance(a: f64, b: f64) -> f64 {
+    let circular_distance = |a: f64, b: f64| {
         let diff = (a - b).abs() % (2.0 * PI);
         diff.min(2.0 * PI - diff)
-    }
+    };
 
     // Normalize all angles to [0, 2π)
     let angles: Vec<f64> = angles.into_iter().map(|angle| angle % (2.0 * PI)).collect();
@@ -67,7 +70,9 @@ fn circular_median_angle(angles: Vec<f64>) -> PyResult<f64> {
         reordered.sort_by(|&x, &y| {
             let x_relative = (x - cut_point) % (2.0 * PI);
             let y_relative = (y - cut_point) % (2.0 * PI);
-            x_relative.partial_cmp(&y_relative).unwrap()
+            x_relative
+                .partial_cmp(&y_relative)
+                .expect("Should be able to compare floats")
         });
 
         // Find median in this ordering

@@ -1,6 +1,6 @@
 from typing import Optional
 import numpy as np
-from .types import Point
+from .types import Point, PointFloat
 
 def astar(
     img: np.ndarray,
@@ -26,12 +26,31 @@ class TableGrower:
         start_point: tuple[int, int],
         search_region: int,
         distance_penalty: float,
+        look_distance: int,
+        grow_threshold: float,
+        min_row_count: int,
     ): ...
     def get_corner(self, coord: tuple[int, int]) -> Optional[Point]: ...
     def all_rows_complete(self) -> bool: ...
     def get_all_corners(self) -> list[list[Optional[Point]]]: ...
     def get_edge_points(self) -> list[tuple[Point, float]]: ...
     def grow_point(
-        self, table_image: np.ndarray, cross_correlation: np.ndarray
+        self,
+        table_image: np.ndarray,
+        cross_correlation: np.ndarray,
     ) -> Optional[float]: ...
-    def grow_points(self, table_image: np.ndarray, cross_correlation: np.ndarray): ...
+    def grow_points(
+        self,
+        table_image: np.ndarray,
+        cross_correlation: np.ndarray,
+    ): ...
+    def extrapolate_one(
+        self, table_image: np.ndarray, cross_correlation: np.ndarray
+    ) -> Optional[Point]: ...
+    def is_table_complete(self) -> bool: ...
+    def grow_table(
+        self,
+        table_image: np.ndarray,
+        cross_correlation: np.ndarray,
+    ): ...
+    def set_threshold(self, value: float): ...

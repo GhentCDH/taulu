@@ -1,12 +1,22 @@
 [package]
 name = "taulu"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "_core"
 # "cdylib" is necessary to produce a shared library for Python to import from.
 crate-type = ["cdylib"]
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+correctness = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+unwrap_used = "warn"
+unnecessary_debug_formatting = "allow"
+needless_pass_by_value = "allow"
+as_conversions = "warn"
+
 
 [profile.release]
 lto = true
@@ -21,3 +31,5 @@ pyo3 = { version = "0.26.0", features = ["extension-module", "abi3-py39", "gener
 pathfinding = "4.14.0"
 numpy = "0.26.0"
 rayon = "1.11.0"
+approx = "0.5.1"
+ndarray = { version = "0.16.1", default-features = false }

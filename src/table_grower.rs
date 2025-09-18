@@ -7,6 +7,7 @@ use pyo3::prelude::*;
 use pyo3::{FromPyObject, PyResult};
 use rayon::prelude::*;
 
+use crate::geom_util::{evaluate_polynomial, linear_polynomial_least_squares};
 use crate::traits::Xy;
 use crate::{Direction, Image, Point};
 
@@ -50,18 +51,21 @@ impl From<Point> for Coord {
 #[derive(Debug)]
 pub struct TableGrower {
     /// The points in the grid, indexed by (row, col)
-    corners: Vec<Vec<Option<Point>>>,
+    pub corners: Vec<Vec<Option<Point>>>,
     /// The number of columns in the grid, being columns of the table + 1
     #[pyo3(get)]
-    columns: usize,
+    pub columns: usize,
     /// Edge of the table grid, where new points can be grown from
-    edge: HashMap<Coord, (Point, f64)>,
+    pub edge: HashMap<Coord, (Point, f64)>,
     /// The size of the search region to use when finding the best corner match
-    search_region: usize,
+    pub search_region: usize,
     /// The distance penalty to use when finding the best corner match
-    distance_penalty: f64,
-    column_widths: Vec<i32>,
-    row_heights: Vec<i32>,
+    pub distance_penalty: f64,
+    pub column_widths: Vec<i32>,
+    pub row_heights: Vec<i32>,
+    pub look_distance: usize,
+    pub grow_threshold: f64,
+    pub min_row_count: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -89,7 +93,7 @@ impl Add<Step> for Coord {
 impl TableGrower {
     #[new]
     #[allow(clippy::too_many_arguments)]
-    /// Notice that the start_point is given as (x, y), both being integers
+    /// Notice that the `start_point` is given as (x, y), both being integers
     fn new(
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
@@ -98,6 +102,9 @@ impl TableGrower {
         start_point: Point,
         search_region: usize,
         distance_penalty: f64,
+        look_distance: usize,
+        grow_threshold: f64,
+        min_row_count: usize,
     ) -> PyResult<Self> {
         let corners = Vec::new();
         let mut table_grower = Self {
@@ -108,6 +115,9 @@ impl TableGrower {
             row_heights,
             search_region,
             distance_penalty,
+            look_distance,
+            grow_threshold,
+            min_row_count,
         };
 
         table_grower.add_corner(
@@ -129,7 +139,9 @@ impl TableGrower {
     }
 
     fn all_rows_complete(&self) -> bool {
-        self.corners.iter().all(|row| row.len() == self.columns)
+        self.corners
+            .iter()
+            .all(|row| row.len() == self.columns && row.iter().all(|c| c.is_some()))
     }
 
     fn get_all_corners(&self) -> Vec<Vec<Option<Point>>> {
@@ -147,8 +159,12 @@ impl TableGrower {
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
-    ) -> PyResult<Option<f64>> {
-        self.grow_point_internal(&table_image.as_array(), &cross_correlation.as_array())
+    ) -> Option<f64> {
+        self.grow_point_internal(
+            &table_image.as_array(),
+            &cross_correlation.as_array(),
+            self.grow_threshold,
+        )
     }
 
     fn grow_points(
@@ -158,10 +174,106 @@ impl TableGrower {
     ) -> PyResult<()> {
         loop {
             if self
-                .grow_point_internal(&table_image.as_array(), &cross_correlation.as_array())?
+                .grow_point_internal(
+                    &table_image.as_array(),
+                    &cross_correlation.as_array(),
+                    self.grow_threshold,
+                )
                 .is_none()
             {
                 break Ok(());
+            }
+        }
+    }
+
+    /// Returns None when no corner was added
+    pub fn extrapolate_one(
+        &mut self,
+        table_image: PyReadonlyArray2<'_, u8>,
+        cross_correlation: PyReadonlyArray2<'_, u8>,
+    ) -> Option<Point> {
+        let (selected_location, point) = self.extrapolate_one_internal()?;
+        self.add_corner(
+            &table_image.as_array(),
+            &cross_correlation.as_array(),
+            point,
+            selected_location,
+        );
+
+        Some(point)
+    }
+
+    fn is_table_complete(&self) -> bool {
+        self.all_rows_complete() && self.corners.len() >= self.min_row_count
+    }
+
+    fn set_threshold(&mut self, value: f64) {
+        self.grow_threshold = value;
+    }
+
+    fn grow_table(
+        &mut self,
+        table_image: PyReadonlyArray2<'_, u8>,
+        cross_correlation: PyReadonlyArray2<'_, u8>,
+        // TODO: extract into struct field
+    ) {
+        let mut threshold = self.grow_threshold;
+
+        assert!(threshold <= 1.0, "threshold should be <= 1.0");
+        assert!(threshold > 0.0, "threshold should be > 0.0");
+
+        let original_threshold = threshold;
+        let table = table_image.as_array();
+        let cross = cross_correlation.as_array();
+
+        // first grow all points with the initial threshold until
+        // there are no good candidates left
+        loop {
+            if self
+                .grow_point_internal(&table, &cross, threshold)
+                .is_none()
+            {
+                break;
+            }
+        }
+
+        let mut loops_without_change = 0;
+
+        // if the table hasn't been completed this way, extrapolate corners
+        while !self.is_table_complete() {
+            loops_without_change += 1;
+
+            if loops_without_change > 50 {
+                break;
+            }
+
+            if let Some((coord, point)) = self.extrapolate_one_internal() {
+                self.add_corner(&table, &cross, point, coord);
+
+                loops_without_change = 0;
+
+                let mut grown = false;
+                while self
+                    .grow_point_internal(&table, &cross, threshold)
+                    .is_some()
+                {
+                    grown = true;
+                    // increase the threshold
+                    threshold = (0.1 + 0.9 * threshold).min(original_threshold);
+                }
+
+                if !grown {
+                    threshold *= 0.9;
+                }
+            } else {
+                // couldn't extrapolate a corner, grow a new corner with a lowered threshold
+                threshold *= 0.9;
+                if self
+                    .grow_point_internal(&table, &cross, threshold)
+                    .is_some()
+                {
+                    loops_without_change = 0;
+                }
             }
         }
     }
@@ -169,26 +281,29 @@ impl TableGrower {
 
 impl TableGrower {
     /// Grow a grid of points starting from start and growing according to the given
-    /// column widths and row heights. The table_image is used to guide the growth
-    /// using the cross_correlation image to find the best positions for the grid points.
+    /// column widths and row heights. The `table_image` is used to guide the growth
+    /// using the `cross_correlation` image to find the best positions for the grid points.
     fn grow_point_internal(
         &mut self,
         table_image: &Image,
         cross_correlation: &Image,
-    ) -> PyResult<Option<f64>> {
+        threshold: f64,
+    ) -> Option<f64> {
         // find the edge point with the highest confidence
         // without emptying the edge
-        let Some((&coord, &(corner, confidence))) = self
-            .edge
-            .iter()
-            .max_by(|a, b| a.1 .1.partial_cmp(&b.1 .1).unwrap())
-        else {
-            return Ok(None);
-        };
+        let (&coord, &(corner, confidence)) = self.edge.iter().max_by(|a, b| {
+            a.1.1
+                .partial_cmp(&b.1.1)
+                .expect("should be able to compare f64s")
+        })?;
+
+        if confidence < threshold {
+            return None;
+        }
 
         let _ = self.add_corner(table_image, cross_correlation, corner, coord);
 
-        Ok(Some(confidence))
+        Some(confidence)
     }
 
     fn add_corner(
@@ -201,13 +316,9 @@ impl TableGrower {
         assert!(coord.x() < self.columns);
 
         while self.corners.len() <= coord.y() {
-            self.corners.push(Vec::with_capacity(self.columns));
+            self.corners.push(vec![None; self.columns]);
         }
         let row = &mut self.corners[coord.0];
-
-        while row.len() < coord.x() {
-            row.push(None);
-        }
 
         if row.len() == coord.x() {
             row.push(Some(corner_point));
@@ -234,7 +345,7 @@ impl TableGrower {
             .map(|(step, new_coord, condition)| {
                 if *condition && self[*new_coord].is_none() {
                     if let Some((corner, confidence)) =
-                        self.step_from_coord(&table_image, &cross_correlation, coord, *step)
+                        self.step_from_coord(table_image, cross_correlation, coord, *step)
                     {
                         Some((*new_coord, corner, confidence as f32))
                     } else {
@@ -264,8 +375,9 @@ impl TableGrower {
         step: Step,
     ) -> Option<(Point, f64)> {
         // construct the goals based on the step direction,
+        //uuu
         // known column widths and row heights, and existing points
-        let current_point = self.get_corner(coord)?;
+        let current_point = TableGrower::get_corner(&self, coord)?;
 
         let image_size = table_image.shape();
         let height = image_size[0];
@@ -391,6 +503,238 @@ impl TableGrower {
                 }
             })
             .or_insert((corner, confidence));
+    }
+
+    pub fn width(&self) -> usize {
+        self.columns
+    }
+
+    pub fn height(&self) -> usize {
+        self.corners.len()
+    }
+
+    pub fn count_neighbours(&self, loc: Coord) -> u32 {
+        let mut count = 0;
+        // up
+        if loc.y() > 0 && self.corners[loc.y() - 1][loc.x()].is_some() {
+            count += 1;
+        }
+
+        // down
+        if loc.y() + 1 < self.height() && self.corners[loc.y() + 1][loc.x()].is_some() {
+            count += 1;
+        }
+
+        // left
+        if loc.x() > 0 && self.corners[loc.y()][loc.x() - 1].is_some() {
+            count += 1;
+        }
+
+        // right
+        if loc.x() + 1 < self.width() && self.corners[loc.y()][loc.x() + 1].is_some() {
+            count += 1;
+        }
+
+        count
+    }
+
+    /// Rerturns the next-best empty corner to be used for extrapolation
+    pub fn extendable_corner_and_neighbours(
+        &self,
+        look_distance: usize,
+    ) -> Option<(Coord, Vec<Point>, Vec<Point>)> {
+        self.corners
+            .par_iter()
+            .enumerate()
+            .map(|(y, row)| {
+                (
+                    y,
+                    row.iter()
+                        .enumerate()
+                        .filter(|(_x, cell)| cell.is_none())
+                        .map(|(x, _cell)| {
+                            (
+                                x,
+                                self.neighbour_points_x(Coord::new(x, y), look_distance),
+                                self.neighbour_points_y(Coord::new(x, y), look_distance),
+                            )
+                        })
+                        .max_by_key(|(_x, x_nbs, y_nbs)| x_nbs.len().min(y_nbs.len())),
+                )
+            })
+            .filter_map(|(y, opt_max)| opt_max.map(|(x, x_nbs, y_nbs)| (x, y, x_nbs, y_nbs)))
+            .max_by_key(|(_y, _x, x_nbs, y_nbs)| x_nbs.len().min(y_nbs.len()))
+            .and_then(|(x, y, x_nbs, y_nbs)| {
+                if x_nbs.len().min(y_nbs.len()) > 0 {
+                    Some((Coord::new(x, y), x_nbs, y_nbs))
+                } else {
+                    None
+                }
+            })
+    }
+
+    #[inline]
+    pub fn in_bounds(&self, loc: Coord) -> bool {
+        loc.x() < self.width() && loc.y() < self.height()
+    }
+
+    pub fn neighbour_points_x(&self, loc: Coord, look_distance: usize) -> Vec<Point> {
+        let mut points: Vec<Point> = Vec::new();
+        for dx in 1..=look_distance {
+            let right = Coord::new(loc.x() + dx, loc.y());
+            if self.in_bounds(right)
+                && self.corners[right.y()][right.x()].is_some()
+                && let Some(point) = self[right]
+            {
+                points.push(point);
+            }
+
+            let left = Coord::new(loc.x().saturating_sub(dx), loc.y());
+            if self.in_bounds(left) && self.corners[left.y()][left.x()].is_some() {
+                if let Some(last) = points.last()
+                    && let Some(left) = self[left]
+                    && *last == left
+                {
+                    continue;
+                }
+                if let Some(point) = self[left] {
+                    points.push(point);
+                };
+            }
+        }
+        points
+    }
+
+    pub fn neighbour_points_y(&self, loc: Coord, look_distance: usize) -> Vec<Point> {
+        let mut points = Vec::new();
+        for dy in 1..=look_distance {
+            let down = Coord::new(loc.x(), loc.y() + dy);
+            if self.in_bounds(down)
+                && self.corners[down.y()][down.x()].is_some()
+                && let Some(point) = self[down]
+            {
+                points.push(point);
+            }
+
+            let up = Coord::new(loc.x(), loc.y().saturating_sub(dy));
+            if self.in_bounds(up) && self.corners[up.y()][up.x()].is_some() {
+                if let Some(last) = points.last()
+                    && let Some(up) = self[up]
+                    && *last == up
+                {
+                    continue;
+                }
+                if let Some(point) = self[up] {
+                    points.push(point);
+                }
+            }
+        }
+        points
+    }
+
+    #[allow(clippy::similar_names)]
+    fn extrapolate_one_internal(&self) -> Option<(Coord, Point)> {
+        // Get the missing corner with the maxmin neighbours in each direction
+        let (selected_location, neighbours_x, neighbours_y) =
+            self.extendable_corner_and_neighbours(self.look_distance)?;
+
+        if neighbours_x.is_empty() && neighbours_y.is_empty() {
+            return None;
+        }
+
+        let horizontal_xs = neighbours_x
+            .iter()
+            .map(|p| p.x() as f32)
+            .collect::<Vec<_>>();
+        let horizontal_ys = neighbours_x
+            .iter()
+            .map(|p| p.y() as f32)
+            .collect::<Vec<_>>();
+        let vertical_xs = neighbours_y
+            .iter()
+            .map(|p| p.x() as f32)
+            .collect::<Vec<_>>();
+        let vertical_ys = neighbours_y
+            .iter()
+            .map(|p| p.y() as f32)
+            .collect::<Vec<_>>();
+
+        let degree = 1;
+        let horizontal_coeffs =
+            linear_polynomial_least_squares(degree, &horizontal_xs, &horizontal_ys).ok()?;
+        let vertical_coeffs =
+            linear_polynomial_least_squares(degree, &vertical_ys, &vertical_xs).ok()?;
+
+        // iteratively solve for the intersection of both
+        let (mut x, mut y) = {
+            let point = neighbours_x.first()?;
+            (point.x() as f32, point.y() as f32)
+        };
+
+        let ho = &horizontal_coeffs;
+        let ve = &vertical_coeffs;
+
+        // Newton's method
+        let (h, h_derivative) = match degree {
+            1 => {
+                let h = vec![ho[0] + ho[1] * ve[0], ho[1] * ve[1] - 1.0];
+                let h_derivative = vec![ho[1] * ve[1] - 1.0];
+                (h, h_derivative)
+            }
+            2 => {
+                let h = vec![
+                    ho[0] + ho[1] * ve[0] + ho[2] * ve[0] * ve[0],
+                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                    ho[1] * ve[2] + 2.0 * ho[2] * ve[0] * ve[2] + ho[2] * ve[1] * ve[1],
+                    2.0 * ho[2] * ve[1] * ve[2],
+                    ho[2] * ve[2] * ve[2],
+                ];
+                let h_derivative = vec![
+                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                    2.0 * ho[1] * ve[2] + 4.0 * ho[2] * ve[0] * ve[2] + 2.0 * ho[2] * ve[1] * ve[1],
+                    6.0 * ho[2] * ve[1] * ve[2],
+                    4.0 * ho[2] * ve[2] * ve[2],
+                ];
+                (h, h_derivative)
+            }
+            _ => {
+                return None;
+            }
+        };
+
+        let mut done = false;
+        for _ in 0..20 {
+            // let new_x = evaluate_polynomial(&vertical_coeffs, y);
+            // let new_y = evaluate_polynomial(&horizontal_coeffs, new_x);
+            let h_y = evaluate_polynomial(&h, y);
+            let h_der_y = evaluate_polynomial(&h_derivative, y);
+            let new_y = y - h_y / h_der_y;
+
+            // let dist = (x - new_x).powi(2) + (y - new_y).powi(2);
+            let dist = (y - new_y).abs();
+
+            if dist < 1e-6 {
+                x = evaluate_polynomial(&vertical_coeffs, new_y);
+                y = new_y;
+                // x = new_x;
+                // y = new_y;
+                done = true;
+                break;
+            }
+
+            if dist.is_nan() {
+                return None;
+            }
+
+            // x = new_x;
+            y = new_y;
+        }
+
+        if !done {
+            return None;
+        }
+
+        Some((selected_location, Point(x.round() as i32, y.round() as i32)))
     }
 }
 
@@ -544,4 +888,162 @@ fn find_best_corner_match(
         Point(result_x as i32, result_y as i32),
         best_value_normalized as f64,
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn create_test_table_grower() -> TableGrower {
+        let mut corners = vec![vec![None; 4]; 3];
+
+        // x . x .
+        // x . . .
+        // x . . .
+
+        // Add some points to create a pattern
+        corners[0][0] = Some(Point(10, 10));
+        corners[0][2] = Some(Point(30, 12));
+        corners[1][0] = Some(Point(8, 25));
+        corners[2][0] = Some(Point(6, 40));
+
+        TableGrower {
+            corners,
+            columns: 4,
+            edge: HashMap::new(),
+            search_region: 10,
+            distance_penalty: 0.5,
+            column_widths: vec![4; 3],
+            row_heights: vec![4; 2],
+            look_distance: 3,
+            grow_threshold: 1.0,
+            min_row_count: 2,
+        }
+    }
+
+    fn create_empty_table_grower() -> TableGrower {
+        let corners = vec![vec![None; 4]; 3];
+
+        TableGrower {
+            corners,
+            columns: 4,
+            edge: HashMap::new(),
+            search_region: 10,
+            distance_penalty: 0.5,
+            column_widths: vec![4; 3],
+            row_heights: vec![4; 2],
+            look_distance: 3,
+            grow_threshold: 1.0,
+            min_row_count: 2,
+        }
+    }
+
+    #[test]
+    fn test_table_completer_creation() {
+        let grower = create_test_table_grower();
+
+        assert_eq!(grower.width(), 4);
+        assert_eq!(grower.height(), 3);
+        assert_eq!(grower.corners.len(), 3);
+        assert_eq!(grower.corners[0].len(), 4);
+    }
+
+    #[test]
+    fn test_count_neighbours() {
+        let grower = create_test_table_grower();
+
+        // o . x .
+        // x . . .
+        // x . . .
+
+        // Corner at (0,0) should have 1 neighbor (down)
+        assert_eq!(grower.count_neighbours(Coord::new(0, 0)), 1);
+
+        // x . x .
+        // o . . .
+        // x . . .
+
+        // Corner at (0,1) should have 2 neighbors (up and down)
+        assert_eq!(grower.count_neighbours(Coord::new(0, 1)), 2);
+
+        // x . x .
+        // x . . .
+        // o . . .
+
+        // Corner at (0,2) should have 1 neighbor (up)
+        assert_eq!(grower.count_neighbours(Coord::new(0, 2)), 1);
+
+        // x . x .
+        // x o . .
+        // x . . .
+
+        // Empty position (1,1) should have 1 neighbor (left)
+        assert_eq!(grower.count_neighbours(Coord::new(1, 1)), 1);
+
+        // x . o .
+        // x . . .
+        // x . . .
+
+        // Position (2,0) should have 0 neighbors
+        assert_eq!(grower.count_neighbours(Coord::new(2, 0)), 0);
+    }
+
+    #[test]
+    fn test_in_bounds() {
+        let grower = create_test_table_grower();
+
+        assert!(grower.in_bounds(Coord::new(0, 0)));
+        assert!(grower.in_bounds(Coord::new(3, 2)));
+        assert!(!grower.in_bounds(Coord::new(4, 0)));
+        assert!(!grower.in_bounds(Coord::new(0, 3)));
+        assert!(!grower.in_bounds(Coord::new(4, 3)));
+    }
+
+    #[test]
+    fn test_neighbour_points_x() {
+        let grower = create_test_table_grower();
+
+        let neighbors = grower.neighbour_points_x(Coord::new(1, 0), 3);
+
+        // Should find the point at (0,0) and (2,0)
+        assert!(!neighbors.is_empty());
+        assert!(neighbors.contains(&Point(10, 10)));
+        assert!(neighbors.contains(&Point(30, 12)));
+    }
+
+    #[test]
+    fn test_neighbour_points_y() {
+        let grower = create_test_table_grower();
+
+        let neighbors = grower.neighbour_points_y(Coord::new(0, 1), 3);
+
+        // Should find points at (0,0) and (0,2)
+        assert!(!neighbors.is_empty());
+    }
+
+    #[test]
+    fn test_add_missing_corners_integration() {
+        let grower = create_test_table_grower();
+        let result = grower.extrapolate_one_internal();
+
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_table_completer_with_no_existing_corners() {
+        let grower = create_empty_table_grower();
+        let result = grower.extrapolate_one_internal();
+        // Should return None since there are no existing corners to extrapolate from
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_table_completer_bounds_checking() {
+        let grower = create_test_table_grower();
+
+        // Test various boundary conditions
+        assert!(grower.in_bounds(Coord::new(0, 0)));
+        assert!(grower.in_bounds(Coord::new(3, 2))); // width-1, height-1
+        assert!(!grower.in_bounds(Coord::new(4, 0))); // width
+        assert!(!grower.in_bounds(Coord::new(0, 3))); // height
+    }
 }

@@ -1,0 +1,131 @@
+use ndarray::prelude::*;
+
+use crate::invert::invert_matrix;
+
+#[derive(Debug)]
+pub enum Error {
+    NotEnoughPoints,
+    MatrixError,
+}
+
+/// Solves the least squares problem for fitting a polynomial
+/// of given degree to the set of points
+pub fn linear_polynomial_least_squares(
+    degree: usize,
+    sample_input: &[f32],
+    sample_output: &[f32],
+) -> Result<Vec<f32>, Error> {
+    assert_eq!(sample_input.len(), sample_output.len());
+    let n = sample_input.len();
+
+    if n < degree + 1 {
+        return Err(Error::NotEnoughPoints);
+    }
+
+    // linear least square fit x and y separately on linear curve
+    let mut features: Array2<f32> = Array2::zeros((n, degree + 1));
+    for ((sample, power), element) in features.indexed_iter_mut() {
+        *element = (sample_input[sample]).powi(power as i32);
+    }
+
+    let mut samples: Array2<f32> = Array2::zeros((n, 1));
+    for ((sample, _), element) in samples.indexed_iter_mut() {
+        *element = sample_output[sample];
+    }
+
+    // X^T X
+    let xt_x = features.t().dot(&features);
+
+    // (X^T X)^(-1)
+    let xt_x_inv = invert_matrix(&xt_x).map_err(|_| Error::MatrixError)?;
+
+    // X^T W Y
+    let xt_y = features.t().dot(&samples);
+
+    let coeffs = xt_x_inv.dot(&xt_y);
+
+    assert_eq!(coeffs.shape(), &[degree + 1, 1]);
+
+    Ok(coeffs.into_raw_vec_and_offset().0)
+}
+
+pub fn evaluate_polynomial(coeffs: &[f32], input: f32) -> f32 {
+    coeffs
+        .iter()
+        .enumerate()
+        .map(|(i, c)| c * input.powi(i as i32))
+        .sum()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_abs_diff_eq;
+
+    #[test]
+    fn test_evaluate_polynomial() {
+        // Test linear polynomial: y = 2x + 3
+        let coeffs = vec![3.0, 2.0]; // constant term first, then x term
+
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 0.0), 3.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 1.0), 5.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 2.0), 7.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, -1.0), 1.0, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn test_evaluate_polynomial_quadratic() {
+        // Test quadratic polynomial: y = x^2 + 2x + 1 = (x+1)^2
+        let coeffs = vec![1.0, 2.0, 1.0]; // constant, x, x^2
+
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 0.0), 1.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 1.0), 4.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, -1.0), 0.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 2.0), 9.0, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn test_evaluate_polynomial_constant() {
+        let coeffs = vec![5.0]; // constant polynomial
+
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 0.0), 5.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, 100.0), 5.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(evaluate_polynomial(&coeffs, -50.0), 5.0, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn test_linear_polynomial_least_squares_two_points() {
+        let x_values = vec![2.0, 3.0];
+        let y_values = vec![5.0, 10.0];
+
+        let result = linear_polynomial_least_squares(1, &x_values, &y_values);
+        assert!(result.is_ok());
+
+        let coeffs = result.unwrap();
+        assert_eq!(coeffs.len(), 2);
+
+        assert_abs_diff_eq!(coeffs[0], -5.0, epsilon = 1e-6);
+        assert_abs_diff_eq!(coeffs[1], 5.0, epsilon = 1e-6);
+
+        let eval = evaluate_polynomial(&coeffs, 4.0);
+        assert_abs_diff_eq!(eval, 15.0, epsilon = 1e-6);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_linear_polynomial_least_squares_mismatched_lengths() {
+        let x_values = vec![0.0, 1.0, 2.0];
+        let y_values = vec![0.0, 1.0]; // Different length
+
+        let _ = linear_polynomial_least_squares(2, &x_values, &y_values);
+    }
+
+    #[test]
+    fn test_linear_polynomial_least_squares_empty() {
+        let x_values: Vec<f32> = vec![];
+        let y_values: Vec<f32> = vec![];
+
+        let result = linear_polynomial_least_squares(1, &x_values, &y_values);
+        assert!(result.is_err());
+    }
+}

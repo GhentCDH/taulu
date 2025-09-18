@@ -3,6 +3,7 @@ The Taulu class is a convenience class that hides the inner workings
 of taulu as much as possible.
 """
 
+from time import perf_counter
 import os
 from os import PathLike
 from os.path import exists
@@ -164,7 +165,10 @@ class Taulu:
 
         # TODO: perform checks on the image
 
+        now = perf_counter()
         h = self._aligner.align(image, visual=debug_view)
+        align_time = perf_counter() - now
+        logger.info(f"Header alignment took {align_time:.2f} seconds")
 
         # find the starting point for the table grid algorithm
         left_top_template = self._template.intersection((1, 0))
@@ -194,6 +198,7 @@ class Taulu:
         else:
             cell_heights = self._template.cell_heights(cell_height_factor)
 
+        now = perf_counter()
         table = self._grid_detector.find_table_points(
             image,
             left_top_table,
@@ -201,6 +206,8 @@ class Taulu:
             cell_heights,
             visual=debug_view,
         )
+        grid_time = perf_counter() - now
+        logger.info(f"Grid detection took {grid_time:.2f} seconds")
 
         if isinstance(table, Split):
             table = TableGrid.from_split(table, (0, 0))
