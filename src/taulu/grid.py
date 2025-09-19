@@ -414,8 +414,6 @@ class GridDetector:
             filtered, left_top, int(self._search_region * 1.5)
         )
 
-        print(f"left top point, starting point for rust table grower: {left_top}")
-
         if confidence < 0.1:
             logger.warning(
                 f"Low confidence for the starting point: {confidence} at {left_top}"
@@ -490,18 +488,15 @@ class GridDetector:
                 loops_without_change += 1
 
                 if loops_without_change > 50:
-                    print("fuck")
                     break
 
                 if table_grower.extrapolate_one(img_gray, filtered_gray) is not None:
-                    print("extrapolated one")
                     show_grower_progress()
 
                     loops_without_change = 0
 
                     grown = False
                     while table_grower.grow_point(img_gray, filtered_gray) is not None:
-                        print("grew one")
                         show_grower_progress()
                         grown = True
                         threshold = min(0.1 + 0.9 * threshold, original_threshold)
@@ -512,12 +507,10 @@ class GridDetector:
                         table_grower.set_threshold(threshold)
 
                 else:
-                    print("couldnt extrapolate")
                     threshold *= 0.9
                     table_grower.set_threshold(threshold)
 
                     if table_grower.grow_point(img_gray, filtered_gray) is not None:
-                        print("grew one")
                         show_grower_progress()
                         loops_without_change = 0
 
