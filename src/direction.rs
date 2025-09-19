@@ -1,4 +1,4 @@
-use crate::point::Point;
+use crate::{point::Point, table_grower::Step};
 
 #[derive(Debug)]
 pub enum Direction {
@@ -99,6 +99,17 @@ impl TryFrom<&str> for Direction {
             _ => Err(pyo3::PyErr::new::<pyo3::exceptions::PyValueError, _>(
                 "Direction must be 'right', 'down', 'right_strict', 'left_strict', 'up', 'up_strict', 'diagonal', 'straight' or 'any'",
             )),
+        }
+    }
+}
+
+impl From<Step> for Direction {
+    fn from(value: Step) -> Self {
+        match value {
+            Step::Right => Self::RightStrict,
+            Step::Down => Self::DownStrict,
+            Step::Left => Self::LeftStrict,
+            Step::Up => Self::UpStrict,
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::convert::Into;
-use std::ops::{Add, Index};
+use std::ops::{Add, Index, Neg};
 
 use numpy::PyReadonlyArray2;
 use pathfinding::prelude::astar;
@@ -8,9 +8,9 @@ use pyo3::prelude::*;
 use pyo3::{FromPyObject, PyResult};
 use rayon::prelude::*;
 
-use crate::geom_util::{evaluate_polynomial, linear_polynomial_least_squares};
+use crate::geom_util::{evaluate_polynomial, gaussian_1d, linear_polynomial_least_squares};
 use crate::traits::Xy;
-use crate::{Direction, Image, Point};
+use crate::{Image, Point};
 
 // A coordinate of the grid (row, col)
 // This struct is used to make clear that the order is (row, col) not (x, y)
@@ -33,6 +33,24 @@ impl Coord {
     #[must_use]
     pub fn new(x: usize, y: usize) -> Self {
         Self(y, x)
+    }
+
+    #[must_use]
+    pub fn take_amount_of_steps(&self, amount: usize, step: Step) -> Option<Coord> {
+        if match step {
+            Step::Right | Step::Down => false,
+            Step::Left => self.1 < amount,
+            Step::Up => self.0 < amount,
+        } {
+            return None;
+        }
+
+        Some(match step {
+            Step::Right => Coord(self.0, self.1 + amount),
+            Step::Down => Coord(self.0 + amount, self.1),
+            Step::Left => Coord(self.0, self.1 - amount),
+            Step::Up => Coord(self.0 - amount, self.1),
+        })
     }
 }
 
@@ -76,7 +94,7 @@ pub struct TableGrower {
     pub min_row_count: usize,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Step {
     Right,
     Down,
@@ -93,6 +111,30 @@ impl Add<Step> for Coord {
             Step::Down => Coord(self.0 + 1, self.1),
             Step::Left => Coord(self.0, self.1 - 1),
             Step::Up => Coord(self.0 - 1, self.1),
+        }
+    }
+}
+
+impl Neg for Step {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            Step::Right => Self::Left,
+            Step::Down => Self::Up,
+            Step::Left => Self::Right,
+            Step::Up => Self::Down,
+        }
+    }
+}
+
+impl Step {
+    fn rotate_ninety(self) -> Self {
+        match self {
+            Step::Right => Step::Up,
+            Step::Up => Step::Left,
+            Step::Left => Step::Down,
+            Step::Down => Step::Right,
         }
     }
 }
@@ -376,42 +418,20 @@ impl TableGrower {
         edge_added
     }
 
-    #[allow(clippy::too_many_lines)]
-    fn step_from_coord(
-        &self,
-        table_image: &Image,
-        cross_correlation: &Image,
-        coord: Coord,
-        step: Step,
-    ) -> Option<(Point, f64)> {
-        // construct the goals based on the step direction,
-        //uuu
-        // known column widths and row heights, and existing points
-        let current_point = TableGrower::get_corner(self, coord)?;
-
-        let image_size = table_image.shape();
-        let height = image_size[0];
-        let width = image_size[1];
-
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-        let (direction, goals) = match step {
+    fn header_based_step_from_coord(&self, coord: Coord, step: Step) -> Option<Point> {
+        let current_point = self[coord]?;
+        match step {
             Step::Right => {
                 if coord.x() + 1 >= self.columns {
                     return None;
                 }
-
-                let next_x = current_point.x() + self.column_widths[coord.x()];
-                let goals: Vec<crate::Point> = (0..(self.search_region as i32))
-                    .map(|i| {
-                        Point(
-                            next_x,
-                            current_point.y() + i - self.search_region as i32 / 2,
-                        )
-                    })
-                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
-                    .collect();
-
-                (Direction::RightStrict, goals)
+                Some(&current_point + &Point(self.column_widths[coord.x()], 0))
+            }
+            Step::Left => {
+                if coord.x() == 0 {
+                    return None;
+                }
+                Some(&current_point + &Point(-self.column_widths[coord.x() - 1], 0))
             }
             Step::Down => {
                 // extend row heights with last value if necessary
@@ -423,37 +443,7 @@ impl TableGrower {
                 } else {
                     self.row_heights[coord.y()]
                 };
-
-                let next_y = current_point.y() + h;
-                let goals = (0..(self.search_region as i32))
-                    .map(|i| {
-                        Point(
-                            current_point.x() + i - self.search_region as i32 / 2,
-                            next_y,
-                        )
-                    })
-                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
-                    .collect::<Vec<_>>();
-
-                (Direction::DownStrict, goals)
-            }
-            Step::Left => {
-                if coord.x() == 0 {
-                    return None;
-                }
-
-                let next_x = current_point.x() - self.column_widths[coord.x() - 1];
-                let goals = (0..(self.search_region as i32))
-                    .map(|i| {
-                        Point(
-                            next_x,
-                            current_point.y() + i - self.search_region as i32 / 2,
-                        )
-                    })
-                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
-                    .collect::<Vec<_>>();
-
-                (Direction::LeftStrict, goals)
+                Some(&current_point + &Point(0, h))
             }
             Step::Up => {
                 if coord.y() == 0 {
@@ -470,20 +460,50 @@ impl TableGrower {
                     self.row_heights[coord.y() - 1]
                 };
 
-                let next_y = current_point.1 - h;
-                let goals = (0..(self.search_region as i32))
-                    .map(|i| {
-                        Point(
-                            current_point.x() + i - self.search_region as i32 / 2,
-                            next_y,
-                        )
-                    })
-                    .filter(|p| p.within((0, 0, width as i32, height as i32)))
-                    .collect::<Vec<_>>();
-
-                (Direction::UpStrict, goals)
+                Some(&current_point + &Point(0, -h))
             }
+        }
+    }
+
+    fn step_from_coord(
+        &self,
+        table_image: &Image,
+        cross_correlation: &Image,
+        coord: Coord,
+        step: Step,
+    ) -> Option<(Point, f64)> {
+        // construct the goals based on the step direction,
+        // known column widths and row heights, and existing points
+        let current_point = TableGrower::get_corner(self, coord)?;
+
+        let image_size = table_image.shape();
+        let height = image_size[0];
+        let width = image_size[1];
+
+        // let estimated_new_point = self.header_based_step_from_coord(coord, step)?;
+        let estimated_new_point = &self.approximate_best_step(coord, step)? + &current_point;
+
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+        let goals = match step {
+            Step::Right => (0..(self.search_region as i32))
+                .map(|i| &estimated_new_point + &Point(0, i - self.search_region as i32 / 2))
+                .filter(|p| p.within((0, 0, width as i32, height as i32)))
+                .collect(),
+            Step::Down => (0..(self.search_region as i32))
+                .map(|i| &estimated_new_point + &Point(i - self.search_region as i32 / 2, 0))
+                .filter(|p| p.within((0, 0, width as i32, height as i32)))
+                .collect::<Vec<_>>(),
+            Step::Left => (0..(self.search_region as i32))
+                .map(|i| &estimated_new_point + &Point(0, i - self.search_region as i32 / 2))
+                .filter(|p| p.within((0, 0, width as i32, height as i32)))
+                .collect::<Vec<_>>(),
+            Step::Up => (0..(self.search_region as i32))
+                .map(|i| &estimated_new_point + &Point(i - self.search_region as i32 / 2, 0))
+                .filter(|p| p.within((0, 0, width as i32, height as i32)))
+                .collect::<Vec<_>>(),
         };
+
+        let direction = step.into();
 
         if goals.is_empty() {
             return None;
@@ -765,6 +785,81 @@ impl TableGrower {
 
         #[allow(clippy::cast_possible_truncation)]
         Some((selected_location, Point(x.round() as i32, y.round() as i32)))
+    }
+
+    /// Approximates the best step size to take from `current` in `step` direction
+    /// this approximation is based on the steps that have been taken before, by neighbouring
+    /// points
+    fn approximate_best_step(&self, current: Coord, step: Step) -> Option<Point> {
+        let mut gaussian_weights = gaussian_1d(self.look_distance * 2, None);
+        let similar_steps = self.similar_neighbouring_steps(current, step);
+
+        let mut count = 0;
+        for (i, step) in similar_steps.iter().enumerate() {
+            if step.is_none() {
+                gaussian_weights[i] = 0.0;
+            } else {
+                count += 1;
+            }
+        }
+
+        normalize(&mut gaussian_weights);
+
+        let result = similar_steps
+            .iter()
+            .zip(gaussian_weights.iter())
+            .filter(|(step, _weight)| step.is_some())
+            .map(|(step, weight)| step.expect("filter") * *weight)
+            .fold(Point(0, 0), |acc, val| acc + val);
+
+        #[allow(clippy::cast_precision_loss)]
+        if count <= 3 {
+            let header_step = self.header_based_step_from_coord(current, step)?;
+            Some(
+                header_step * (1.0 / (1.0 + count as f32))
+                    + result * (count as f32 / (1.0 + count as f32)),
+            )
+        } else {
+            Some(result)
+        }
+    }
+
+    /// Finds the step sizes that relevant neighbours took in the same direction
+    /// to reach another corner point.
+    ///
+    /// The result is a vector of length `look_distance * 2`.
+    /// For neighbours which don't exist or haven't taken the relevant step yet,
+    /// use the default guestimated value
+    #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
+    fn similar_neighbouring_steps(&self, current: Coord, step: Step) -> Vec<Option<Point>> {
+        let mut steps = vec![None; self.look_distance * 2];
+
+        let neighbours_one = (1..=self.look_distance).map(|offset| {
+            current
+                .take_amount_of_steps(offset, step.rotate_ninety())
+                .filter(|&c| self.in_bounds(c))
+        });
+        let neighbours_two = (1..=self.look_distance).map(|offset| {
+            current
+                .take_amount_of_steps(offset, step.rotate_ninety().neg())
+                .filter(|&c| self.in_bounds(c))
+        });
+
+        // get the step size they took in the step direction
+        neighbours_one
+            .chain(neighbours_two)
+            .enumerate()
+            .filter(|(_i, nb)| nb.is_some())
+            .for_each(|(i, nb)| {
+                let nb = nb.expect("filter");
+                if let Some(current_point) = self[nb]
+                    && let Some(next_point) = self[nb + step]
+                {
+                    steps[i] = Some(&next_point - &current_point);
+                }
+            });
+
+        steps
     }
 }
 

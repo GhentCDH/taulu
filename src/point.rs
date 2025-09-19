@@ -1,8 +1,9 @@
-use std::ops::Add;
+use std::ops::{Add, Mul, Sub};
 
 use pyo3::{FromPyObject, IntoPyObject};
 
 use crate::Image;
+use crate::table_grower::Step;
 use crate::{Direction, traits};
 
 /// x, y
@@ -82,9 +83,39 @@ impl<'a> Add<&'a Point> for &'_ Point {
     }
 }
 
+impl<'a> Sub<&'a Point> for &'_ Point {
+    type Output = Point;
+
+    fn sub(self, rhs: &'a Point) -> Self::Output {
+        Point(self.0 - rhs.0, self.1 - rhs.1)
+    }
+}
+
+impl<'a> Mul<f32> for &'_ Point {
+    type Output = Point;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Point(
+            (self.0 as f32 * rhs).round() as i32,
+            (self.1 as f32 * rhs).round() as i32,
+        )
+    }
+}
+
 impl From<Point> for (i32, i32) {
     fn from(value: Point) -> Self {
         (value.0, value.1)
+    }
+}
+
+impl From<Step> for Point {
+    fn from(value: Step) -> Self {
+        match value {
+            Step::Right => Point(1, 0),
+            Step::Down => Point(0, 1),
+            Step::Left => Point(-1, 0),
+            Step::Up => Point(0, -1),
+        }
     }
 }
 

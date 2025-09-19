@@ -9,6 +9,36 @@ pub enum Error {
     Conversion,
 }
 
+pub fn gaussian_1d(width: usize, sigma: Option<f32>) -> Vec<f32> {
+    #[allow(clippy::cast_precision_loss)]
+    let sigma = sigma.unwrap_or(width as f32 * 0.15 + 0.35);
+    let mut kernel = Vec::with_capacity(width);
+    #[allow(clippy::cast_precision_loss)]
+    let mean = (width as f32 - 1.0) / 2.0;
+    let coeff = 1.0 / (sigma * (2.0 * std::f32::consts::PI).sqrt());
+    let denom = 2.0 * sigma * sigma;
+
+    for x in 0..width {
+        #[allow(clippy::cast_precision_loss)]
+        let exponent = -((x as f32 - mean).powi(2)) / denom;
+        kernel.push(coeff * exponent.exp());
+    }
+
+    // Normalize the kernel
+    normalize(&mut kernel);
+
+    kernel
+}
+
+pub fn normalize(kernel: &mut [f32]) {
+    let sum: f32 = kernel.iter().sum();
+    if sum != 0.0 {
+        for k in kernel {
+            *k /= sum;
+        }
+    }
+}
+
 /// Solves the least squares problem for fitting a polynomial
 /// of given degree to the set of points
 pub fn linear_polynomial_least_squares(
