@@ -16,6 +16,7 @@ pub enum Direction {
 }
 
 impl Direction {
+    #[must_use]
     pub fn offsets(&self) -> &[Point] {
         match self {
             Direction::Right => &[
@@ -65,6 +66,7 @@ impl Direction {
         }
     }
 
+    #[must_use]
     pub fn perpendicular(&self, dx: i32, dy: i32) -> bool {
         match self {
             Direction::Right | Direction::RightStrict | Direction::Left | Direction::LeftStrict => {

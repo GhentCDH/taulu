@@ -102,7 +102,7 @@ fn circular_median_angle(angles: Vec<f64>) -> PyResult<f64> {
         }
     }
 
-    Ok(best_median.unwrap())
+    Ok(best_median.expect("input shouldn't be empty"))
 }
 
 /// Calculate the median slope from a list of line segments.
@@ -139,7 +139,7 @@ fn median_slope(lines: Vec<((f64, f64), (f64, f64))>) -> PyResult<f64> {
 /// the `lib.name` setting in the `Cargo.toml`, else Python will not be able to
 /// import the module.
 #[pymodule]
-fn _core<'py>(m: &Bound<'py, PyModule>) -> PyResult<()> {
+fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TableGrower>()?;
     m.add_function(wrap_pyfunction!(astar, m)?)?;
     m.add_function(wrap_pyfunction!(median_slope, m)?)?;

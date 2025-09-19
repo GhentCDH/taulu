@@ -5,7 +5,8 @@ use crate::invert::invert_matrix;
 #[derive(Debug)]
 pub enum Error {
     NotEnoughPoints,
-    MatrixError,
+    Matrix,
+    Conversion,
 }
 
 /// Solves the least squares problem for fitting a polynomial
@@ -15,7 +16,11 @@ pub fn linear_polynomial_least_squares(
     sample_input: &[f32],
     sample_output: &[f32],
 ) -> Result<Vec<f32>, Error> {
-    assert_eq!(sample_input.len(), sample_output.len());
+    assert_eq!(
+        sample_input.len(),
+        sample_output.len(),
+        "input and output should have equal length"
+    );
     let n = sample_input.len();
 
     if n < degree + 1 {
@@ -25,7 +30,8 @@ pub fn linear_polynomial_least_squares(
     // linear least square fit x and y separately on linear curve
     let mut features: Array2<f32> = Array2::zeros((n, degree + 1));
     for ((sample, power), element) in features.indexed_iter_mut() {
-        *element = (sample_input[sample]).powi(power as i32);
+        *element =
+            (sample_input[sample]).powi(i32::try_from(power).map_err(|_| Error::Conversion)?);
     }
 
     let mut samples: Array2<f32> = Array2::zeros((n, 1));
@@ -37,7 +43,7 @@ pub fn linear_polynomial_least_squares(
     let xt_x = features.t().dot(&features);
 
     // (X^T X)^(-1)
-    let xt_x_inv = invert_matrix(&xt_x).map_err(|_| Error::MatrixError)?;
+    let xt_x_inv = invert_matrix(&xt_x).map_err(|_| Error::Matrix)?;
 
     // X^T W Y
     let xt_y = features.t().dot(&samples);
@@ -53,7 +59,12 @@ pub fn evaluate_polynomial(coeffs: &[f32], input: f32) -> f32 {
     coeffs
         .iter()
         .enumerate()
-        .map(|(i, c)| c * input.powi(i as i32))
+        .map(|(i, c)| {
+            c * input.powi(
+                i32::try_from(i)
+                    .expect("coefficients index should convert to i32 without overflow"),
+            )
+        })
         .sum()
 }
 
@@ -101,7 +112,7 @@ mod tests {
         let result = linear_polynomial_least_squares(1, &x_values, &y_values);
         assert!(result.is_ok());
 
-        let coeffs = result.unwrap();
+        let coeffs = result.expect("result should be ok because this was just asserted");
         assert_eq!(coeffs.len(), 2);
 
         assert_abs_diff_eq!(coeffs[0], -5.0, epsilon = 1e-6);
@@ -112,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "equal length")]
     fn test_linear_polynomial_least_squares_mismatched_lengths() {
         let x_values = vec![0.0, 1.0, 2.0];
         let y_values = vec![0.0, 1.0]; // Different length

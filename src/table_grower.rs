@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::Into;
 use std::ops::{Add, Index};
 
 use numpy::PyReadonlyArray2;
@@ -29,6 +30,7 @@ impl Xy<usize> for Coord {
 }
 
 impl Coord {
+    #[must_use]
     pub fn new(x: usize, y: usize) -> Self {
         Self(y, x)
     }
@@ -36,13 +38,19 @@ impl Coord {
 
 impl From<Coord> for Point {
     fn from(val: Coord) -> Self {
-        Point(val.x() as i32, val.y() as i32)
+        Point(
+            i32::try_from(val.x()).expect("conversion"),
+            i32::try_from(val.y()).expect("conversion"),
+        )
     }
 }
 
 impl From<Point> for Coord {
     fn from(val: Point) -> Self {
-        Coord(val.1 as usize, val.0 as usize)
+        Coord(
+            usize::try_from(val.1).expect("conversion"),
+            usize::try_from(val.0).expect("convertion"),
+        )
     }
 }
 
@@ -105,7 +113,7 @@ impl TableGrower {
         look_distance: usize,
         grow_threshold: f64,
         min_row_count: usize,
-    ) -> PyResult<Self> {
+    ) -> Self {
         let corners = Vec::new();
         let mut table_grower = Self {
             edge: HashMap::new(),
@@ -127,7 +135,7 @@ impl TableGrower {
             Coord(0, 0),
         );
 
-        Ok(table_grower)
+        table_grower
     }
 
     fn get_corner(&self, coord: Coord) -> Option<Point> {
@@ -141,7 +149,7 @@ impl TableGrower {
     fn all_rows_complete(&self) -> bool {
         self.corners
             .iter()
-            .all(|row| row.len() == self.columns && row.iter().all(|c| c.is_some()))
+            .all(|row| row.len() == self.columns && row.iter().all(std::option::Option::is_some))
     }
 
     fn get_all_corners(&self) -> Vec<Vec<Option<Point>>> {
@@ -149,12 +157,12 @@ impl TableGrower {
     }
 
     fn get_edge_points(&self) -> Vec<(Point, f64)> {
-        self.edge.values().cloned().collect()
+        self.edge.values().copied().collect()
     }
 
     /// Grow a grid of points starting from start and growing according to the given
-    /// column widths and row heights. The table_image is used to guide the growth
-    /// using the cross_correlation image to find the best positions for the grid points.
+    /// column widths and row heights. The `table_image` is used to guide the growth
+    /// using the `cross_correlation` image to find the best positions for the grid points.
     fn grow_point(
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
@@ -347,6 +355,7 @@ impl TableGrower {
                     if let Some((corner, confidence)) =
                         self.step_from_coord(table_image, cross_correlation, coord, *step)
                     {
+                        #[allow(clippy::cast_possible_truncation)]
                         Some((*new_coord, corner, confidence as f32))
                     } else {
                         None
@@ -360,13 +369,14 @@ impl TableGrower {
         let mut edge_added = false;
 
         for (new_coord, corner, confidence) in step_results.iter().flatten().copied() {
-            self.update_edge(new_coord, corner, confidence as f64);
+            self.update_edge(new_coord, corner, f64::from(confidence));
             edge_added = true;
         }
 
         edge_added
     }
 
+    #[allow(clippy::too_many_lines)]
     fn step_from_coord(
         &self,
         table_image: &Image,
@@ -377,12 +387,13 @@ impl TableGrower {
         // construct the goals based on the step direction,
         //uuu
         // known column widths and row heights, and existing points
-        let current_point = TableGrower::get_corner(&self, coord)?;
+        let current_point = TableGrower::get_corner(self, coord)?;
 
         let image_size = table_image.shape();
         let height = image_size[0];
         let width = image_size[1];
 
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let (direction, goals) = match step {
             Step::Right => {
                 if coord.x() + 1 >= self.columns {
@@ -405,7 +416,10 @@ impl TableGrower {
             Step::Down => {
                 // extend row heights with last value if necessary
                 let h = if coord.y() >= self.row_heights.len() {
-                    *self.row_heights.last().unwrap()
+                    *self
+                        .row_heights
+                        .last()
+                        .expect("There should be at least one row already at this point")
                 } else {
                     self.row_heights[coord.y()]
                 };
@@ -448,7 +462,10 @@ impl TableGrower {
 
                 // extend row heights with last value if necessary
                 let h = if coord.y() > self.row_heights.len() {
-                    *self.row_heights.last().unwrap()
+                    *self
+                        .row_heights
+                        .last()
+                        .expect("There should be at least one row already at this point")
                 } else {
                     self.row_heights[coord.y() - 1]
                 };
@@ -478,16 +495,16 @@ impl TableGrower {
             |p| p.min_distance(&goals),
             |p| p.at_goal(&goals),
         )
-        .map(|r| r.0.into_iter().map(|p| p.into()).collect())?;
+        .map(|r| r.0.into_iter().map(Into::into).collect())?;
 
         let approx = {
-            let last = path.last().unwrap();
+            let last = path.last().expect("path should have at least one entry");
             Point(last.0, last.1)
         };
 
         find_best_corner_match(
             cross_correlation,
-            &approx,
+            approx,
             self.search_region,
             self.distance_penalty,
         )
@@ -505,14 +522,17 @@ impl TableGrower {
             .or_insert((corner, confidence));
     }
 
+    #[must_use]
     pub fn width(&self) -> usize {
         self.columns
     }
 
+    #[must_use]
     pub fn height(&self) -> usize {
         self.corners.len()
     }
 
+    #[must_use]
     pub fn count_neighbours(&self, loc: Coord) -> u32 {
         let mut count = 0;
         // up
@@ -539,6 +559,7 @@ impl TableGrower {
     }
 
     /// Rerturns the next-best empty corner to be used for extrapolation
+    #[must_use]
     pub fn extendable_corner_and_neighbours(
         &self,
         look_distance: usize,
@@ -574,10 +595,12 @@ impl TableGrower {
     }
 
     #[inline]
+    #[must_use]
     pub fn in_bounds(&self, loc: Coord) -> bool {
         loc.x() < self.width() && loc.y() < self.height()
     }
 
+    #[must_use]
     pub fn neighbour_points_x(&self, loc: Coord, look_distance: usize) -> Vec<Point> {
         let mut points: Vec<Point> = Vec::new();
         for dx in 1..=look_distance {
@@ -599,12 +622,13 @@ impl TableGrower {
                 }
                 if let Some(point) = self[left] {
                     points.push(point);
-                };
+                }
             }
         }
         points
     }
 
+    #[must_use]
     pub fn neighbour_points_y(&self, loc: Coord, look_distance: usize) -> Vec<Point> {
         let mut points = Vec::new();
         for dy in 1..=look_distance {
@@ -642,18 +666,22 @@ impl TableGrower {
             return None;
         }
 
+        #[allow(clippy::cast_precision_loss)]
         let horizontal_xs = neighbours_x
             .iter()
             .map(|p| p.x() as f32)
             .collect::<Vec<_>>();
+        #[allow(clippy::cast_precision_loss)]
         let horizontal_ys = neighbours_x
             .iter()
             .map(|p| p.y() as f32)
             .collect::<Vec<_>>();
+        #[allow(clippy::cast_precision_loss)]
         let vertical_xs = neighbours_y
             .iter()
             .map(|p| p.x() as f32)
             .collect::<Vec<_>>();
+        #[allow(clippy::cast_precision_loss)]
         let vertical_ys = neighbours_y
             .iter()
             .map(|p| p.y() as f32)
@@ -668,6 +696,7 @@ impl TableGrower {
         // iteratively solve for the intersection of both
         let (mut x, mut y) = {
             let point = neighbours_x.first()?;
+            #[allow(clippy::cast_precision_loss)]
             (point.x() as f32, point.y() as f32)
         };
 
@@ -734,6 +763,7 @@ impl TableGrower {
             return None;
         }
 
+        #[allow(clippy::cast_possible_truncation)]
         Some((selected_location, Point(x.round() as i32, y.round() as i32)))
     }
 }
@@ -750,6 +780,7 @@ impl Index<Coord> for TableGrower {
     }
 }
 
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec<f32>> {
     // If no distance penalty, return uniform weights
     if distance_penalty == 0.0 {
@@ -780,9 +811,15 @@ fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec
     weights
 }
 
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 fn find_best_corner_match(
     cross_correlation: &Image,
-    approx: &Point,
+    approx: Point,
     search_region: usize,
     distance_penalty: f64, // This parameter isn't used in the Python version
 ) -> Option<(Point, f64)> {
@@ -803,7 +840,7 @@ fn find_best_corner_match(
 
     // Handle edge cases
     if crop_width == 0 || crop_height == 0 {
-        return Some((*approx, 0.0)); // Return original point with 0 confidence
+        return Some((approx, 0.0)); // Return original point with 0 confidence
     }
 
     // Extract cropped region
@@ -815,7 +852,7 @@ fn find_best_corner_match(
     }
 
     if cropped.is_empty() || cropped[0].is_empty() {
-        return Some((*approx, 0.0));
+        return Some((approx, 0.0));
     }
 
     // Apply Gaussian weighting
@@ -825,7 +862,7 @@ fn find_best_corner_match(
         let mut result = vec![vec![0.0f32; crop_width]; crop_height];
         for i in 0..crop_height {
             for j in 0..crop_width {
-                result[i][j] = cropped[i][j] as f32 * weights[i][j];
+                result[i][j] = f32::from(cropped[i][j]) * weights[i][j];
             }
         }
         result
@@ -849,7 +886,7 @@ fn find_best_corner_match(
         let mut weighted_extended = vec![vec![0.0f32; search_region]; search_region];
         for i in 0..search_region {
             for j in 0..search_region {
-                weighted_extended[i][j] = extended[i][j] as f32 * weights[i][j];
+                weighted_extended[i][j] = f32::from(extended[i][j]) * weights[i][j];
             }
         }
 
@@ -886,7 +923,7 @@ fn find_best_corner_match(
 
     Some((
         Point(result_x as i32, result_y as i32),
-        best_value_normalized as f64,
+        f64::from(best_value_normalized),
     ))
 }
 
