@@ -15,7 +15,9 @@ def setup():
 
 def main():
     taulu = Taulu(("table_00_header_left.png", "table_00_header_right.png"))
-    table = taulu.segment_table("../data/table_00.png", 0.8, debug_view=True)
+    table = taulu.segment_table(
+        "../data/table_00.png", cell_height_factor=0.8, debug_view=True
+    )
 
     table.show_cells("../data/table_00.png")
 

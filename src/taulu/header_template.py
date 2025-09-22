@@ -1,3 +1,7 @@
+"""
+A HeaderTemplate defines the structure of a table header.
+"""
+
 from os import PathLike
 from pathlib import Path
 from typing import Iterable, Optional, cast

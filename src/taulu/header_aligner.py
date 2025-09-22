@@ -1,3 +1,7 @@
+"""
+Header alignment functionality
+"""
+
 from os import PathLike, fspath
 import cv2 as cv
 import pandas as pd

@@ -1,0 +1,4443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>taulu API documentation</title>
+<meta name="description" content="Taulu - *segment tables from images* …">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Package <code>taulu</code></h1>
+</header>
+<section id="section-intro">
+<p>Taulu - <em>segment tables from images</em></p>
+<p>Taulu is a Python package designed to segment images of tables into their constituent rows and columns (and cells).</p>
+<p>To use this package, you first need to make an annotation of the headers in your table images.
+The idea is that these headers will be similar across your full set of images, and they will be
+used as a starting point for the search algorithm that finds the table grid.</p>
+<p>Here is an example python script of how to use Taulu:</p>
+<pre><code class="language-python">from taulu import Taulu
+import os
+
+
+def setup():
+    # create an Annotation file of the headers in the image
+    # (one for the left header, one for the right)
+    # and store them in the examples directory
+    print(&quot;Annotating the LEFT header...&quot;)
+    Taulu.annotate(&quot;../data/table_00.png&quot;, &quot;table_00_header_left.png&quot;)
+
+    print(&quot;Annotating the RIGHT header...&quot;)
+    Taulu.annotate(&quot;../data/table_00.png&quot;, &quot;table_00_header_right.png&quot;)
+
+
+def main():
+    taulu = Taulu((&quot;table_00_header_left.png&quot;, &quot;table_00_header_right.png&quot;))
+    table = taulu.segment_table(&quot;../data/table_00.png&quot;,  cell_height_factor=0.8, debug_view=True)
+
+    table.show_cells(&quot;../data/table_00.png&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    if os.path.exists(&quot;table_00_header_left.png&quot;) and os.path.exists(
+        &quot;table_00_header_right.png&quot;
+    ):
+        main()
+    else:
+        setup()
+        main()
+
+</code></pre>
+<p>If you want a high-level overview of how to use Taulu, see <a href="./taulu.html#taulu.taulu.Taulu">the Taulu class</a></p>
+</section>
+<section>
+<h2 class="section-title" id="header-submodules">Sub-modules</h2>
+<dl>
+<dt><code class="name"><a title="taulu.grid" href="grid.html">taulu.grid</a></code></dt>
+<dd>
+<div class="desc"><p>Implements the grid finding algorithm, that is able to find the intersections of horizontal and vertical rules.</p></div>
+</dd>
+<dt><code class="name"><a title="taulu.header_aligner" href="header_aligner.html">taulu.header_aligner</a></code></dt>
+<dd>
+<div class="desc"><p>Header alignment functionality</p></div>
+</dd>
+<dt><code class="name"><a title="taulu.header_template" href="header_template.html">taulu.header_template</a></code></dt>
+<dd>
+<div class="desc"><p>A HeaderTemplate defines the structure of a table header.</p></div>
+</dd>
+<dt><code class="name"><a title="taulu.split" href="split.html">taulu.split</a></code></dt>
+<dd>
+<div class="desc"><p>A module that provides a Split class to handle data with left and right variants …</p></div>
+</dd>
+<dt><code class="name"><a title="taulu.table_indexer" href="table_indexer.html">taulu.table_indexer</a></code></dt>
+<dd>
+<div class="desc"><p>Defines an abstract class TableIndexer, which provides methods for mapping pixel coordinates
+in an image to table cell indices and for cropping images …</p></div>
+</dd>
+<dt><code class="name"><a title="taulu.taulu" href="taulu.html">taulu.taulu</a></code></dt>
+<dd>
+<div class="desc"><p>The Taulu class is a convenience class that hides the inner workings
+of taulu as much as possible.</p></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="taulu.GridDetector"><code class="flex name class">
+<span>class <span class="ident">GridDetector</span></span>
+<span>(</span><span>kernel_size: int = 21,<br>cross_width: int = 6,<br>cross_height: int | None = None,<br>morph_size: int | None = None,<br>sauvola_k: float = 0.04,<br>sauvola_window: int = 15,<br>scale: float = 1.0,<br>search_region: int = 40,<br>distance_penalty: float = 0.4)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class GridDetector:
+    &#34;&#34;&#34;
+    Implements a filters result in high activation where the image has an intersection of a vertical
+    and horizontal rule, useful for finding the bounding boxes of cells.
+
+    Also implements the search algorithm that uses the output of this filter to build a tabular structure of
+    corner points (in row major order).
+    &#34;&#34;&#34;
+
+    def __init__(
+        self,
+        kernel_size: int = 21,
+        cross_width: int = 6,
+        cross_height: Optional[int] = None,
+        morph_size: Optional[int] = None,
+        sauvola_k: float = 0.04,
+        sauvola_window: int = 15,
+        scale: float = 1.0,
+        search_region: int = 40,
+        distance_penalty: float = 0.4,
+    ):
+        &#34;&#34;&#34;
+        Args:
+            kernel_size (int): the size of the cross kernel
+                a larger kernel size often means that more penalty is applied, often leading
+                to more sparse results
+            cross_width (int): the width of one of the edges in the cross filter, should be
+                roughly equal to the width of the rules in the image after morphology is applied
+            cross_height (int | None): useful if the horizontal rules and vertical rules
+                have different sizes
+            morph_size (int | None): the size of the morphology operators that are applied before
+                the cross kernel. &#39;bridges the gaps&#39; of broken-up lines
+            sauvola_k (float): threshold parameter for sauvola thresholding
+            sauvola_window (int): window_size parameter for sauvola thresholding
+            scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
+            search_region (int): area in which to search for a new max value in `find_nearest` etc.
+            distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
+        &#34;&#34;&#34;
+        self._validate_parameters(
+            kernel_size,
+            cross_width,
+            cross_height,
+            morph_size,
+            search_region,
+            sauvola_k,
+            sauvola_window,
+            distance_penalty,
+        )
+
+        self._kernel_size = kernel_size
+        self._cross_width = cross_width
+        self._cross_height = cross_width if cross_height is None else cross_height
+        self._morph_size = morph_size if morph_size is not None else cross_width
+        self._search_region = search_region
+        self._sauvola_k = sauvola_k
+        self._sauvola_window = sauvola_window
+        self._distance_penalty = distance_penalty
+        self._scale = scale
+
+        self._cross_kernel = self._create_cross_kernel()
+
+    def _validate_parameters(
+        self,
+        kernel_size: int,
+        cross_width: int,
+        cross_height: Optional[int],
+        morph_size: Optional[int],
+        search_region: int,
+        sauvola_k: float,
+        sauvola_window: int,
+        distance_penalty: float,
+    ) -&gt; None:
+        &#34;&#34;&#34;Validate initialization parameters.&#34;&#34;&#34;
+        if kernel_size % 2 == 0:
+            raise ValueError(&#34;kernel_size must be odd&#34;)
+        if (
+            kernel_size &lt;= 0
+            or cross_width &lt;= 0
+            or search_region &lt;= 0
+            or sauvola_window &lt;= 0
+        ):
+            raise ValueError(&#34;Size parameters must be positive&#34;)
+        if cross_height is not None and cross_height &lt;= 0:
+            raise ValueError(&#34;cross_height must be positive&#34;)
+        if morph_size is not None and morph_size &lt;= 0:
+            raise ValueError(&#34;morph_size must be positive&#34;)
+        if not 0 &lt;= distance_penalty &lt;= 1:
+            raise ValueError(&#34;distance_penalty must be in [0, 1]&#34;)
+        if sauvola_k &lt;= 0:
+            raise ValueError(&#34;sauvola_k must be positive&#34;)
+
+    def _create_gaussian_weights(self, region_size: int) -&gt; NDArray:
+        &#34;&#34;&#34;
+        Create a 2D Gaussian weight mask.
+
+        Args:
+            shape (tuple[int, int]): Shape of the region (height, width)
+            p (float): Minimum value at the edge = 1 - p
+
+        Returns:
+            NDArray: Gaussian weight mask
+        &#34;&#34;&#34;
+        if self._distance_penalty == 0:
+            return np.ones((region_size, region_size), dtype=np.float32)
+
+        y = np.linspace(-1, 1, region_size)
+        x = np.linspace(-1, 1, region_size)
+        xv, yv = np.meshgrid(x, y)
+        dist_squared = xv**2 + yv**2
+
+        # Prevent log(0) when distance_penalty is 1
+        if self._distance_penalty &gt;= 0.999:
+            sigma = 0.1  # Small sigma for very sharp peak
+        else:
+            sigma = np.sqrt(-1 / (2 * np.log(1 - self._distance_penalty)))
+
+        weights = np.exp(-dist_squared / (2 * sigma**2))
+
+        return weights.astype(np.float32)
+
+    def _create_cross_kernel(self) -&gt; NDArray:
+        kernel = np.zeros((self._kernel_size, self._kernel_size), dtype=np.uint8)
+        center = self._kernel_size // 2
+
+        # Create horizontal bar
+        h_start = max(0, center - self._cross_height // 2)
+        h_end = min(self._kernel_size, center + (self._cross_height + 1) // 2)
+        kernel[h_start:h_end, :] = 255
+
+        # Create vertical bar
+        v_start = max(0, center - self._cross_width // 2)
+        v_end = min(self._kernel_size, center + (self._cross_width + 1) // 2)
+        kernel[:, v_start:v_end] = 255
+
+        return kernel
+
+    def _apply_morphology(self, binary: MatLike) -&gt; MatLike:
+        # Define a horizontal kernel (adjust width as needed)
+        kernel_hor = cv.getStructuringElement(cv.MORPH_RECT, (self._morph_size, 1))
+        kernel_ver = cv.getStructuringElement(cv.MORPH_RECT, (1, self._morph_size))
+
+        # Apply dilation
+        dilated = cv.dilate(binary, kernel_hor, iterations=1)
+        dilated = cv.dilate(dilated, kernel_ver, iterations=1)
+
+        return dilated
+
+    def _apply_cross_matching(self, img: MatLike) -&gt; MatLike:
+        &#34;&#34;&#34;Apply cross kernel template matching.&#34;&#34;&#34;
+        pad_y = self._cross_kernel.shape[0] // 2
+        pad_x = self._cross_kernel.shape[1] // 2
+
+        padded = cv.copyMakeBorder(
+            img, pad_y, pad_y, pad_x, pad_x, borderType=cv.BORDER_CONSTANT, value=0
+        )
+
+        filtered = cv.matchTemplate(padded, self._cross_kernel, cv.TM_SQDIFF_NORMED)
+        # Invert and normalize to 0-255 range
+        filtered = cv.normalize(1.0 - filtered, None, 0, 255, cv.NORM_MINMAX)
+        return filtered.astype(np.uint8)
+
+    def apply(self, img: MatLike, visual: bool = False) -&gt; MatLike:
+        &#34;&#34;&#34;
+        Apply the grid detection filter to the input image.
+
+        Args:
+            img (MatLike): the input image
+            visual (bool): whether to show intermediate steps
+
+        Returns:
+            MatLike: the filtered image, with high values (whiter pixels) at intersections of horizontal and vertical rules
+        &#34;&#34;&#34;
+
+        if img is None or img.size == 0:
+            raise ValueError(&#34;Input image is empty or None&#34;)
+
+        binary = imu.sauvola(img, k=self._sauvola_k, window_size=self._sauvola_window)
+
+        if visual:
+            imu.show(binary, title=&#34;thresholded&#34;)
+
+        binary = self._apply_morphology(binary)
+
+        if visual:
+            imu.show(binary, title=&#34;dilated&#34;)
+
+        filtered = self._apply_cross_matching(binary)
+
+        return filtered
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def find_nearest(
+        self, filtered: MatLike, point: Point, region: Optional[int] = None
+    ) -&gt; Tuple[Point, float]:
+        &#34;&#34;&#34;
+        Find the nearest &#39;corner match&#39; in the image, along with its score [0,1]
+
+        Args:
+            filtered (MatLike): the filtered image (obtained through `apply`)
+            point (tuple[int, int]): the approximate target point (x, y)
+            region (None | int): alternative value for search region,
+                overwriting the `__init__` parameter `region`
+        &#34;&#34;&#34;
+
+        if filtered is None or filtered.size == 0:
+            raise ValueError(&#34;Filtered image is empty or None&#34;)
+
+        region_size = region if region is not None else self._search_region
+        x, y = point
+
+        # Calculate crop boundaries
+        crop_x = max(0, x - region_size // 2)
+        crop_y = max(0, y - region_size // 2)
+        crop_width = min(region_size, filtered.shape[1] - crop_x)
+        crop_height = min(region_size, filtered.shape[0] - crop_y)
+
+        # Handle edge cases
+        if crop_width &lt;= 0 or crop_height &lt;= 0:
+            logger.warning(f&#34;Point {point} is outside image bounds&#34;)
+            return point, 0.0
+
+        cropped = filtered[crop_y : crop_y + crop_height, crop_x : crop_x + crop_width]
+
+        if cropped.size == 0:
+            return point, 0.0
+
+        # Always apply Gaussian weighting by extending crop if needed
+        if cropped.shape[0] == region_size and cropped.shape[1] == region_size:
+            # Perfect size - apply weights directly
+            weights = self._create_gaussian_weights(region_size)
+            weighted = cropped.astype(np.float32) * weights
+        else:
+            # Extend crop to match region_size, apply weights, then restore
+            extended = np.zeros((region_size, region_size), dtype=cropped.dtype)
+
+            # Calculate offset to center the cropped region in extended array
+            offset_y = (region_size - cropped.shape[0]) // 2
+            offset_x = (region_size - cropped.shape[1]) // 2
+
+            # Place cropped region in center of extended array
+            extended[
+                offset_y : offset_y + cropped.shape[0],
+                offset_x : offset_x + cropped.shape[1],
+            ] = cropped
+
+            # Apply Gaussian weights to extended array
+            weights = self._create_gaussian_weights(region_size)
+            weighted_extended = extended.astype(np.float32) * weights
+
+            # Extract the original region back out
+            weighted = weighted_extended[
+                offset_y : offset_y + cropped.shape[0],
+                offset_x : offset_x + cropped.shape[1],
+            ]
+
+        best_idx = np.argmax(weighted)
+        best_y, best_x = np.unravel_index(best_idx, cropped.shape)
+
+        result_point = (
+            int(crop_x + best_x),
+            int(crop_y + best_y),
+        )
+        result_confidence = float(weighted[best_y, best_x]) / 255.0
+
+        return result_point, result_confidence
+
+    def find_table_points(
+        self,
+        img: MatLike | PathLike[str],
+        left_top: Point,
+        cell_widths: list[int],
+        cell_heights: list[int] | int,
+        visual: bool = False,
+        window: str = WINDOW,
+        goals_width: Optional[int] = None,
+    ) -&gt; &#34;TableGrid&#34;:
+        &#34;&#34;&#34;
+        Parse the image to a `TableGrid` structure that holds all of the
+        intersections between horizontal and vertical rules, starting near the `left_top` point
+
+        Args:
+            img (MatLike): the input image of a table
+            left_top (tuple[int, int]): the starting point of the algorithm
+            cell_widths (list[int]): the expected widths of the cells (based on a header template)
+            cell_heights (list[int]): the expected height of the rows of data.
+                The last value from this list is used until the image has no more vertical space.
+            visual (bool): whether to show intermediate steps
+            window (str): the name of the OpenCV window to use for visualization
+            goals_width (int | None): the width of the goal region when searching for the next point.
+                If None, defaults to 1.5 * search_region
+
+        Returns:
+            a TableGrid object
+        &#34;&#34;&#34;
+
+        if goals_width is None:
+            goals_width = self._search_region * 3 // 2
+
+        if not cell_widths:
+            raise ValueError(&#34;cell_widths must contain at least one value&#34;)
+
+        if not isinstance(img, np.ndarray):
+            img = cv.imread(os.fspath(img))
+
+        filtered = self.apply(img, visual)
+
+        if visual:
+            imu.show(filtered, window=window)
+
+        if isinstance(cell_heights, int):
+            cell_heights = [cell_heights]
+
+        left_top, confidence = self.find_nearest(
+            filtered, left_top, int(self._search_region * 1.5)
+        )
+
+        if confidence &lt; 0.1:
+            logger.warning(
+                f&#34;Low confidence for the starting point: {confidence} at {left_top}&#34;
+            )
+
+        # resize all parameters according to scale
+        img = cv.resize(img, None, fx=self._scale, fy=self._scale)
+
+        if visual:
+            imu.push(img)
+
+        filtered = cv.resize(filtered, None, fx=self._scale, fy=self._scale)
+        cell_widths = [int(w * self._scale) for w in cell_widths]
+        cell_heights = [int(h * self._scale) for h in cell_heights]
+        left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
+        self._search_region = int(self._search_region * self._scale)
+
+        threshold = 0.65
+        look_distance = 5
+        min_rows = 30
+
+        img_gray = ensure_gray(img)
+        filtered_gray = ensure_gray(filtered)
+
+        table_grower = TableGrower(
+            img_gray,
+            filtered_gray,
+            cell_widths,  # pyright: ignore
+            cell_heights,  # pyright: ignore
+            left_top,
+            self._search_region,
+            self._distance_penalty,
+            look_distance,
+            threshold,
+            min_rows,
+        )
+
+        def show_grower_progress(wait: bool = False):
+            img_orig = np.copy(img)
+            corners = table_grower.get_all_corners()
+            for y in range(len(corners)):
+                for x in range(len(corners[y])):
+                    if corners[y][x] is not None:
+                        img_orig = imu.draw_points(
+                            img_orig,
+                            [corners[y][x]],
+                            color=(0, 0, 255),
+                            thickness=30,
+                        )
+
+            edge = table_grower.get_edge_points()
+
+            for point, score in edge:
+                color = (100, int(clamp(score * 255, 0, 255)), 100)
+                imu.draw_point(img_orig, point, color=color, thickness=20)
+
+            imu.show(img_orig, wait=wait)
+
+        if visual:
+            # python implementation of rust loops, for visualization purposes
+            # note this is a LOT slower
+            while table_grower.grow_point(img_gray, filtered_gray) is not None:
+                show_grower_progress()
+
+            show_grower_progress(True)
+
+            original_threshold = threshold
+
+            loops_without_change = 0
+
+            while not table_grower.is_table_complete():
+                loops_without_change += 1
+
+                if loops_without_change &gt; 50:
+                    break
+
+                if table_grower.extrapolate_one(img_gray, filtered_gray) is not None:
+                    show_grower_progress()
+
+                    loops_without_change = 0
+
+                    grown = False
+                    while table_grower.grow_point(img_gray, filtered_gray) is not None:
+                        show_grower_progress()
+                        grown = True
+                        threshold = min(0.1 + 0.9 * threshold, original_threshold)
+                        table_grower.set_threshold(threshold)
+
+                    if not grown:
+                        threshold *= 0.9
+                        table_grower.set_threshold(threshold)
+
+                else:
+                    threshold *= 0.9
+                    table_grower.set_threshold(threshold)
+
+                    if table_grower.grow_point(img_gray, filtered_gray) is not None:
+                        show_grower_progress()
+                        loops_without_change = 0
+
+        else:
+            table_grower.grow_table(img_gray, filtered_gray)
+
+        table_grower.smooth_grid()
+        corners = table_grower.get_all_corners()
+        logger.info(
+            f&#34;Table growth complete, found {len(corners)} rows and {len(corners[0])} columns&#34;
+        )
+        # rescale corners back to original size
+        if self._scale != 1.0:
+            for y in range(len(corners)):
+                for x in range(len(corners[y])):
+                    if corners[y][x] is not None:
+                        corners[y][x] = (
+                            int(corners[y][x][0] / self._scale),  # pyright:ignore
+                            int(corners[y][x][1] / self._scale),  # pyright:ignore
+                        )
+
+        return TableGrid(corners)  # pyright: ignore
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _build_table_row(
+        self,
+        gray: MatLike,
+        filtered: MatLike,
+        start_point: Point,
+        cell_widths: List[int],
+        row_idx: int,
+        goals_width: int,
+        previous_row_points: Optional[List[Point]] = None,
+        visual: bool = False,
+    ) -&gt; List[Point]:
+        &#34;&#34;&#34;Build a single row of table points.&#34;&#34;&#34;
+        row = [start_point]
+        current = start_point
+
+        for col_idx, width in enumerate(cell_widths):
+            next_point = self._find_next_column_point(
+                gray,
+                filtered,
+                current,
+                width,
+                goals_width,
+                visual,
+                previous_row_points,
+                col_idx,
+            )
+            if next_point is None:
+                logger.warning(
+                    f&#34;Could not find point for row {row_idx}, col {col_idx + 1}&#34;
+                )
+                return []  # Return empty list to signal failure
+            row.append(next_point)
+            current = next_point
+
+        return row
+
+    def _clamp_point_to_img(self, point: Point, img: MatLike) -&gt; Point:
+        &#34;&#34;&#34;Clamp a point to be within the image bounds.&#34;&#34;&#34;
+        x = max(0, min(point[0], img.shape[1] - 1))
+        y = max(0, min(point[1], img.shape[0] - 1))
+        return (x, y)
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _find_next_column_point(
+        self,
+        gray: MatLike,
+        filtered: MatLike,
+        current: Point,
+        width: int,
+        goals_width: int,
+        visual: bool = False,
+        previous_row_points: Optional[List[Point]] = None,
+        current_col_idx: int = 0,
+    ) -&gt; Optional[Point]:
+        &#34;&#34;&#34;Find the next point in the current row.&#34;&#34;&#34;
+
+        if previous_row_points is not None and current_col_idx + 1 &lt; len(
+            previous_row_points
+        ):
+            # grow an astar path downwards from the previous row point that is
+            # above and to the right of current
+            # and ensure all points are within image bounds
+            bottom_right = [
+                self._clamp_point_to_img(
+                    (
+                        current[0] + width - goals_width // 2 + x,
+                        current[1] + goals_width,
+                    ),
+                    gray,
+                )
+                for x in range(goals_width)
+            ]
+            goals = self._astar(
+                gray, previous_row_points[current_col_idx + 1], bottom_right, &#34;down&#34;
+            )
+
+            if goals is None:
+                logger.warning(
+                    f&#34;A* failed to find path going downwards from previous row&#39;s point at idx {current_col_idx + 1}&#34;
+                )
+                return None
+        else:
+            goals = [
+                self._clamp_point_to_img(
+                    (current[0] + width, current[1] - goals_width // 2 + y), gray
+                )
+                for y in range(goals_width)
+            ]
+
+        path = self._astar(gray, current, goals, &#34;right&#34;)
+
+        if path is None:
+            logger.warning(
+                f&#34;A* failed to find path going rightward from {current} to goals&#34;
+            )
+            return None
+
+        next_point, _ = self.find_nearest(filtered, path[-1], self._search_region)
+
+        # show the point and the search region on the image for debugging
+        if visual:
+            self._visualize_path_finding(
+                goals + path,
+                current,
+                next_point,
+                current,
+                path[-1],
+                self._search_region,
+            )
+
+        return next_point
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _find_next_row_start(
+        self,
+        gray: MatLike,
+        filtered: MatLike,
+        top_point: Point,
+        row_idx: int,
+        cell_heights: List[int],
+        goals_width: int,
+        visual: bool = False,
+    ) -&gt; Optional[Point]:
+        &#34;&#34;&#34;Find the starting point of the next row.&#34;&#34;&#34;
+        if row_idx &lt; len(cell_heights):
+            row_height = cell_heights[row_idx]
+        else:
+            row_height = cell_heights[-1]
+
+        if top_point[1] + row_height &gt;= filtered.shape[0] - 10:  # Near bottom
+            return None
+
+        goals = [
+            (top_point[0] - goals_width // 2 + x, top_point[1] + row_height)
+            for x in range(goals_width)
+        ]
+
+        path = self._astar(gray, top_point, goals, &#34;down&#34;)
+        if path is None:
+            return None
+
+        next_point, _ = self.find_nearest(
+            filtered, path[-1], region=self._search_region * 3 // 2
+        )
+
+        if visual:
+            self._visualize_path_finding(
+                path, top_point, next_point, top_point, path[-1], self._search_region
+            )
+
+        return next_point
+
+    def _visualize_grid(self, img: MatLike, points: List[List[Point]]) -&gt; None:
+        &#34;&#34;&#34;Visualize the detected grid points.&#34;&#34;&#34;
+        all_points = [point for row in points for point in row]
+        drawn = imu.draw_points(img, all_points)
+        imu.show(drawn, wait=True)
+
+    def _visualize_path_finding(
+        self,
+        path: List[Point],
+        current: Point,
+        next_point: Point,
+        previous_row_target: Optional[Point] = None,
+        region_center: Optional[Point] = None,
+        region_size: Optional[int] = None,
+    ) -&gt; None:
+        &#34;&#34;&#34;Visualize the path finding process for debugging.&#34;&#34;&#34;
+        global show_time
+
+        screen = imu.pop()
+
+        # if gray, convert to BGR
+        if len(screen.shape) == 2 or screen.shape[2] == 1:
+            debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
+        else:
+            debug_img = cast(MatLike, screen)
+
+        debug_img = imu.draw_points(debug_img, path, color=(200, 200, 0), thickness=2)
+        debug_img = imu.draw_points(
+            debug_img, [current], color=(0, 255, 0), thickness=3
+        )
+        debug_img = imu.draw_points(
+            debug_img, [next_point], color=(0, 0, 255), thickness=2
+        )
+
+        # Draw previous row target if available
+        if previous_row_target is not None:
+            debug_img = imu.draw_points(
+                debug_img, [previous_row_target], color=(255, 0, 255), thickness=2
+            )
+
+        # Draw search region if available
+        if region_center is not None and region_size is not None:
+            top_left = (
+                max(0, region_center[0] - region_size // 2),
+                max(0, region_center[1] - region_size // 2),
+            )
+            bottom_right = (
+                min(debug_img.shape[1], region_center[0] + region_size // 2),
+                min(debug_img.shape[0], region_center[1] + region_size // 2),
+            )
+            cv.rectangle(
+                debug_img,
+                top_left,
+                bottom_right,
+                color=(255, 0, 0),
+                thickness=2,
+                lineType=cv.LINE_AA,
+            )
+
+        imu.push(debug_img)
+
+        show_time += 1
+        if show_time % 10 != 1:
+            return
+
+        imu.show(debug_img, title=&#34;Next column point&#34;, wait=False)
+        # time.sleep(0.003)
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _astar(
+        self,
+        img: np.ndarray,
+        start: tuple[int, int],
+        goals: list[tuple[int, int]],
+        direction: str,
+    ) -&gt; Optional[List[Point]]:
+        &#34;&#34;&#34;
+        Find the best path between the start point and one of the goal points on the image
+        &#34;&#34;&#34;
+
+        if not goals:
+            return None
+
+        if self._scale != 1.0:
+            img = cv.resize(img, None, fx=self._scale, fy=self._scale)
+            start = (int(start[0] * self._scale), int(start[1] * self._scale))
+            goals = [(int(g[0] * self._scale), int(g[1] * self._scale)) for g in goals]
+
+        # calculate bounding box with margin
+        all_points = goals + [start]
+        xs = [p[0] for p in all_points]
+        ys = [p[1] for p in all_points]
+
+        margin = 30
+        top_left = (max(0, min(xs) - margin), max(0, min(ys) - margin))
+        bottom_right = (
+            min(img.shape[1], max(xs) + margin),
+            min(img.shape[0], max(ys) + margin),
+        )
+
+        # check bounds
+        if (
+            top_left[0] &gt;= bottom_right[0]
+            or top_left[1] &gt;= bottom_right[1]
+            or top_left[0] &gt;= img.shape[1]
+            or top_left[1] &gt;= img.shape[0]
+        ):
+            return None
+
+        # transform coordinates to cropped image
+        start_local = (start[0] - top_left[0], start[1] - top_left[1])
+        goals_local = [(g[0] - top_left[0], g[1] - top_left[1]) for g in goals]
+
+        cropped = img[top_left[1] : bottom_right[1], top_left[0] : bottom_right[0]]
+
+        if cropped.size == 0:
+            return None
+
+        path = rust_astar(cropped, start_local, goals_local, direction)
+
+        if path is None:
+            return None
+
+        if self._scale != 1.0:
+            path = [(int(p[0] / self._scale), int(p[1] / self._scale)) for p in path]
+            top_left = (int(top_left[0] / self._scale), int(top_left[1] / self._scale))
+
+        return [(p[0] + top_left[0], p[1] + top_left[1]) for p in path]</code></pre>
+</details>
+<div class="desc"><p>Implements a filters result in high activation where the image has an intersection of a vertical
+and horizontal rule, useful for finding the bounding boxes of cells.</p>
+<p>Also implements the search algorithm that uses the output of this filter to build a tabular structure of
+corner points (in row major order).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>kernel_size</code></strong> :&ensp;<code>int</code></dt>
+<dd>the size of the cross kernel
+a larger kernel size often means that more penalty is applied, often leading
+to more sparse results</dd>
+<dt><strong><code>cross_width</code></strong> :&ensp;<code>int</code></dt>
+<dd>the width of one of the edges in the cross filter, should be
+roughly equal to the width of the rules in the image after morphology is applied</dd>
+<dt><strong><code>cross_height</code></strong> :&ensp;<code>int | None</code></dt>
+<dd>useful if the horizontal rules and vertical rules
+have different sizes</dd>
+<dt><strong><code>morph_size</code></strong> :&ensp;<code>int | None</code></dt>
+<dd>the size of the morphology operators that are applied before
+the cross kernel. 'bridges the gaps' of broken-up lines</dd>
+<dt><strong><code>sauvola_k</code></strong> :&ensp;<code>float</code></dt>
+<dd>threshold parameter for sauvola thresholding</dd>
+<dt><strong><code>sauvola_window</code></strong> :&ensp;<code>int</code></dt>
+<dd>window_size parameter for sauvola thresholding</dd>
+<dt><strong><code>scale</code></strong> :&ensp;<code>float</code></dt>
+<dd>image scale factor to do calculations on (useful for increasing calculation speed mostly)</dd>
+<dt><strong><code>search_region</code></strong> :&ensp;<code>int</code></dt>
+<dd>area in which to search for a new max value in <code>find_nearest</code> etc.</dd>
+<dt><strong><code>distance_penalty</code></strong> :&ensp;<code>float</code></dt>
+<dd>how much the point finding algorithm penalizes points that are further in the region [0, 1]</dd>
+</dl></div>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.GridDetector.apply"><code class="name flex">
+<span>def <span class="ident">apply</span></span>(<span>self, img: cv2.Mat | numpy.ndarray, visual: bool = False) ‑> cv2.Mat | numpy.ndarray</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def apply(self, img: MatLike, visual: bool = False) -&gt; MatLike:
+    &#34;&#34;&#34;
+    Apply the grid detection filter to the input image.
+
+    Args:
+        img (MatLike): the input image
+        visual (bool): whether to show intermediate steps
+
+    Returns:
+        MatLike: the filtered image, with high values (whiter pixels) at intersections of horizontal and vertical rules
+    &#34;&#34;&#34;
+
+    if img is None or img.size == 0:
+        raise ValueError(&#34;Input image is empty or None&#34;)
+
+    binary = imu.sauvola(img, k=self._sauvola_k, window_size=self._sauvola_window)
+
+    if visual:
+        imu.show(binary, title=&#34;thresholded&#34;)
+
+    binary = self._apply_morphology(binary)
+
+    if visual:
+        imu.show(binary, title=&#34;dilated&#34;)
+
+    filtered = self._apply_cross_matching(binary)
+
+    return filtered</code></pre>
+</details>
+<div class="desc"><p>Apply the grid detection filter to the input image.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>img</code></strong> :&ensp;<code>MatLike</code></dt>
+<dd>the input image</dd>
+<dt><strong><code>visual</code></strong> :&ensp;<code>bool</code></dt>
+<dd>whether to show intermediate steps</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>MatLike</code></dt>
+<dd>the filtered image, with high values (whiter pixels) at intersections of horizontal and vertical rules</dd>
+</dl></div>
+</dd>
+<dt id="taulu.GridDetector.find_nearest"><code class="name flex">
+<span>def <span class="ident">find_nearest</span></span>(<span>self,<br>filtered: cv2.Mat | numpy.ndarray,<br>point: Tuple[int, int],<br>region: int | None = None) ‑> Tuple[Tuple[int, int], float]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@log_calls(level=logging.DEBUG, include_return=True)
+def find_nearest(
+    self, filtered: MatLike, point: Point, region: Optional[int] = None
+) -&gt; Tuple[Point, float]:
+    &#34;&#34;&#34;
+    Find the nearest &#39;corner match&#39; in the image, along with its score [0,1]
+
+    Args:
+        filtered (MatLike): the filtered image (obtained through `apply`)
+        point (tuple[int, int]): the approximate target point (x, y)
+        region (None | int): alternative value for search region,
+            overwriting the `__init__` parameter `region`
+    &#34;&#34;&#34;
+
+    if filtered is None or filtered.size == 0:
+        raise ValueError(&#34;Filtered image is empty or None&#34;)
+
+    region_size = region if region is not None else self._search_region
+    x, y = point
+
+    # Calculate crop boundaries
+    crop_x = max(0, x - region_size // 2)
+    crop_y = max(0, y - region_size // 2)
+    crop_width = min(region_size, filtered.shape[1] - crop_x)
+    crop_height = min(region_size, filtered.shape[0] - crop_y)
+
+    # Handle edge cases
+    if crop_width &lt;= 0 or crop_height &lt;= 0:
+        logger.warning(f&#34;Point {point} is outside image bounds&#34;)
+        return point, 0.0
+
+    cropped = filtered[crop_y : crop_y + crop_height, crop_x : crop_x + crop_width]
+
+    if cropped.size == 0:
+        return point, 0.0
+
+    # Always apply Gaussian weighting by extending crop if needed
+    if cropped.shape[0] == region_size and cropped.shape[1] == region_size:
+        # Perfect size - apply weights directly
+        weights = self._create_gaussian_weights(region_size)
+        weighted = cropped.astype(np.float32) * weights
+    else:
+        # Extend crop to match region_size, apply weights, then restore
+        extended = np.zeros((region_size, region_size), dtype=cropped.dtype)
+
+        # Calculate offset to center the cropped region in extended array
+        offset_y = (region_size - cropped.shape[0]) // 2
+        offset_x = (region_size - cropped.shape[1]) // 2
+
+        # Place cropped region in center of extended array
+        extended[
+            offset_y : offset_y + cropped.shape[0],
+            offset_x : offset_x + cropped.shape[1],
+        ] = cropped
+
+        # Apply Gaussian weights to extended array
+        weights = self._create_gaussian_weights(region_size)
+        weighted_extended = extended.astype(np.float32) * weights
+
+        # Extract the original region back out
+        weighted = weighted_extended[
+            offset_y : offset_y + cropped.shape[0],
+            offset_x : offset_x + cropped.shape[1],
+        ]
+
+    best_idx = np.argmax(weighted)
+    best_y, best_x = np.unravel_index(best_idx, cropped.shape)
+
+    result_point = (
+        int(crop_x + best_x),
+        int(crop_y + best_y),
+    )
+    result_confidence = float(weighted[best_y, best_x]) / 255.0
+
+    return result_point, result_confidence</code></pre>
+</details>
+<div class="desc"><p>Find the nearest 'corner match' in the image, along with its score [0,1]</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>filtered</code></strong> :&ensp;<code>MatLike</code></dt>
+<dd>the filtered image (obtained through <code>apply</code>)</dd>
+<dt><strong><code>point</code></strong> :&ensp;<code>tuple[int, int]</code></dt>
+<dd>the approximate target point (x, y)</dd>
+<dt><strong><code>region</code></strong> :&ensp;<code>None | int</code></dt>
+<dd>alternative value for search region,
+overwriting the <code>__init__</code> parameter <code>region</code></dd>
+</dl></div>
+</dd>
+<dt id="taulu.GridDetector.find_table_points"><code class="name flex">
+<span>def <span class="ident">find_table_points</span></span>(<span>self,<br>img: cv2.Mat | numpy.ndarray | os.PathLike[str],<br>left_top: Tuple[int, int],<br>cell_widths: list[int],<br>cell_heights: list[int] | int,<br>visual: bool = False,<br>window: str = 'taulu',<br>goals_width: int | None = None) ‑> <a title="taulu.grid.TableGrid" href="grid.html#taulu.grid.TableGrid">TableGrid</a></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def find_table_points(
+    self,
+    img: MatLike | PathLike[str],
+    left_top: Point,
+    cell_widths: list[int],
+    cell_heights: list[int] | int,
+    visual: bool = False,
+    window: str = WINDOW,
+    goals_width: Optional[int] = None,
+) -&gt; &#34;TableGrid&#34;:
+    &#34;&#34;&#34;
+    Parse the image to a `TableGrid` structure that holds all of the
+    intersections between horizontal and vertical rules, starting near the `left_top` point
+
+    Args:
+        img (MatLike): the input image of a table
+        left_top (tuple[int, int]): the starting point of the algorithm
+        cell_widths (list[int]): the expected widths of the cells (based on a header template)
+        cell_heights (list[int]): the expected height of the rows of data.
+            The last value from this list is used until the image has no more vertical space.
+        visual (bool): whether to show intermediate steps
+        window (str): the name of the OpenCV window to use for visualization
+        goals_width (int | None): the width of the goal region when searching for the next point.
+            If None, defaults to 1.5 * search_region
+
+    Returns:
+        a TableGrid object
+    &#34;&#34;&#34;
+
+    if goals_width is None:
+        goals_width = self._search_region * 3 // 2
+
+    if not cell_widths:
+        raise ValueError(&#34;cell_widths must contain at least one value&#34;)
+
+    if not isinstance(img, np.ndarray):
+        img = cv.imread(os.fspath(img))
+
+    filtered = self.apply(img, visual)
+
+    if visual:
+        imu.show(filtered, window=window)
+
+    if isinstance(cell_heights, int):
+        cell_heights = [cell_heights]
+
+    left_top, confidence = self.find_nearest(
+        filtered, left_top, int(self._search_region * 1.5)
+    )
+
+    if confidence &lt; 0.1:
+        logger.warning(
+            f&#34;Low confidence for the starting point: {confidence} at {left_top}&#34;
+        )
+
+    # resize all parameters according to scale
+    img = cv.resize(img, None, fx=self._scale, fy=self._scale)
+
+    if visual:
+        imu.push(img)
+
+    filtered = cv.resize(filtered, None, fx=self._scale, fy=self._scale)
+    cell_widths = [int(w * self._scale) for w in cell_widths]
+    cell_heights = [int(h * self._scale) for h in cell_heights]
+    left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
+    self._search_region = int(self._search_region * self._scale)
+
+    threshold = 0.65
+    look_distance = 5
+    min_rows = 30
+
+    img_gray = ensure_gray(img)
+    filtered_gray = ensure_gray(filtered)
+
+    table_grower = TableGrower(
+        img_gray,
+        filtered_gray,
+        cell_widths,  # pyright: ignore
+        cell_heights,  # pyright: ignore
+        left_top,
+        self._search_region,
+        self._distance_penalty,
+        look_distance,
+        threshold,
+        min_rows,
+    )
+
+    def show_grower_progress(wait: bool = False):
+        img_orig = np.copy(img)
+        corners = table_grower.get_all_corners()
+        for y in range(len(corners)):
+            for x in range(len(corners[y])):
+                if corners[y][x] is not None:
+                    img_orig = imu.draw_points(
+                        img_orig,
+                        [corners[y][x]],
+                        color=(0, 0, 255),
+                        thickness=30,
+                    )
+
+        edge = table_grower.get_edge_points()
+
+        for point, score in edge:
+            color = (100, int(clamp(score * 255, 0, 255)), 100)
+            imu.draw_point(img_orig, point, color=color, thickness=20)
+
+        imu.show(img_orig, wait=wait)
+
+    if visual:
+        # python implementation of rust loops, for visualization purposes
+        # note this is a LOT slower
+        while table_grower.grow_point(img_gray, filtered_gray) is not None:
+            show_grower_progress()
+
+        show_grower_progress(True)
+
+        original_threshold = threshold
+
+        loops_without_change = 0
+
+        while not table_grower.is_table_complete():
+            loops_without_change += 1
+
+            if loops_without_change &gt; 50:
+                break
+
+            if table_grower.extrapolate_one(img_gray, filtered_gray) is not None:
+                show_grower_progress()
+
+                loops_without_change = 0
+
+                grown = False
+                while table_grower.grow_point(img_gray, filtered_gray) is not None:
+                    show_grower_progress()
+                    grown = True
+                    threshold = min(0.1 + 0.9 * threshold, original_threshold)
+                    table_grower.set_threshold(threshold)
+
+                if not grown:
+                    threshold *= 0.9
+                    table_grower.set_threshold(threshold)
+
+            else:
+                threshold *= 0.9
+                table_grower.set_threshold(threshold)
+
+                if table_grower.grow_point(img_gray, filtered_gray) is not None:
+                    show_grower_progress()
+                    loops_without_change = 0
+
+    else:
+        table_grower.grow_table(img_gray, filtered_gray)
+
+    table_grower.smooth_grid()
+    corners = table_grower.get_all_corners()
+    logger.info(
+        f&#34;Table growth complete, found {len(corners)} rows and {len(corners[0])} columns&#34;
+    )
+    # rescale corners back to original size
+    if self._scale != 1.0:
+        for y in range(len(corners)):
+            for x in range(len(corners[y])):
+                if corners[y][x] is not None:
+                    corners[y][x] = (
+                        int(corners[y][x][0] / self._scale),  # pyright:ignore
+                        int(corners[y][x][1] / self._scale),  # pyright:ignore
+                    )
+
+    return TableGrid(corners)  # pyright: ignore</code></pre>
+</details>
+<div class="desc"><p>Parse the image to a <code><a title="taulu.TableGrid" href="#taulu.TableGrid">TableGrid</a></code> structure that holds all of the
+intersections between horizontal and vertical rules, starting near the <code>left_top</code> point</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>img</code></strong> :&ensp;<code>MatLike</code></dt>
+<dd>the input image of a table</dd>
+<dt><strong><code>left_top</code></strong> :&ensp;<code>tuple[int, int]</code></dt>
+<dd>the starting point of the algorithm</dd>
+<dt><strong><code>cell_widths</code></strong> :&ensp;<code>list[int]</code></dt>
+<dd>the expected widths of the cells (based on a header template)</dd>
+<dt><strong><code>cell_heights</code></strong> :&ensp;<code>list[int]</code></dt>
+<dd>the expected height of the rows of data.
+The last value from this list is used until the image has no more vertical space.</dd>
+<dt><strong><code>visual</code></strong> :&ensp;<code>bool</code></dt>
+<dd>whether to show intermediate steps</dd>
+<dt><strong><code>window</code></strong> :&ensp;<code>str</code></dt>
+<dd>the name of the OpenCV window to use for visualization</dd>
+<dt><strong><code>goals_width</code></strong> :&ensp;<code>int | None</code></dt>
+<dd>the width of the goal region when searching for the next point.
+If None, defaults to 1.5 * search_region</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>a TableGrid object</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="taulu.HeaderAligner"><code class="flex name class">
+<span>class <span class="ident">HeaderAligner</span></span>
+<span>(</span><span>template: cv2.Mat | numpy.ndarray | os.PathLike[str] | str | None = None,<br>max_features: int = 25000,<br>patch_size: int = 31,<br>match_fraction: float = 0.6,<br>scale: float = 1.0,<br>max_dist: float = 1.0,<br>k: float | None = None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class HeaderAligner:
+    &#34;&#34;&#34;
+    Calculates a transformation matrix to transform points from header-template-image-space to
+    subject-image-space.
+    &#34;&#34;&#34;
+
+    def __init__(
+        self,
+        template: None | MatLike | PathLike[str] | str = None,
+        max_features: int = 25_000,
+        patch_size: int = 31,
+        match_fraction: float = 0.6,
+        scale: float = 1.0,
+        max_dist: float = 1.00,
+        k: float | None = None,
+    ):
+        &#34;&#34;&#34;
+        Args:
+            template (MatLike | str): (path of) template image, with the table template clearly visible
+            max_features (int): maximal number of features that will be extracted by ORB
+            patch_size (int): for ORB feature extractor
+            match_fraction (float): best fraction of matches that are kept
+            scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
+            max_dist (float): maximum distance (relative to image size) of matched features.
+                Increase this value if the warping between image and template needs to be more agressive
+            k (float | None): sauvola thresholding threshold value. If None, no sauvola thresholding is done
+        &#34;&#34;&#34;
+
+        if type(template) is str or type(template) is PathLike:
+            value = cv.imread(fspath(template))
+            template = value
+
+        self._k = k
+        if scale &gt; 1.0:
+            raise TauluException(
+                &#34;Scaling up the image for header alignment is useless. Use 0 &lt; scale &lt;= 1.0&#34;
+            )
+        if scale == 0:
+            raise TauluException(&#34;Use 0 &lt; scale &lt;= 1.0&#34;)
+
+        self._scale = scale
+        self._template = self._scale_img(cast(MatLike, template))
+        self._template_orig: None | MatLike = None
+        self._preprocess_template()
+        self._max_features = max_features
+        self._patch_size = patch_size
+        self._match_fraction = match_fraction
+        self._max_dist = max_dist
+
+    def _scale_img(self, img: MatLike) -&gt; MatLike:
+        if self._scale == 1.0:
+            return img
+
+        return cv.resize(img, None, fx=self._scale, fy=self._scale)
+
+    def _unscale_img(self, img: MatLike) -&gt; MatLike:
+        if self._scale == 1.0:
+            return img
+
+        return cv.resize(img, None, fx=1 / self._scale, fy=1 / self._scale)
+
+    def _unscale_homography(self, h: np.ndarray) -&gt; np.ndarray:
+        if self._scale == 1.0:
+            return h
+
+        scale_matrix = np.diag([self._scale, self._scale, 1.0])
+        # inv_scale_matrix = np.linalg.inv(scale_matrix)
+        inv_scale_matrix = np.diag([1.0 / self._scale, 1.0 / self._scale, 1.0])
+        # return inv_scale_matrix @ h @ scale_matrix
+        return inv_scale_matrix @ h @ scale_matrix
+
+    @property
+    def template(self):
+        &#34;&#34;&#34;The template image that subject images are aligned to&#34;&#34;&#34;
+        return self._template
+
+    @template.setter
+    def template(self, value: MatLike | str):
+        &#34;&#34;&#34;Set the template image as a path or an image&#34;&#34;&#34;
+
+        if type(value) is str:
+            value = cv.imread(value)
+            self._template = value
+
+        # TODO: check if the image has the right properties (dimensions etc.)
+        self._template = cast(MatLike, value)
+
+        self._preprocess_template()
+
+    def _preprocess_template(self):
+        self._template_orig = cv.cvtColor(self._template, cv.COLOR_BGR2GRAY)
+        if self._k is not None:
+            self._template = imu.sauvola(self._template, self._k)
+            self._template = cv.bitwise_not(self._template)
+        else:
+            _, _, self._template = cv.split(self._template)
+
+    def _preprocess_image(self, img: MatLike):
+        if self._template_orig is None:
+            raise TauluException(&#34;process the template first&#34;)
+
+        if self._k is not None:
+            img = imu.sauvola(img, self._k)
+            img = cv.bitwise_not(img)
+        else:
+            _, _, img = cv.split(img)
+
+        return img
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _find_transform_of_template_on(
+        self, im: MatLike, visual: bool = False, window: str = WINDOW
+    ):
+        im = self._scale_img(im)
+        # Detect ORB features and compute descriptors.
+        orb = cv.ORB_create(
+            self._max_features,  # type:ignore
+            patchSize=self._patch_size,
+        )
+        keypoints_im, descriptors_im = orb.detectAndCompute(im, None)
+        keypoints_tg, descriptors_tg = orb.detectAndCompute(self._template, None)
+
+        # Match features
+        matcher = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
+        matches = matcher.match(descriptors_im, descriptors_tg)
+
+        # Sort matches by score
+        matches = sorted(matches, key=lambda x: x.distance)
+
+        # Remove not so good matches
+        numGoodMatches = int(len(matches) * self._match_fraction)
+        matches = matches[:numGoodMatches]
+
+        if visual:
+            final_img_filtered = cv.drawMatches(
+                im,
+                keypoints_im,
+                self._template,
+                keypoints_tg,
+                matches[:10],
+                None,  # type:ignore
+                cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+            )
+            imu.show(final_img_filtered, title=&#34;matches&#34;, window=window)
+
+        # Extract location of good matches
+        points1 = np.zeros((len(matches), 2), dtype=np.float32)
+        points2 = np.zeros((len(matches), 2), dtype=np.float32)
+
+        for i, match in enumerate(matches):
+            points1[i, :] = keypoints_tg[match.trainIdx].pt
+            points2[i, :] = keypoints_im[match.queryIdx].pt
+
+        # Prune reference points based upon distance between
+        # key points. This assumes a fairly good alignment to start with
+        # due to the protocol used (location of the sheets)
+        p1 = pd.DataFrame(data=points1)
+        p2 = pd.DataFrame(data=points2)
+        refdist = abs(p1 - p2)
+
+        mask_x = refdist.loc[:, 0] &lt; (im.shape[0] * self._max_dist)
+        mask_y = refdist.loc[:, 1] &lt; (im.shape[1] * self._max_dist)
+        mask = mask_x &amp; mask_y
+        points1 = points1[mask.to_numpy()]
+        points2 = points2[mask.to_numpy()]
+
+        # Find homography
+        h, _ = cv.findHomography(points1, points2, cv.RANSAC)
+
+        return self._unscale_homography(h)
+
+    def view_alignment(self, img: MatLike, h: NDArray):
+        &#34;&#34;&#34;
+        Show the alignment of the template on the given image
+        by transforming it using the supplied transformation matrix `h`
+        and visualising both on different channels
+
+        Args:
+            img (MatLike): the image on which the template is transformed
+            h (NDArray): the transformation matrix
+        &#34;&#34;&#34;
+
+        im = imu.ensure_gray(img)
+        header = imu.ensure_gray(self._unscale_img(self._template))
+        height, width = im.shape
+
+        header_warped = cv.warpPerspective(header, h, (width, height))
+
+        merged = np.full((height, width, 3), 255, dtype=np.uint8)
+
+        merged[..., 1] = im
+        merged[..., 2] = header_warped
+
+        return imu.show(merged)
+
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def align(
+        self, img: MatLike | str, visual: bool = False, window: str = WINDOW
+    ) -&gt; NDArray:
+        &#34;&#34;&#34;
+        Calculates a homogeneous transformation matrix that maps pixels of
+        the template to the given image
+        &#34;&#34;&#34;
+
+        logger.info(&#34;Aligning header with supplied table image&#34;)
+
+        if type(img) is str:
+            img = cv.imread(img)
+        img = cast(MatLike, img)
+
+        img = self._preprocess_image(img)
+
+        h = self._find_transform_of_template_on(img, visual, window)
+
+        if visual:
+            self.view_alignment(img, h)
+
+        return h
+
+    def template_to_img(self, h: NDArray, point: Iterable[int]) -&gt; tuple[int, int]:
+        &#34;&#34;&#34;
+        Transform the given point (in template-space) using the transformation h
+        (obtained through the `align` method)
+
+        Args:
+            h (NDArray): transformation matrix of shape (3, 3)
+            point (Iterable[int]): the to-be-transformed point, should conform to (x, y)
+        &#34;&#34;&#34;
+
+        point = np.array([[point[0], point[1], 1]])  # type:ignore
+        transformed = np.dot(h, point.T)  # type:ignore
+
+        transformed /= transformed[2]
+
+        return int(transformed[0][0]), int(transformed[1][0])</code></pre>
+</details>
+<div class="desc"><p>Calculates a transformation matrix to transform points from header-template-image-space to
+subject-image-space.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>template</code></strong> :&ensp;<code>MatLike | str</code></dt>
+<dd>(path of) template image, with the table template clearly visible</dd>
+<dt><strong><code>max_features</code></strong> :&ensp;<code>int</code></dt>
+<dd>maximal number of features that will be extracted by ORB</dd>
+<dt><strong><code>patch_size</code></strong> :&ensp;<code>int</code></dt>
+<dd>for ORB feature extractor</dd>
+<dt><strong><code>match_fraction</code></strong> :&ensp;<code>float</code></dt>
+<dd>best fraction of matches that are kept</dd>
+<dt><strong><code>scale</code></strong> :&ensp;<code>float</code></dt>
+<dd>image scale factor to do calculations on (useful for increasing calculation speed mostly)</dd>
+<dt><strong><code>max_dist</code></strong> :&ensp;<code>float</code></dt>
+<dd>maximum distance (relative to image size) of matched features.
+Increase this value if the warping between image and template needs to be more agressive</dd>
+<dt><strong><code>k</code></strong> :&ensp;<code>float | None</code></dt>
+<dd>sauvola thresholding threshold value. If None, no sauvola thresholding is done</dd>
+</dl></div>
+<h3>Instance variables</h3>
+<dl>
+<dt id="taulu.HeaderAligner.template"><code class="name">prop <span class="ident">template</span></code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def template(self):
+    &#34;&#34;&#34;The template image that subject images are aligned to&#34;&#34;&#34;
+    return self._template</code></pre>
+</details>
+<div class="desc"><p>The template image that subject images are aligned to</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.HeaderAligner.align"><code class="name flex">
+<span>def <span class="ident">align</span></span>(<span>self,<br>img: cv2.Mat | numpy.ndarray | str,<br>visual: bool = False,<br>window: str = 'taulu') ‑> numpy.ndarray[tuple[int, ...], numpy.dtype[+_ScalarType_co]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@log_calls(level=logging.DEBUG, include_return=True)
+def align(
+    self, img: MatLike | str, visual: bool = False, window: str = WINDOW
+) -&gt; NDArray:
+    &#34;&#34;&#34;
+    Calculates a homogeneous transformation matrix that maps pixels of
+    the template to the given image
+    &#34;&#34;&#34;
+
+    logger.info(&#34;Aligning header with supplied table image&#34;)
+
+    if type(img) is str:
+        img = cv.imread(img)
+    img = cast(MatLike, img)
+
+    img = self._preprocess_image(img)
+
+    h = self._find_transform_of_template_on(img, visual, window)
+
+    if visual:
+        self.view_alignment(img, h)
+
+    return h</code></pre>
+</details>
+<div class="desc"><p>Calculates a homogeneous transformation matrix that maps pixels of
+the template to the given image</p></div>
+</dd>
+<dt id="taulu.HeaderAligner.template_to_img"><code class="name flex">
+<span>def <span class="ident">template_to_img</span></span>(<span>self,<br>h: numpy.ndarray[tuple[int, ...], numpy.dtype[+_ScalarType_co]],<br>point: Iterable[int]) ‑> tuple[int, int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def template_to_img(self, h: NDArray, point: Iterable[int]) -&gt; tuple[int, int]:
+    &#34;&#34;&#34;
+    Transform the given point (in template-space) using the transformation h
+    (obtained through the `align` method)
+
+    Args:
+        h (NDArray): transformation matrix of shape (3, 3)
+        point (Iterable[int]): the to-be-transformed point, should conform to (x, y)
+    &#34;&#34;&#34;
+
+    point = np.array([[point[0], point[1], 1]])  # type:ignore
+    transformed = np.dot(h, point.T)  # type:ignore
+
+    transformed /= transformed[2]
+
+    return int(transformed[0][0]), int(transformed[1][0])</code></pre>
+</details>
+<div class="desc"><p>Transform the given point (in template-space) using the transformation h
+(obtained through the <code>align</code> method)</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>h</code></strong> :&ensp;<code>NDArray</code></dt>
+<dd>transformation matrix of shape (3, 3)</dd>
+<dt><strong><code>point</code></strong> :&ensp;<code>Iterable[int]</code></dt>
+<dd>the to-be-transformed point, should conform to (x, y)</dd>
+</dl></div>
+</dd>
+<dt id="taulu.HeaderAligner.view_alignment"><code class="name flex">
+<span>def <span class="ident">view_alignment</span></span>(<span>self,<br>img: cv2.Mat | numpy.ndarray,<br>h: numpy.ndarray[tuple[int, ...], numpy.dtype[+_ScalarType_co]])</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def view_alignment(self, img: MatLike, h: NDArray):
+    &#34;&#34;&#34;
+    Show the alignment of the template on the given image
+    by transforming it using the supplied transformation matrix `h`
+    and visualising both on different channels
+
+    Args:
+        img (MatLike): the image on which the template is transformed
+        h (NDArray): the transformation matrix
+    &#34;&#34;&#34;
+
+    im = imu.ensure_gray(img)
+    header = imu.ensure_gray(self._unscale_img(self._template))
+    height, width = im.shape
+
+    header_warped = cv.warpPerspective(header, h, (width, height))
+
+    merged = np.full((height, width, 3), 255, dtype=np.uint8)
+
+    merged[..., 1] = im
+    merged[..., 2] = header_warped
+
+    return imu.show(merged)</code></pre>
+</details>
+<div class="desc"><p>Show the alignment of the template on the given image
+by transforming it using the supplied transformation matrix <code>h</code>
+and visualising both on different channels</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>img</code></strong> :&ensp;<code>MatLike</code></dt>
+<dd>the image on which the template is transformed</dd>
+<dt><strong><code>h</code></strong> :&ensp;<code>NDArray</code></dt>
+<dd>the transformation matrix</dd>
+</dl></div>
+</dd>
+</dl>
+</dd>
+<dt id="taulu.HeaderTemplate"><code class="flex name class">
+<span>class <span class="ident">HeaderTemplate</span></span>
+<span>(</span><span>rules: Iterable[Iterable[int]])</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class HeaderTemplate(TableIndexer):
+    def __init__(self, rules: Iterable[Iterable[int]]):
+        &#34;&#34;&#34;
+        A TableTemplate is a collection of rules of a table. This class implements methods
+        for finding cell positions in a table image, given the template the image adheres to.
+
+        Args:
+            rules: 2D array of lines, where each line is represented as [x0, y0, x1, y1]
+        &#34;&#34;&#34;
+
+        super().__init__()
+        self._rules = [_Rule(*rule) for rule in rules]
+        self._h_rules = sorted(
+            [rule for rule in self._rules if rule._is_horizontal()], key=lambda r: r._y
+        )
+        self._v_rules = sorted(
+            [rule for rule in self._rules if rule._is_vertical()], key=lambda r: r._x
+        )
+
+    @log_calls(level=logging.DEBUG)
+    def save(self, path: PathLike[str]):
+        &#34;&#34;&#34;
+        Save the HeaderTemplate to the given path, as a json
+        &#34;&#34;&#34;
+
+        data = {&#34;rules&#34;: [r.to_dict() for r in self._rules]}
+
+        with open(path, &#34;w&#34;) as f:
+            json.dump(data, f)
+
+    @staticmethod
+    @log_calls(level=logging.DEBUG)
+    def from_saved(path: PathLike[str]) -&gt; &#34;HeaderTemplate&#34;:
+        with open(path, &#34;r&#34;) as f:
+            data = json.load(f)
+            rules = data[&#34;rules&#34;]
+            rules = [[r[&#34;x0&#34;], r[&#34;y0&#34;], r[&#34;x1&#34;], r[&#34;y1&#34;]] for r in rules]
+
+            return HeaderTemplate(rules)
+
+    @property
+    def cols(self) -&gt; int:
+        return len(self._v_rules) - 1
+
+    @property
+    def rows(self) -&gt; int:
+        return len(self._h_rules) - 1
+
+    @staticmethod
+    @log_calls(level=logging.DEBUG)
+    def annotate_image(
+        template: MatLike | str, crop: Optional[PathLike[str]] = None, margin: int = 10
+    ) -&gt; &#34;HeaderTemplate&#34;:
+        &#34;&#34;&#34;
+        Utility method that allows users to create a template form a template image.
+
+        The user is asked to click to annotate lines (two clicks per line).
+
+        Args:
+            template: the image on which to annotate the header lines
+            crop (str | None): if str, crop the template image first, then do the annotation.
+                The cropped image will be stored at the supplied path
+            margin (int): margin to add around the cropping of the header
+        &#34;&#34;&#34;
+
+        if type(template) is str:
+            value = cv.imread(template)
+            template = value
+        template = cast(MatLike, template)
+
+        if crop is not None:
+            cropped = HeaderTemplate._crop(template, margin)
+            cv.imwrite(os.fspath(crop), cropped)
+            template = cropped
+
+        start_point = None
+        lines: list[list[int]] = []
+
+        anno_template = np.copy(template)
+
+        def get_point(event, x, y, flags, params):
+            nonlocal lines, start_point, anno_template
+            _ = flags
+            _ = params
+            if event == cv.EVENT_LBUTTONDOWN:
+                if start_point is not None:
+                    line: list[int] = [start_point[1], start_point[0], x, y]
+
+                    cv.line(  # type:ignore
+                        anno_template,  # type:ignore
+                        (start_point[1], start_point[0]),
+                        (x, y),
+                        (0, 255, 0),
+                        2,
+                        cv.LINE_AA,
+                    )
+                    cv.imshow(constants.WINDOW, anno_template)  # type:ignore
+
+                    lines.append(line)
+                    start_point = None
+                else:
+                    start_point = (y, x)
+            elif event == cv.EVENT_RBUTTONDOWN:
+                start_point = None
+
+                # remove the last annotation
+                lines = lines[:-1]
+
+                anno_template = np.copy(anno_template)
+
+                for line in lines:
+                    cv.line(
+                        template,
+                        (line[0], line[1]),
+                        (line[2], line[3]),
+                        (0, 255, 0),
+                        2,
+                        cv.LINE_AA,
+                    )
+
+                cv.imshow(constants.WINDOW, template)
+
+        print(ANNO_HELP)
+
+        imu.show(anno_template, get_point, title=&#34;annotate the header&#34;)
+
+        return HeaderTemplate(lines)
+
+    @staticmethod
+    @log_calls(level=logging.DEBUG, include_return=True)
+    def _crop(template: MatLike, margin: int = 10) -&gt; MatLike:
+        &#34;&#34;&#34;
+        Crop the image to contain only the annotations, such that it can be used as the header image in the taulu workflow.
+        &#34;&#34;&#34;
+
+        points = []
+        anno_template = np.copy(template)
+
+        def get_point(event, x, y, flags, params):
+            nonlocal points, anno_template
+            _ = flags
+            _ = params
+            if event == cv.EVENT_LBUTTONDOWN:
+                point = (x, y)
+
+                cv.circle(  # type:ignore
+                    anno_template,  # type:ignore
+                    (x, y),
+                    4,
+                    (0, 255, 0),
+                    2,
+                )
+                cv.imshow(constants.WINDOW, anno_template)  # type:ignore
+
+                points.append(point)
+            elif event == cv.EVENT_RBUTTONDOWN:
+                # remove the last annotation
+                points = points[:-1]
+
+                anno_template = np.copy(anno_template)
+
+                for p in points:
+                    cv.circle(
+                        anno_template,
+                        p,
+                        4,
+                        (0, 255, 0),
+                        2,
+                    )
+
+                cv.imshow(constants.WINDOW, anno_template)
+
+        print(CROP_HELP)
+
+        imu.show(anno_template, get_point, title=&#34;crop the header&#34;)
+
+        assert len(points) == 4, (
+            &#34;you need to annotate the four corners of the table in order to crop it&#34;
+        )
+
+        # crop the image to contain all of the points (just crop rectangularly, x, y, w, h)
+        # Convert points to numpy array
+        points_np = np.array(points)
+
+        # Find bounding box
+        x_min = np.min(points_np[:, 0])
+        y_min = np.min(points_np[:, 1])
+        x_max = np.max(points_np[:, 0])
+        y_max = np.max(points_np[:, 1])
+
+        # Compute width and height
+        width = x_max - x_min
+        height = y_max - y_min
+
+        # Ensure integers and within image boundaries
+        x_min = max(int(x_min), 0)
+        y_min = max(int(y_min), 0)
+        width = int(width)
+        height = int(height)
+
+        # Crop the image
+        cropped = template[
+            y_min - margin : y_min + height + margin,
+            x_min - margin : x_min + width + margin,
+        ]
+
+        return cropped
+
+    @staticmethod
+    def from_vgg_annotation(annotation: str) -&gt; &#34;HeaderTemplate&#34;:
+        &#34;&#34;&#34;
+        Create a TableTemplate from annotations made in [vgg](https://annotate.officialstatistics.org/), using the polylines tool.
+
+        Args:
+            annotation (str): the path of the annotation csv file
+        &#34;&#34;&#34;
+
+        rules = []
+        with open(annotation, &#34;r&#34;) as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                shape_attributes = json.loads(row[&#34;region_shape_attributes&#34;])
+                if shape_attributes[&#34;name&#34;] == &#34;polyline&#34;:
+                    x_points = shape_attributes[&#34;all_points_x&#34;]
+                    y_points = shape_attributes[&#34;all_points_y&#34;]
+                    if len(x_points) == 2 and len(y_points) == 2:
+                        rules.append(
+                            [x_points[0], y_points[0], x_points[1], y_points[1]]
+                        )
+
+        return HeaderTemplate(rules)
+
+    def cell_width(self, i: int) -&gt; int:
+        self._check_col_idx(i)
+        return int(self._v_rules[i + 1]._x - self._v_rules[i]._x)
+
+    def cell_widths(self, start: int = 0) -&gt; list[int]:
+        return [self.cell_width(i) for i in range(start, self.cols)]
+
+    def cell_height(self, header_factor: float = 0.8) -&gt; int:
+        return int((self._h_rules[1]._y - self._h_rules[0]._y) * header_factor)
+
+    def cell_heights(self, header_factors: list[float] | float) -&gt; list[int]:
+        if isinstance(header_factors, float):
+            header_factors = [header_factors]
+        header_factors = cast(list, header_factors)
+        return [
+            int((self._h_rules[1]._y - self._h_rules[0]._y) * f) for f in header_factors
+        ]
+
+    def intersection(self, index: tuple[int, int]) -&gt; tuple[float, float]:
+        &#34;&#34;&#34;
+        Returns the interaction of the index[0]th horizontal rule and the
+        index[1]th vertical rule
+        &#34;&#34;&#34;
+
+        ints = self._h_rules[index[0]].intersection(self._v_rules[index[1]])
+        assert ints is not None
+        return ints
+
+    def cell(self, point: tuple[float, float]) -&gt; tuple[int, int]:
+        &#34;&#34;&#34;
+        Get the cell index (row, col) that corresponds with the point (x, y) in the template image
+
+        Args:
+            point (tuple[float, float]): the coordinates in the template image
+
+        Returns:
+            tuple[int, int]: (row, col)
+        &#34;&#34;&#34;
+
+        x, y = point
+
+        row = -1
+        col = -1
+
+        for i in range(self.rows):
+            y0 = self._h_rules[i]._y_at_x(x)
+            y1 = self._h_rules[i + 1]._y_at_x(x)
+            if min(y0, y1) &lt;= y &lt;= max(y0, y1):
+                row = i
+                break
+
+        for i in range(self.cols):
+            x0 = self._v_rules[i]._x_at_y(y)
+            x1 = self._v_rules[i + 1]._x_at_y(y)
+            if min(x0, x1) &lt;= x &lt;= max(x0, x1):
+                col = i
+                break
+
+        if row == -1 or col == -1:
+            return (-1, -1)
+
+        return (row, col)
+
+    def cell_polygon(
+        self, cell: tuple[int, int]
+    ) -&gt; tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+        &#34;&#34;&#34;
+        Return points (x,y) that make up a polygon around the requested cell
+        (top left, top right, bottom right, bottom left)
+        &#34;&#34;&#34;
+
+        row, col = cell
+
+        self._check_col_idx(col)
+        self._check_row_idx(row)
+
+        top_rule = self._h_rules[row]
+        bottom_rule = self._h_rules[row + 1]
+        left_rule = self._v_rules[col]
+        right_rule = self._v_rules[col + 1]
+
+        # Calculate corner points using intersections
+        top_left = top_rule.intersection(left_rule)
+        top_right = top_rule.intersection(right_rule)
+        bottom_left = bottom_rule.intersection(left_rule)
+        bottom_right = bottom_rule.intersection(right_rule)
+
+        if not all(
+            [
+                point is not None
+                for point in [top_left, top_right, bottom_left, bottom_right]
+            ]
+        ):
+            raise TauluException(&#34;the lines around this cell do not intersect&#34;)
+
+        return top_left, top_right, bottom_right, bottom_left  # type:ignore
+
+    def region(
+        self, start: tuple[int, int], end: tuple[int, int]
+    ) -&gt; tuple[Point, Point, Point, Point]:
+        self._check_row_idx(start[0])
+        self._check_row_idx(end[0])
+        self._check_col_idx(start[1])
+        self._check_col_idx(end[1])
+
+        # the rules that surround this row
+        top_rule = self._h_rules[start[0]]
+        bottom_rule = self._h_rules[end[0] + 1]
+        left_rule = self._v_rules[start[1]]
+        right_rule = self._v_rules[end[1] + 1]
+
+        # four points that will be the bounding polygon of the result,
+        # which needs to be rectified
+        top_left = top_rule.intersection(left_rule)
+        top_right = top_rule.intersection(right_rule)
+        bottom_left = bottom_rule.intersection(left_rule)
+        bottom_right = bottom_rule.intersection(right_rule)
+
+        if (
+            top_left is None
+            or top_right is None
+            or bottom_left is None
+            or bottom_right is None
+        ):
+            raise TauluException(&#34;the lines around this row do not intersect properly&#34;)
+
+        def to_point(pnt) -&gt; Point:
+            return (int(pnt[0]), int(pnt[1]))
+
+        return (
+            to_point(top_left),
+            to_point(top_right),
+            to_point(bottom_right),
+            to_point(bottom_left),
+        )
+
+    def text_regions(
+        self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -20
+    ) -&gt; list[tuple[tuple[int, int], tuple[int, int]]]:
+        raise TauluException(&#34;text_regions should not be called on a HeaderTemplate&#34;)</code></pre>
+</details>
+<div class="desc"><p>Subclasses implement methods for going from a pixel in the input image to a table cell index,
+and cropping an image to the given table cell index.</p>
+<p>A TableTemplate is a collection of rules of a table. This class implements methods
+for finding cell positions in a table image, given the template the image adheres to.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>rules</code></strong></dt>
+<dd>2D array of lines, where each line is represented as [x0, y0, x1, y1]</dd>
+</dl></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="taulu.table_indexer.TableIndexer" href="table_indexer.html#taulu.table_indexer.TableIndexer">TableIndexer</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Static methods</h3>
+<dl>
+<dt id="taulu.HeaderTemplate.annotate_image"><code class="name flex">
+<span>def <span class="ident">annotate_image</span></span>(<span>template: cv2.Mat | numpy.ndarray | str,<br>crop: os.PathLike[str] | None = None,<br>margin: int = 10) ‑> <a title="taulu.header_template.HeaderTemplate" href="header_template.html#taulu.header_template.HeaderTemplate">HeaderTemplate</a></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+@log_calls(level=logging.DEBUG)
+def annotate_image(
+    template: MatLike | str, crop: Optional[PathLike[str]] = None, margin: int = 10
+) -&gt; &#34;HeaderTemplate&#34;:
+    &#34;&#34;&#34;
+    Utility method that allows users to create a template form a template image.
+
+    The user is asked to click to annotate lines (two clicks per line).
+
+    Args:
+        template: the image on which to annotate the header lines
+        crop (str | None): if str, crop the template image first, then do the annotation.
+            The cropped image will be stored at the supplied path
+        margin (int): margin to add around the cropping of the header
+    &#34;&#34;&#34;
+
+    if type(template) is str:
+        value = cv.imread(template)
+        template = value
+    template = cast(MatLike, template)
+
+    if crop is not None:
+        cropped = HeaderTemplate._crop(template, margin)
+        cv.imwrite(os.fspath(crop), cropped)
+        template = cropped
+
+    start_point = None
+    lines: list[list[int]] = []
+
+    anno_template = np.copy(template)
+
+    def get_point(event, x, y, flags, params):
+        nonlocal lines, start_point, anno_template
+        _ = flags
+        _ = params
+        if event == cv.EVENT_LBUTTONDOWN:
+            if start_point is not None:
+                line: list[int] = [start_point[1], start_point[0], x, y]
+
+                cv.line(  # type:ignore
+                    anno_template,  # type:ignore
+                    (start_point[1], start_point[0]),
+                    (x, y),
+                    (0, 255, 0),
+                    2,
+                    cv.LINE_AA,
+                )
+                cv.imshow(constants.WINDOW, anno_template)  # type:ignore
+
+                lines.append(line)
+                start_point = None
+            else:
+                start_point = (y, x)
+        elif event == cv.EVENT_RBUTTONDOWN:
+            start_point = None
+
+            # remove the last annotation
+            lines = lines[:-1]
+
+            anno_template = np.copy(anno_template)
+
+            for line in lines:
+                cv.line(
+                    template,
+                    (line[0], line[1]),
+                    (line[2], line[3]),
+                    (0, 255, 0),
+                    2,
+                    cv.LINE_AA,
+                )
+
+            cv.imshow(constants.WINDOW, template)
+
+    print(ANNO_HELP)
+
+    imu.show(anno_template, get_point, title=&#34;annotate the header&#34;)
+
+    return HeaderTemplate(lines)</code></pre>
+</details>
+<div class="desc"><p>Utility method that allows users to create a template form a template image.</p>
+<p>The user is asked to click to annotate lines (two clicks per line).</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>template</code></strong></dt>
+<dd>the image on which to annotate the header lines</dd>
+<dt><strong><code>crop</code></strong> :&ensp;<code>str | None</code></dt>
+<dd>if str, crop the template image first, then do the annotation.
+The cropped image will be stored at the supplied path</dd>
+<dt><strong><code>margin</code></strong> :&ensp;<code>int</code></dt>
+<dd>margin to add around the cropping of the header</dd>
+</dl></div>
+</dd>
+<dt id="taulu.HeaderTemplate.from_saved"><code class="name flex">
+<span>def <span class="ident">from_saved</span></span>(<span>path: os.PathLike[str]) ‑> <a title="taulu.header_template.HeaderTemplate" href="header_template.html#taulu.header_template.HeaderTemplate">HeaderTemplate</a></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+@log_calls(level=logging.DEBUG)
+def from_saved(path: PathLike[str]) -&gt; &#34;HeaderTemplate&#34;:
+    with open(path, &#34;r&#34;) as f:
+        data = json.load(f)
+        rules = data[&#34;rules&#34;]
+        rules = [[r[&#34;x0&#34;], r[&#34;y0&#34;], r[&#34;x1&#34;], r[&#34;y1&#34;]] for r in rules]
+
+        return HeaderTemplate(rules)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.HeaderTemplate.from_vgg_annotation"><code class="name flex">
+<span>def <span class="ident">from_vgg_annotation</span></span>(<span>annotation: str) ‑> <a title="taulu.header_template.HeaderTemplate" href="header_template.html#taulu.header_template.HeaderTemplate">HeaderTemplate</a></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def from_vgg_annotation(annotation: str) -&gt; &#34;HeaderTemplate&#34;:
+    &#34;&#34;&#34;
+    Create a TableTemplate from annotations made in [vgg](https://annotate.officialstatistics.org/), using the polylines tool.
+
+    Args:
+        annotation (str): the path of the annotation csv file
+    &#34;&#34;&#34;
+
+    rules = []
+    with open(annotation, &#34;r&#34;) as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            shape_attributes = json.loads(row[&#34;region_shape_attributes&#34;])
+            if shape_attributes[&#34;name&#34;] == &#34;polyline&#34;:
+                x_points = shape_attributes[&#34;all_points_x&#34;]
+                y_points = shape_attributes[&#34;all_points_y&#34;]
+                if len(x_points) == 2 and len(y_points) == 2:
+                    rules.append(
+                        [x_points[0], y_points[0], x_points[1], y_points[1]]
+                    )
+
+    return HeaderTemplate(rules)</code></pre>
+</details>
+<div class="desc"><p>Create a TableTemplate from annotations made in <a href="https://annotate.officialstatistics.org/">vgg</a>, using the polylines tool.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>annotation</code></strong> :&ensp;<code>str</code></dt>
+<dd>the path of the annotation csv file</dd>
+</dl></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="taulu.HeaderTemplate.cols"><code class="name">prop <span class="ident">cols</span> : int</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def cols(self) -&gt; int:
+    return len(self._v_rules) - 1</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.HeaderTemplate.rows"><code class="name">prop <span class="ident">rows</span> : int</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def rows(self) -&gt; int:
+    return len(self._h_rules) - 1</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.HeaderTemplate.cell"><code class="name flex">
+<span>def <span class="ident">cell</span></span>(<span>self, point: tuple[float, float]) ‑> tuple[int, int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cell(self, point: tuple[float, float]) -&gt; tuple[int, int]:
+    &#34;&#34;&#34;
+    Get the cell index (row, col) that corresponds with the point (x, y) in the template image
+
+    Args:
+        point (tuple[float, float]): the coordinates in the template image
+
+    Returns:
+        tuple[int, int]: (row, col)
+    &#34;&#34;&#34;
+
+    x, y = point
+
+    row = -1
+    col = -1
+
+    for i in range(self.rows):
+        y0 = self._h_rules[i]._y_at_x(x)
+        y1 = self._h_rules[i + 1]._y_at_x(x)
+        if min(y0, y1) &lt;= y &lt;= max(y0, y1):
+            row = i
+            break
+
+    for i in range(self.cols):
+        x0 = self._v_rules[i]._x_at_y(y)
+        x1 = self._v_rules[i + 1]._x_at_y(y)
+        if min(x0, x1) &lt;= x &lt;= max(x0, x1):
+            col = i
+            break
+
+    if row == -1 or col == -1:
+        return (-1, -1)
+
+    return (row, col)</code></pre>
+</details>
+<div class="desc"><p>Get the cell index (row, col) that corresponds with the point (x, y) in the template image</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>point</code></strong> :&ensp;<code>tuple[float, float]</code></dt>
+<dd>the coordinates in the template image</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple[int, int]</code></dt>
+<dd>(row, col)</dd>
+</dl></div>
+</dd>
+<dt id="taulu.HeaderTemplate.cell_height"><code class="name flex">
+<span>def <span class="ident">cell_height</span></span>(<span>self, header_factor: float = 0.8) ‑> int</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cell_height(self, header_factor: float = 0.8) -&gt; int:
+    return int((self._h_rules[1]._y - self._h_rules[0]._y) * header_factor)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.HeaderTemplate.cell_heights"><code class="name flex">
+<span>def <span class="ident">cell_heights</span></span>(<span>self, header_factors: list[float] | float) ‑> list[int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cell_heights(self, header_factors: list[float] | float) -&gt; list[int]:
+    if isinstance(header_factors, float):
+        header_factors = [header_factors]
+    header_factors = cast(list, header_factors)
+    return [
+        int((self._h_rules[1]._y - self._h_rules[0]._y) * f) for f in header_factors
+    ]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.HeaderTemplate.cell_polygon"><code class="name flex">
+<span>def <span class="ident">cell_polygon</span></span>(<span>self, cell: tuple[int, int]) ‑> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cell_polygon(
+    self, cell: tuple[int, int]
+) -&gt; tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+    &#34;&#34;&#34;
+    Return points (x,y) that make up a polygon around the requested cell
+    (top left, top right, bottom right, bottom left)
+    &#34;&#34;&#34;
+
+    row, col = cell
+
+    self._check_col_idx(col)
+    self._check_row_idx(row)
+
+    top_rule = self._h_rules[row]
+    bottom_rule = self._h_rules[row + 1]
+    left_rule = self._v_rules[col]
+    right_rule = self._v_rules[col + 1]
+
+    # Calculate corner points using intersections
+    top_left = top_rule.intersection(left_rule)
+    top_right = top_rule.intersection(right_rule)
+    bottom_left = bottom_rule.intersection(left_rule)
+    bottom_right = bottom_rule.intersection(right_rule)
+
+    if not all(
+        [
+            point is not None
+            for point in [top_left, top_right, bottom_left, bottom_right]
+        ]
+    ):
+        raise TauluException(&#34;the lines around this cell do not intersect&#34;)
+
+    return top_left, top_right, bottom_right, bottom_left  # type:ignore</code></pre>
+</details>
+<div class="desc"><p>Return points (x,y) that make up a polygon around the requested cell
+(top left, top right, bottom right, bottom left)</p></div>
+</dd>
+<dt id="taulu.HeaderTemplate.cell_width"><code class="name flex">
+<span>def <span class="ident">cell_width</span></span>(<span>self, i: int) ‑> int</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cell_width(self, i: int) -&gt; int:
+    self._check_col_idx(i)
+    return int(self._v_rules[i + 1]._x - self._v_rules[i]._x)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.HeaderTemplate.cell_widths"><code class="name flex">
+<span>def <span class="ident">cell_widths</span></span>(<span>self, start: int = 0) ‑> list[int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cell_widths(self, start: int = 0) -&gt; list[int]:
+    return [self.cell_width(i) for i in range(start, self.cols)]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.HeaderTemplate.intersection"><code class="name flex">
+<span>def <span class="ident">intersection</span></span>(<span>self, index: tuple[int, int]) ‑> tuple[float, float]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def intersection(self, index: tuple[int, int]) -&gt; tuple[float, float]:
+    &#34;&#34;&#34;
+    Returns the interaction of the index[0]th horizontal rule and the
+    index[1]th vertical rule
+    &#34;&#34;&#34;
+
+    ints = self._h_rules[index[0]].intersection(self._v_rules[index[1]])
+    assert ints is not None
+    return ints</code></pre>
+</details>
+<div class="desc"><p>Returns the interaction of the index[0]th horizontal rule and the
+index[1]th vertical rule</p></div>
+</dd>
+<dt id="taulu.HeaderTemplate.save"><code class="name flex">
+<span>def <span class="ident">save</span></span>(<span>self, path: os.PathLike[str])</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@log_calls(level=logging.DEBUG)
+def save(self, path: PathLike[str]):
+    &#34;&#34;&#34;
+    Save the HeaderTemplate to the given path, as a json
+    &#34;&#34;&#34;
+
+    data = {&#34;rules&#34;: [r.to_dict() for r in self._rules]}
+
+    with open(path, &#34;w&#34;) as f:
+        json.dump(data, f)</code></pre>
+</details>
+<div class="desc"><p>Save the HeaderTemplate to the given path, as a json</p></div>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="taulu.table_indexer.TableIndexer" href="table_indexer.html#taulu.table_indexer.TableIndexer">TableIndexer</a></b></code>:
+<ul class="hlist">
+<li><code><a title="taulu.table_indexer.TableIndexer.crop_region" href="table_indexer.html#taulu.table_indexer.TableIndexer.crop_region">crop_region</a></code></li>
+<li><code><a title="taulu.table_indexer.TableIndexer.region" href="table_indexer.html#taulu.table_indexer.TableIndexer.region">region</a></code></li>
+<li><code><a title="taulu.table_indexer.TableIndexer.text_regions" href="table_indexer.html#taulu.table_indexer.TableIndexer.text_regions">text_regions</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="taulu.Split"><code class="flex name class">
+<span>class <span class="ident">Split</span></span>
+<span>(</span><span>left: ~T | None = None, right: ~T | None = None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Split(Generic[T]):
+    &#34;&#34;&#34;Wrapper for data that has both a left and a right variant&#34;&#34;&#34;
+
+    def __init__(self, left: T | None = None, right: T | None = None):
+        self._left = left
+        self._right = right
+
+    @property
+    def left(self) -&gt; T:
+        assert self._left is not None
+        return self._left
+
+    @left.setter
+    def left(self, value: T):
+        self._left = value
+
+    @property
+    def right(self) -&gt; T:
+        assert self._right is not None
+        return self._right
+
+    @right.setter
+    def right(self, value: T):
+        self._right = value
+
+    def append(self, value: T):
+        if self._left is None:
+            self._left = value
+        else:
+            self._right = value
+
+    def __repr__(self) -&gt; str:
+        return f&#34;left: {self._left}, right: {self._right}&#34;
+
+    def __iter__(self):
+        assert self._left is not None
+        assert self._right is not None
+        return iter((self._left, self._right))
+
+    def __getitem__(self, index: bool) -&gt; T:
+        assert self._left is not None
+        assert self._right is not None
+        if int(index) == 0:
+            return self._left
+        else:
+            return self._right
+
+    def apply(
+        self,
+        funcs: &#34;Split[Callable[[T, *Any], V]] | Callable[[T, *Any], V]&#34;,
+        *args,
+        **kwargs,
+    ) -&gt; &#34;Split[V]&#34;:
+        if not isinstance(funcs, Split):
+            funcs = Split(funcs, funcs)
+
+        def get_arg(side: str, arg):
+            if isinstance(arg, Split):
+                return getattr(arg, side)
+            return arg
+
+        def call(side: str):
+            func = getattr(funcs, side)
+            target = getattr(self, side)
+
+            side_args = [get_arg(side, arg) for arg in args]
+            side_kwargs = {k: get_arg(side, v) for k, v in kwargs.items()}
+
+            return func(target, *side_args, **side_kwargs)
+
+        return Split(call(&#34;left&#34;), call(&#34;right&#34;))
+
+    def __getattr__(self, attr_name: str):
+        if attr_name in self.__dict__:
+            return getattr(self, attr_name)
+
+        def wrapper(*args, **kwargs):
+            return self.apply(
+                Split(
+                    getattr(self.left.__class__, attr_name),
+                    getattr(self.right.__class__, attr_name),
+                ),
+                *args,
+                **kwargs,
+            )
+
+        return wrapper</code></pre>
+</details>
+<div class="desc"><p>Wrapper for data that has both a left and a right variant</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>typing.Generic</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="taulu.Split.left"><code class="name">prop <span class="ident">left</span> : ~T</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def left(self) -&gt; T:
+    assert self._left is not None
+    return self._left</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.Split.right"><code class="name">prop <span class="ident">right</span> : ~T</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def right(self) -&gt; T:
+    assert self._right is not None
+    return self._right</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.Split.append"><code class="name flex">
+<span>def <span class="ident">append</span></span>(<span>self, value: ~T)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def append(self, value: T):
+    if self._left is None:
+        self._left = value
+    else:
+        self._right = value</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.Split.apply"><code class="name flex">
+<span>def <span class="ident">apply</span></span>(<span>self,<br>funcs: <a title="taulu.Split" href="#taulu.Split">Split</a>[Callable[[T, *Any], V]] | Callable[[T, *Any], V],<br>*args,<br>**kwargs) ‑> <a title="taulu.Split" href="#taulu.Split">Split</a>[V]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def apply(
+    self,
+    funcs: &#34;Split[Callable[[T, *Any], V]] | Callable[[T, *Any], V]&#34;,
+    *args,
+    **kwargs,
+) -&gt; &#34;Split[V]&#34;:
+    if not isinstance(funcs, Split):
+        funcs = Split(funcs, funcs)
+
+    def get_arg(side: str, arg):
+        if isinstance(arg, Split):
+            return getattr(arg, side)
+        return arg
+
+    def call(side: str):
+        func = getattr(funcs, side)
+        target = getattr(self, side)
+
+        side_args = [get_arg(side, arg) for arg in args]
+        side_kwargs = {k: get_arg(side, v) for k, v in kwargs.items()}
+
+        return func(target, *side_args, **side_kwargs)
+
+    return Split(call(&#34;left&#34;), call(&#34;right&#34;))</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+<dt id="taulu.TableGrid"><code class="flex name class">
+<span>class <span class="ident">TableGrid</span></span>
+<span>(</span><span>points: list[list[typing.Tuple[int, int]]], right_offset: int | None = None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class TableGrid(TableIndexer):
+    &#34;&#34;&#34;
+    A data class that allows segmenting the image into cells
+    &#34;&#34;&#34;
+
+    _right_offset: int | None = None
+
+    def __init__(self, points: list[list[Point]], right_offset: Optional[int] = None):
+        &#34;&#34;&#34;
+        Args:
+            points: a 2D list of intersections between hor. and vert. rules
+        &#34;&#34;&#34;
+        self._points = points
+        self._right_offset = right_offset
+
+    @property
+    def points(self) -&gt; list[list[Point]]:
+        return self._points
+
+    def row(self, i: int) -&gt; list[Point]:
+        assert 0 &lt;= i and i &lt; len(self._points)
+        return self._points[i]
+
+    @property
+    def cols(self) -&gt; int:
+        if self._right_offset is not None:
+            return len(self.row(0)) - 2
+        else:
+            return len(self.row(0)) - 1
+
+    @property
+    def rows(self) -&gt; int:
+        return len(self._points) - 1
+
+    @staticmethod
+    def from_split(
+        split_grids: Split[&#34;TableGrid&#34;], offsets: Split[Point]
+    ) -&gt; &#34;TableGrid&#34;:
+        &#34;&#34;&#34;
+        Convert two ``TableGrid`` objects into one, that is able to segment the original (non-cropped) image
+
+        Args:
+            split_grids (Split[TableGrid]): a Split of TableGrid objects of the left and right part of the table
+            offsets (Split[tuple[int, int]]): a Split of the offsets in the image where the crop happened
+        &#34;&#34;&#34;
+
+        def offset_points(points, offset):
+            return [
+                [(p[0] + offset[0], p[1] + offset[1]) for p in row] for row in points
+            ]
+
+        split_points = split_grids.apply(
+            lambda grid, offset: offset_points(grid.points, offset), offsets
+        )
+
+        points = []
+
+        rows = min(split_grids.left.rows, split_grids.right.rows)
+
+        for row in range(rows + 1):
+            row_points = []
+
+            row_points.extend(split_points.left[row])
+            row_points.extend(split_points.right[row])
+
+            points.append(row_points)
+
+        table_grid = TableGrid(points, split_grids.left.cols)
+
+        return table_grid
+
+    def save(self, path: str | Path):
+        with open(path, &#34;w&#34;) as f:
+            json.dump({&#34;points&#34;: self.points, &#34;right_offset&#34;: self._right_offset}, f)
+
+    @staticmethod
+    def from_saved(path: str | Path) -&gt; &#34;TableGrid&#34;:
+        with open(path, &#34;r&#34;) as f:
+            points = json.load(f)
+            right_offset = points.get(&#34;right_offset&#34;, None)
+            points = [[(p[0], p[1]) for p in pointes] for pointes in points[&#34;points&#34;]]
+            return TableGrid(points, right_offset)
+
+    def add_left_col(self, width: int):
+        for row in self._points:
+            first = row[0]
+            new_first = (first[0] - width, first[1])
+            row.insert(0, new_first)
+
+    def add_top_row(self, height: int):
+        new_row = []
+        for point in self._points[0]:
+            new_row.append((point[0], point[1] - height))
+
+        self.points.insert(0, new_row)
+
+    def _surrounds(self, rect: list[Point], point: tuple[float, float]) -&gt; bool:
+        &#34;&#34;&#34;point: x, y&#34;&#34;&#34;
+        lt, rt, rb, lb = rect
+        x, y = point
+
+        top = _Rule(*lt, *rt)
+        if top._y_at_x(x) &gt; y:
+            return False
+
+        right = _Rule(*rt, *rb)
+        if right._x_at_y(y) &lt; x:
+            return False
+
+        bottom = _Rule(*lb, *rb)
+        if bottom._y_at_x(x) &lt; y:
+            return False
+
+        left = _Rule(*lb, *lt)
+        if left._x_at_y(y) &gt; x:
+            return False
+
+        return True
+
+    def cell(self, point: tuple[float, float]) -&gt; tuple[int, int]:
+        for r in range(len(self._points) - 1):
+            offset = 0
+            for c in range(len(self.row(0)) - 1):
+                if self._right_offset is not None and c == self._right_offset:
+                    offset = -1
+                    continue
+
+                if self._surrounds(
+                    [
+                        self._points[r][c],
+                        self._points[r][c + 1],
+                        self._points[r + 1][c + 1],
+                        self._points[r + 1][c],
+                    ],
+                    point,
+                ):
+                    return (r, c + offset)
+
+        return (-1, -1)
+
+    def cell_polygon(self, cell: tuple[int, int]) -&gt; tuple[Point, Point, Point, Point]:
+        r, c = cell
+
+        self._check_row_idx(r)
+        self._check_col_idx(c)
+
+        if self._right_offset is not None and c &gt;= self._right_offset:
+            c = c + 1
+
+        return (
+            self._points[r][c],
+            self._points[r][c + 1],
+            self._points[r + 1][c + 1],
+            self._points[r + 1][c],
+        )
+
+    def region(
+        self, start: tuple[int, int], end: tuple[int, int]
+    ) -&gt; tuple[Point, Point, Point, Point]:
+        r0, c0 = start
+        r1, c1 = end
+
+        self._check_row_idx(r0)
+        self._check_row_idx(r1)
+        self._check_col_idx(c0)
+        self._check_col_idx(c1)
+
+        if self._right_offset is not None and c0 &gt;= self._right_offset:
+            c0 = c0 + 1
+
+        if self._right_offset is not None and c1 &gt;= self._right_offset:
+            c1 = c1 + 1
+
+        lt = self._points[r0][c0]
+        rt = self._points[r0][c1 + 1]
+        rb = self._points[r1 + 1][c1 + 1]
+        lb = self._points[r1 + 1][c0]
+
+        return lt, rt, rb, lb
+
+    def visualize_points(self, img: MatLike):
+        &#34;&#34;&#34;
+        Draw the detected table points on the image for visual verification
+        &#34;&#34;&#34;
+        import colorsys
+
+        def clr(index, total_steps):
+            hue = index / total_steps  # Normalized hue between 0 and 1
+            r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+            return int(r * 255), int(g * 255), int(b * 255)
+
+        for i, row in enumerate(self._points):
+            for p in row:
+                cv.circle(img, p, 4, clr(i, len(self._points)), -1)
+
+        imu.show(img)
+
+    def text_regions(
+        self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -3
+    ) -&gt; list[tuple[tuple[int, int], tuple[int, int]]]:
+        def vertical_rule_crop(row: int, col: int):
+            self._check_col_idx(col)
+            self._check_row_idx(row)
+
+            if self._right_offset is not None and col &gt;= self._right_offset:
+                col = col + 1
+
+            top = self._points[row][col]
+            bottom = self._points[row + 1][col]
+
+            left = int(min(top[0], bottom[0]))
+            right = int(max(top[0], bottom[0]))
+
+            return img[
+                int(top[1]) - margin_y : int(bottom[1]) + margin_y,
+                left - margin_x : right + margin_x,
+            ]
+
+        result = []
+
+        start = None
+        for col in range(self.cols):
+            crop = vertical_rule_crop(row, col)
+            text_over_score = imu.text_presence_score(crop)
+            text_over = text_over_score &gt; -0.10
+
+            if not text_over:
+                if start is not None:
+                    result.append(((row, start), (row, col - 1)))
+                start = col
+
+        if start is not None:
+            result.append(((row, start), (row, self.cols - 1)))
+
+        return result
+
+    def anneal(
+        self, img: MatLike, look_distance_main: int = 3, look_distance_alt: int = 3
+    ):
+        # how far to look in the main direction of the line
+        # that is currently being examined
+        LOOK_MAIN = look_distance_main
+
+        # how far to look in the perpendicular direction of the line
+        # that is currently being examined
+        LOOK_ALT = look_distance_alt
+
+        def _left_at(col: int, offset: int = LOOK_ALT) -&gt; int:
+            if self._right_offset is not None and col &gt; self._right_offset:
+                return int(clamp(col - offset, self._right_offset + 1, self.cols + 1))
+            else:
+                return int(clamp(col - offset, 0, self.cols + 1))
+
+        def _right_at(col: int, offset: int = LOOK_ALT) -&gt; int:
+            if self._right_offset is not None and col &lt;= self._right_offset:
+                return int(clamp(col + offset, 0, self._right_offset))
+            else:
+                return int(clamp(col + offset, 0, self.cols + 1))
+
+        def _median_slope(index: Point) -&gt; Optional[float]:
+            (r, c) = index
+
+            left = _left_at(c)
+            right = _right_at(c)
+
+            if left == right:
+                return None
+
+            lines = []
+            for row in range(r - LOOK_MAIN, r + LOOK_MAIN):
+                if row &lt; 0 or row == r or row &gt;= len(self.points):
+                    continue
+
+                left_point = self.points[row][int(left)]
+                right_point = self.points[row][int(right)]
+
+                lines.append((left_point, right_point))
+
+            return _core_median_slope(lines)
+
+        new_points = []
+        for row in self.points:
+            new_points.append(row.copy())
+
+        for row in range(len(self.points)):
+            for col in range(len(self.points[0])):
+                slope = _median_slope((row, col))
+
+                if slope is None:
+                    continue
+
+                left = _left_at(col, 1)
+                left_point = self.points[row][int(left)]
+
+                right = _right_at(col, 1)
+                right_point = self.points[row][int(right)]
+
+                # img_ = np.copy(img)
+                # # draw a line through the left point with that slope
+                # cv.line(
+                #     img_,
+                #     (int(left_point[0]), int(left_point[1])),
+                #     (
+                #         int(right_point[0]),
+                #         int(slope * (right_point[0] - left_point[0]) + left_point[1]),
+                #     ),
+                #     (0, 255, 0),
+                #     3,
+                #     cv.LINE_AA,
+                # )
+                # imu.show(img_)
+
+                # extrapolate left point to this points x coordinate
+                new_y = (
+                    slope * (self.points[row][col][0] - left_point[0]) + left_point[1]
+                )
+
+                new_y = (
+                    new_y / 2
+                    + (
+                        slope * (right_point[0] - self.points[row][col][0])
+                        + right_point[1]
+                    )
+                    / 2
+                )
+
+                movement = new_y - self.points[row][col][1]
+
+                new_points[row][col] = (
+                    self.points[row][col][0],
+                    self.points[row][col][1] + movement * 0.8,
+                )
+
+        self._points = new_points</code></pre>
+</details>
+<div class="desc"><p>A data class that allows segmenting the image into cells</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>points</code></strong></dt>
+<dd>a 2D list of intersections between hor. and vert. rules</dd>
+</dl></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="taulu.table_indexer.TableIndexer" href="table_indexer.html#taulu.table_indexer.TableIndexer">TableIndexer</a></li>
+<li>abc.ABC</li>
+</ul>
+<h3>Static methods</h3>
+<dl>
+<dt id="taulu.TableGrid.from_saved"><code class="name flex">
+<span>def <span class="ident">from_saved</span></span>(<span>path: str | pathlib.Path) ‑> <a title="taulu.grid.TableGrid" href="grid.html#taulu.grid.TableGrid">TableGrid</a></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def from_saved(path: str | Path) -&gt; &#34;TableGrid&#34;:
+    with open(path, &#34;r&#34;) as f:
+        points = json.load(f)
+        right_offset = points.get(&#34;right_offset&#34;, None)
+        points = [[(p[0], p[1]) for p in pointes] for pointes in points[&#34;points&#34;]]
+        return TableGrid(points, right_offset)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.from_split"><code class="name flex">
+<span>def <span class="ident">from_split</span></span>(<span>split_grids: <a title="taulu.split.Split" href="split.html#taulu.split.Split">Split</a>[ForwardRef('<a title="taulu.TableGrid" href="#taulu.TableGrid">TableGrid</a>')],<br>offsets: <a title="taulu.split.Split" href="split.html#taulu.split.Split">Split</a>[typing.Tuple[int, int]]) ‑> <a title="taulu.grid.TableGrid" href="grid.html#taulu.grid.TableGrid">TableGrid</a></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def from_split(
+    split_grids: Split[&#34;TableGrid&#34;], offsets: Split[Point]
+) -&gt; &#34;TableGrid&#34;:
+    &#34;&#34;&#34;
+    Convert two ``TableGrid`` objects into one, that is able to segment the original (non-cropped) image
+
+    Args:
+        split_grids (Split[TableGrid]): a Split of TableGrid objects of the left and right part of the table
+        offsets (Split[tuple[int, int]]): a Split of the offsets in the image where the crop happened
+    &#34;&#34;&#34;
+
+    def offset_points(points, offset):
+        return [
+            [(p[0] + offset[0], p[1] + offset[1]) for p in row] for row in points
+        ]
+
+    split_points = split_grids.apply(
+        lambda grid, offset: offset_points(grid.points, offset), offsets
+    )
+
+    points = []
+
+    rows = min(split_grids.left.rows, split_grids.right.rows)
+
+    for row in range(rows + 1):
+        row_points = []
+
+        row_points.extend(split_points.left[row])
+        row_points.extend(split_points.right[row])
+
+        points.append(row_points)
+
+    table_grid = TableGrid(points, split_grids.left.cols)
+
+    return table_grid</code></pre>
+</details>
+<div class="desc"><p>Convert two <code><a title="taulu.TableGrid" href="#taulu.TableGrid">TableGrid</a></code> objects into one, that is able to segment the original (non-cropped) image</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>split_grids</code></strong> :&ensp;<code><a title="taulu.Split" href="#taulu.Split">Split</a>[<a title="taulu.TableGrid" href="#taulu.TableGrid">TableGrid</a>]</code></dt>
+<dd>a Split of TableGrid objects of the left and right part of the table</dd>
+<dt><strong><code>offsets</code></strong> :&ensp;<code><a title="taulu.Split" href="#taulu.Split">Split</a>[tuple[int, int]]</code></dt>
+<dd>a Split of the offsets in the image where the crop happened</dd>
+</dl></div>
+</dd>
+</dl>
+<h3>Instance variables</h3>
+<dl>
+<dt id="taulu.TableGrid.cols"><code class="name">prop <span class="ident">cols</span> : int</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def cols(self) -&gt; int:
+    if self._right_offset is not None:
+        return len(self.row(0)) - 2
+    else:
+        return len(self.row(0)) - 1</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.points"><code class="name">prop <span class="ident">points</span> : list[list[typing.Tuple[int, int]]]</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def points(self) -&gt; list[list[Point]]:
+    return self._points</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.rows"><code class="name">prop <span class="ident">rows</span> : int</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def rows(self) -&gt; int:
+    return len(self._points) - 1</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.TableGrid.add_left_col"><code class="name flex">
+<span>def <span class="ident">add_left_col</span></span>(<span>self, width: int)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_left_col(self, width: int):
+    for row in self._points:
+        first = row[0]
+        new_first = (first[0] - width, first[1])
+        row.insert(0, new_first)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.add_top_row"><code class="name flex">
+<span>def <span class="ident">add_top_row</span></span>(<span>self, height: int)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def add_top_row(self, height: int):
+    new_row = []
+    for point in self._points[0]:
+        new_row.append((point[0], point[1] - height))
+
+    self.points.insert(0, new_row)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.anneal"><code class="name flex">
+<span>def <span class="ident">anneal</span></span>(<span>self,<br>img: cv2.Mat | numpy.ndarray,<br>look_distance_main: int = 3,<br>look_distance_alt: int = 3)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def anneal(
+    self, img: MatLike, look_distance_main: int = 3, look_distance_alt: int = 3
+):
+    # how far to look in the main direction of the line
+    # that is currently being examined
+    LOOK_MAIN = look_distance_main
+
+    # how far to look in the perpendicular direction of the line
+    # that is currently being examined
+    LOOK_ALT = look_distance_alt
+
+    def _left_at(col: int, offset: int = LOOK_ALT) -&gt; int:
+        if self._right_offset is not None and col &gt; self._right_offset:
+            return int(clamp(col - offset, self._right_offset + 1, self.cols + 1))
+        else:
+            return int(clamp(col - offset, 0, self.cols + 1))
+
+    def _right_at(col: int, offset: int = LOOK_ALT) -&gt; int:
+        if self._right_offset is not None and col &lt;= self._right_offset:
+            return int(clamp(col + offset, 0, self._right_offset))
+        else:
+            return int(clamp(col + offset, 0, self.cols + 1))
+
+    def _median_slope(index: Point) -&gt; Optional[float]:
+        (r, c) = index
+
+        left = _left_at(c)
+        right = _right_at(c)
+
+        if left == right:
+            return None
+
+        lines = []
+        for row in range(r - LOOK_MAIN, r + LOOK_MAIN):
+            if row &lt; 0 or row == r or row &gt;= len(self.points):
+                continue
+
+            left_point = self.points[row][int(left)]
+            right_point = self.points[row][int(right)]
+
+            lines.append((left_point, right_point))
+
+        return _core_median_slope(lines)
+
+    new_points = []
+    for row in self.points:
+        new_points.append(row.copy())
+
+    for row in range(len(self.points)):
+        for col in range(len(self.points[0])):
+            slope = _median_slope((row, col))
+
+            if slope is None:
+                continue
+
+            left = _left_at(col, 1)
+            left_point = self.points[row][int(left)]
+
+            right = _right_at(col, 1)
+            right_point = self.points[row][int(right)]
+
+            # img_ = np.copy(img)
+            # # draw a line through the left point with that slope
+            # cv.line(
+            #     img_,
+            #     (int(left_point[0]), int(left_point[1])),
+            #     (
+            #         int(right_point[0]),
+            #         int(slope * (right_point[0] - left_point[0]) + left_point[1]),
+            #     ),
+            #     (0, 255, 0),
+            #     3,
+            #     cv.LINE_AA,
+            # )
+            # imu.show(img_)
+
+            # extrapolate left point to this points x coordinate
+            new_y = (
+                slope * (self.points[row][col][0] - left_point[0]) + left_point[1]
+            )
+
+            new_y = (
+                new_y / 2
+                + (
+                    slope * (right_point[0] - self.points[row][col][0])
+                    + right_point[1]
+                )
+                / 2
+            )
+
+            movement = new_y - self.points[row][col][1]
+
+            new_points[row][col] = (
+                self.points[row][col][0],
+                self.points[row][col][1] + movement * 0.8,
+            )
+
+    self._points = new_points</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.row"><code class="name flex">
+<span>def <span class="ident">row</span></span>(<span>self, i: int) ‑> list[typing.Tuple[int, int]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def row(self, i: int) -&gt; list[Point]:
+    assert 0 &lt;= i and i &lt; len(self._points)
+    return self._points[i]</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.save"><code class="name flex">
+<span>def <span class="ident">save</span></span>(<span>self, path: str | pathlib.Path)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def save(self, path: str | Path):
+    with open(path, &#34;w&#34;) as f:
+        json.dump({&#34;points&#34;: self.points, &#34;right_offset&#34;: self._right_offset}, f)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableGrid.visualize_points"><code class="name flex">
+<span>def <span class="ident">visualize_points</span></span>(<span>self, img: cv2.Mat | numpy.ndarray)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def visualize_points(self, img: MatLike):
+    &#34;&#34;&#34;
+    Draw the detected table points on the image for visual verification
+    &#34;&#34;&#34;
+    import colorsys
+
+    def clr(index, total_steps):
+        hue = index / total_steps  # Normalized hue between 0 and 1
+        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+        return int(r * 255), int(g * 255), int(b * 255)
+
+    for i, row in enumerate(self._points):
+        for p in row:
+            cv.circle(img, p, 4, clr(i, len(self._points)), -1)
+
+    imu.show(img)</code></pre>
+</details>
+<div class="desc"><p>Draw the detected table points on the image for visual verification</p></div>
+</dd>
+</dl>
+<h3>Inherited members</h3>
+<ul class="hlist">
+<li><code><b><a title="taulu.table_indexer.TableIndexer" href="table_indexer.html#taulu.table_indexer.TableIndexer">TableIndexer</a></b></code>:
+<ul class="hlist">
+<li><code><a title="taulu.table_indexer.TableIndexer.cell" href="table_indexer.html#taulu.table_indexer.TableIndexer.cell">cell</a></code></li>
+<li><code><a title="taulu.table_indexer.TableIndexer.cell_polygon" href="table_indexer.html#taulu.table_indexer.TableIndexer.cell_polygon">cell_polygon</a></code></li>
+<li><code><a title="taulu.table_indexer.TableIndexer.crop_region" href="table_indexer.html#taulu.table_indexer.TableIndexer.crop_region">crop_region</a></code></li>
+<li><code><a title="taulu.table_indexer.TableIndexer.region" href="table_indexer.html#taulu.table_indexer.TableIndexer.region">region</a></code></li>
+<li><code><a title="taulu.table_indexer.TableIndexer.text_regions" href="table_indexer.html#taulu.table_indexer.TableIndexer.text_regions">text_regions</a></code></li>
+</ul>
+</li>
+</ul>
+</dd>
+<dt id="taulu.TableIndexer"><code class="flex name class">
+<span>class <span class="ident">TableIndexer</span></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class TableIndexer(ABC):
+    &#34;&#34;&#34;
+    Subclasses implement methods for going from a pixel in the input image to a table cell index,
+    and cropping an image to the given table cell index.
+    &#34;&#34;&#34;
+
+    def __init__(self):
+        self._col_offset = 0
+
+    @property
+    def col_offset(self) -&gt; int:
+        return self._col_offset
+
+    @col_offset.setter
+    def col_offset(self, value: int):
+        assert value &gt;= 0
+        self._col_offset = value
+
+    @property
+    @abstractmethod
+    def cols(self) -&gt; int:
+        pass
+
+    @property
+    @abstractmethod
+    def rows(self) -&gt; int:
+        pass
+
+    def cells(self) -&gt; Generator[tuple[int, int], None, None]:
+        for row in range(self.rows):
+            for col in range(self.cols):
+                yield (row, col)
+
+    def _check_row_idx(self, row: int):
+        if row &lt; 0:
+            raise TauluException(&#34;row number needs to be positive or zero&#34;)
+        if row &gt;= self.rows:
+            raise TauluException(f&#34;row number too high: {row} &gt;= {self.rows}&#34;)
+
+    def _check_col_idx(self, col: int):
+        if col &lt; 0:
+            raise TauluException(&#34;col number needs to be positive or zero&#34;)
+        if col &gt;= self.cols:
+            raise TauluException(f&#34;col number too high: {col} &gt;= {self.cols}&#34;)
+
+    @abstractmethod
+    def cell(self, point: tuple[float, float]) -&gt; tuple[int, int]:
+        &#34;&#34;&#34;
+        Returns the coordinate (row, col) of the cell that contains the given position
+
+        Args:
+            point (tuple[float, float]): a location in the input image
+
+        Returns:
+            tuple[int, int]: the cell index (row, col) that contains the given point
+        &#34;&#34;&#34;
+        pass
+
+    @abstractmethod
+    def cell_polygon(
+        self, cell: tuple[int, int]
+    ) -&gt; tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+        &#34;&#34;&#34;returns the polygon (used in e.g. opencv) that enscribes the cell at the given cell position&#34;&#34;&#34;
+        pass
+
+    def _highlight_cell(
+        self,
+        image: MatLike,
+        cell: tuple[int, int],
+        color: tuple[int, int, int] = (0, 0, 255),
+        thickness: int = 2,
+    ):
+        polygon = self.cell_polygon(cell)
+        points = np.int32(list(polygon))  # type:ignore
+        cv.polylines(image, [points], True, color, thickness, cv.LINE_AA)  # type:ignore
+        cv.putText(
+            image,
+            str(cell),
+            (int(polygon[3][0] + 10), int(polygon[3][1] - 10)),
+            cv.FONT_HERSHEY_PLAIN,
+            2.0,
+            (255, 255, 255),
+            2,
+        )
+
+    def highlight_all_cells(
+        self,
+        image: MatLike,
+        color: tuple[int, int, int] = (0, 0, 255),
+        thickness: int = 1,
+    ) -&gt; MatLike:
+        img = np.copy(image)
+
+        for cell in self.cells():
+            self._highlight_cell(img, cell, color, thickness)
+
+        return img
+
+    def select_one_cell(
+        self,
+        image: MatLike,
+        window: str = WINDOW,
+        color: tuple[int, int, int] = (255, 0, 0),
+        thickness: int = 2,
+    ) -&gt; tuple[int, int] | None:
+        clicked = None
+
+        def click_event(event, x, y, flags, params):
+            nonlocal clicked
+
+            img = np.copy(image)
+            _ = flags
+            _ = params
+            if event == cv.EVENT_LBUTTONDOWN:
+                cell = self.cell((x, y))
+                if cell[0] &gt;= 0:
+                    clicked = cell
+                else:
+                    return
+                self._highlight_cell(img, cell, color, thickness)
+                cv.imshow(window, img)
+
+        imu.show(image, click_event=click_event, title=&#34;select one cell&#34;, window=window)
+
+        return clicked
+
+    def show_cells(
+        self, image: MatLike | os.PathLike[str] | str, window: str = WINDOW
+    ) -&gt; list[tuple[int, int]]:
+        if not isinstance(image, np.ndarray):
+            image = cv.imread(os.fspath(image))
+
+        img = np.copy(image)
+
+        cells = []
+
+        def click_event(event, x, y, flags, params):
+            _ = flags
+            _ = params
+            if event == cv.EVENT_LBUTTONDOWN:
+                cell = self.cell((x, y))
+                if cell[0] &gt;= 0:
+                    cells.append(cell)
+                else:
+                    return
+                self._highlight_cell(img, cell)
+                cv.imshow(window, img)
+
+        imu.show(
+            img,
+            click_event=click_event,
+            title=&#34;click to highlight cells&#34;,
+            window=window,
+        )
+
+        return cells
+
+    @abstractmethod
+    def region(
+        self,
+        start: tuple[int, int],
+        end: tuple[int, int],
+    ) -&gt; tuple[Point, Point, Point, Point]:
+        &#34;&#34;&#34;
+        Get the bounding box for the rectangular region that goes from start to end
+
+        Returns:
+            4 points: lt, rt, rb, lb, in format (x, y)
+        &#34;&#34;&#34;
+        pass
+
+    def crop_region(
+        self,
+        image: MatLike,
+        start: tuple[int, int],
+        end: tuple[int, int],
+        margin: int = 0,
+        margin_top: int | None = None,
+        margin_bottom: int | None = None,
+        margin_left: int | None = None,
+        margin_right: int | None = None,
+        margin_y: int | None = None,
+        margin_x: int | None = None,
+    ) -&gt; MatLike:
+        &#34;&#34;&#34;Crop the input image to a rectangular region with the start and end cells as extremes&#34;&#34;&#34;
+
+        region = self.region(start, end)
+
+        lt, rt, rb, lb = _apply_margin(
+            *region,
+            margin=margin,
+            margin_top=margin_top,
+            margin_bottom=margin_bottom,
+            margin_left=margin_left,
+            margin_right=margin_right,
+            margin_y=margin_y,
+            margin_x=margin_x,
+        )
+
+        # apply margins according to priority:
+        # margin_top &gt; margin_y &gt; margin (etc.)
+
+        w = (rt[0] - lt[0] + rb[0] - lb[0]) / 2
+        h = (rb[1] - rt[1] + lb[1] - lt[1]) / 2
+
+        # crop by doing a perspective transform to the desired quad
+        src_pts = np.array([lt, rt, rb, lb], dtype=&#34;float32&#34;)
+        dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=&#34;float32&#34;)
+        M = cv.getPerspectiveTransform(src_pts, dst_pts)
+        warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
+
+        return warped
+
+    @abstractmethod
+    def text_regions(
+        self, img: MatLike, row: int, margin_x: int = 0, margin_y: int = 0
+    ) -&gt; list[tuple[tuple[int, int], tuple[int, int]]]:
+        &#34;&#34;&#34;
+        Split the row into regions of continuous text
+
+        Returns
+            list[tuple[int, int]]: a list of spans (start col, end col)
+        &#34;&#34;&#34;
+
+        pass
+
+    def crop_cell(self, image, cell: tuple[int, int], margin: int = 0) -&gt; MatLike:
+        return self.crop_region(image, cell, cell, margin)</code></pre>
+</details>
+<div class="desc"><p>Subclasses implement methods for going from a pixel in the input image to a table cell index,
+and cropping an image to the given table cell index.</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>abc.ABC</li>
+</ul>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="taulu.grid.TableGrid" href="grid.html#taulu.grid.TableGrid">TableGrid</a></li>
+<li><a title="taulu.header_template.HeaderTemplate" href="header_template.html#taulu.header_template.HeaderTemplate">HeaderTemplate</a></li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="taulu.TableIndexer.col_offset"><code class="name">prop <span class="ident">col_offset</span> : int</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def col_offset(self) -&gt; int:
+    return self._col_offset</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableIndexer.cols"><code class="name">prop <span class="ident">cols</span> : int</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+@abstractmethod
+def cols(self) -&gt; int:
+    pass</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableIndexer.rows"><code class="name">prop <span class="ident">rows</span> : int</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+@abstractmethod
+def rows(self) -&gt; int:
+    pass</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.TableIndexer.cell"><code class="name flex">
+<span>def <span class="ident">cell</span></span>(<span>self, point: tuple[float, float]) ‑> tuple[int, int]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def cell(self, point: tuple[float, float]) -&gt; tuple[int, int]:
+    &#34;&#34;&#34;
+    Returns the coordinate (row, col) of the cell that contains the given position
+
+    Args:
+        point (tuple[float, float]): a location in the input image
+
+    Returns:
+        tuple[int, int]: the cell index (row, col) that contains the given point
+    &#34;&#34;&#34;
+    pass</code></pre>
+</details>
+<div class="desc"><p>Returns the coordinate (row, col) of the cell that contains the given position</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>point</code></strong> :&ensp;<code>tuple[float, float]</code></dt>
+<dd>a location in the input image</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple[int, int]</code></dt>
+<dd>the cell index (row, col) that contains the given point</dd>
+</dl></div>
+</dd>
+<dt id="taulu.TableIndexer.cell_polygon"><code class="name flex">
+<span>def <span class="ident">cell_polygon</span></span>(<span>self, cell: tuple[int, int]) ‑> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def cell_polygon(
+    self, cell: tuple[int, int]
+) -&gt; tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
+    &#34;&#34;&#34;returns the polygon (used in e.g. opencv) that enscribes the cell at the given cell position&#34;&#34;&#34;
+    pass</code></pre>
+</details>
+<div class="desc"><p>returns the polygon (used in e.g. opencv) that enscribes the cell at the given cell position</p></div>
+</dd>
+<dt id="taulu.TableIndexer.cells"><code class="name flex">
+<span>def <span class="ident">cells</span></span>(<span>self) ‑> Generator[tuple[int, int], None, None]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def cells(self) -&gt; Generator[tuple[int, int], None, None]:
+    for row in range(self.rows):
+        for col in range(self.cols):
+            yield (row, col)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableIndexer.crop_cell"><code class="name flex">
+<span>def <span class="ident">crop_cell</span></span>(<span>self, image, cell: tuple[int, int], margin: int = 0) ‑> cv2.Mat | numpy.ndarray</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def crop_cell(self, image, cell: tuple[int, int], margin: int = 0) -&gt; MatLike:
+    return self.crop_region(image, cell, cell, margin)</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableIndexer.crop_region"><code class="name flex">
+<span>def <span class="ident">crop_region</span></span>(<span>self,<br>image: cv2.Mat | numpy.ndarray,<br>start: tuple[int, int],<br>end: tuple[int, int],<br>margin: int = 0,<br>margin_top: int | None = None,<br>margin_bottom: int | None = None,<br>margin_left: int | None = None,<br>margin_right: int | None = None,<br>margin_y: int | None = None,<br>margin_x: int | None = None) ‑> cv2.Mat | numpy.ndarray</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def crop_region(
+    self,
+    image: MatLike,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    margin: int = 0,
+    margin_top: int | None = None,
+    margin_bottom: int | None = None,
+    margin_left: int | None = None,
+    margin_right: int | None = None,
+    margin_y: int | None = None,
+    margin_x: int | None = None,
+) -&gt; MatLike:
+    &#34;&#34;&#34;Crop the input image to a rectangular region with the start and end cells as extremes&#34;&#34;&#34;
+
+    region = self.region(start, end)
+
+    lt, rt, rb, lb = _apply_margin(
+        *region,
+        margin=margin,
+        margin_top=margin_top,
+        margin_bottom=margin_bottom,
+        margin_left=margin_left,
+        margin_right=margin_right,
+        margin_y=margin_y,
+        margin_x=margin_x,
+    )
+
+    # apply margins according to priority:
+    # margin_top &gt; margin_y &gt; margin (etc.)
+
+    w = (rt[0] - lt[0] + rb[0] - lb[0]) / 2
+    h = (rb[1] - rt[1] + lb[1] - lt[1]) / 2
+
+    # crop by doing a perspective transform to the desired quad
+    src_pts = np.array([lt, rt, rb, lb], dtype=&#34;float32&#34;)
+    dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype=&#34;float32&#34;)
+    M = cv.getPerspectiveTransform(src_pts, dst_pts)
+    warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
+
+    return warped</code></pre>
+</details>
+<div class="desc"><p>Crop the input image to a rectangular region with the start and end cells as extremes</p></div>
+</dd>
+<dt id="taulu.TableIndexer.highlight_all_cells"><code class="name flex">
+<span>def <span class="ident">highlight_all_cells</span></span>(<span>self,<br>image: cv2.Mat | numpy.ndarray,<br>color: tuple[int, int, int] = (0, 0, 255),<br>thickness: int = 1) ‑> cv2.Mat | numpy.ndarray</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def highlight_all_cells(
+    self,
+    image: MatLike,
+    color: tuple[int, int, int] = (0, 0, 255),
+    thickness: int = 1,
+) -&gt; MatLike:
+    img = np.copy(image)
+
+    for cell in self.cells():
+        self._highlight_cell(img, cell, color, thickness)
+
+    return img</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableIndexer.region"><code class="name flex">
+<span>def <span class="ident">region</span></span>(<span>self, start: tuple[int, int], end: tuple[int, int]) ‑> tuple[typing.Tuple[int, int], typing.Tuple[int, int], typing.Tuple[int, int], typing.Tuple[int, int]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def region(
+    self,
+    start: tuple[int, int],
+    end: tuple[int, int],
+) -&gt; tuple[Point, Point, Point, Point]:
+    &#34;&#34;&#34;
+    Get the bounding box for the rectangular region that goes from start to end
+
+    Returns:
+        4 points: lt, rt, rb, lb, in format (x, y)
+    &#34;&#34;&#34;
+    pass</code></pre>
+</details>
+<div class="desc"><p>Get the bounding box for the rectangular region that goes from start to end</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>4 points</code></dt>
+<dd>lt, rt, rb, lb, in format (x, y)</dd>
+</dl></div>
+</dd>
+<dt id="taulu.TableIndexer.select_one_cell"><code class="name flex">
+<span>def <span class="ident">select_one_cell</span></span>(<span>self,<br>image: cv2.Mat | numpy.ndarray,<br>window: str = 'taulu',<br>color: tuple[int, int, int] = (255, 0, 0),<br>thickness: int = 2) ‑> tuple[int, int] | None</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def select_one_cell(
+    self,
+    image: MatLike,
+    window: str = WINDOW,
+    color: tuple[int, int, int] = (255, 0, 0),
+    thickness: int = 2,
+) -&gt; tuple[int, int] | None:
+    clicked = None
+
+    def click_event(event, x, y, flags, params):
+        nonlocal clicked
+
+        img = np.copy(image)
+        _ = flags
+        _ = params
+        if event == cv.EVENT_LBUTTONDOWN:
+            cell = self.cell((x, y))
+            if cell[0] &gt;= 0:
+                clicked = cell
+            else:
+                return
+            self._highlight_cell(img, cell, color, thickness)
+            cv.imshow(window, img)
+
+    imu.show(image, click_event=click_event, title=&#34;select one cell&#34;, window=window)
+
+    return clicked</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableIndexer.show_cells"><code class="name flex">
+<span>def <span class="ident">show_cells</span></span>(<span>self,<br>image: cv2.Mat | numpy.ndarray | os.PathLike[str] | str,<br>window: str = 'taulu') ‑> list[tuple[int, int]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def show_cells(
+    self, image: MatLike | os.PathLike[str] | str, window: str = WINDOW
+) -&gt; list[tuple[int, int]]:
+    if not isinstance(image, np.ndarray):
+        image = cv.imread(os.fspath(image))
+
+    img = np.copy(image)
+
+    cells = []
+
+    def click_event(event, x, y, flags, params):
+        _ = flags
+        _ = params
+        if event == cv.EVENT_LBUTTONDOWN:
+            cell = self.cell((x, y))
+            if cell[0] &gt;= 0:
+                cells.append(cell)
+            else:
+                return
+            self._highlight_cell(img, cell)
+            cv.imshow(window, img)
+
+    imu.show(
+        img,
+        click_event=click_event,
+        title=&#34;click to highlight cells&#34;,
+        window=window,
+    )
+
+    return cells</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.TableIndexer.text_regions"><code class="name flex">
+<span>def <span class="ident">text_regions</span></span>(<span>self, img: cv2.Mat | numpy.ndarray, row: int, margin_x: int = 0, margin_y: int = 0) ‑> list[tuple[tuple[int, int], tuple[int, int]]]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@abstractmethod
+def text_regions(
+    self, img: MatLike, row: int, margin_x: int = 0, margin_y: int = 0
+) -&gt; list[tuple[tuple[int, int], tuple[int, int]]]:
+    &#34;&#34;&#34;
+    Split the row into regions of continuous text
+
+    Returns
+        list[tuple[int, int]]: a list of spans (start col, end col)
+    &#34;&#34;&#34;
+
+    pass</code></pre>
+</details>
+<div class="desc"><p>Split the row into regions of continuous text</p>
+<p>Returns
+list[tuple[int, int]]: a list of spans (start col, end col)</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="taulu.Taulu"><code class="flex name class">
+<span>class <span class="ident">Taulu</span></span>
+<span>(</span><span>header_path: os.PathLike[str] | str | Tuple[os.PathLike[str] | str, os.PathLike[str] | str],<br>sauvola_k: float = 0.25,<br>search_region: int = 60,<br>distance_penalty: float = 0.4,<br>cross_width: int = 10,<br>morph_size: int = 4,<br>kernel_size: int = 41,<br>processing_scale: float = 1.0)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Taulu:
+    &#34;&#34;&#34;
+    The Taulu class is a convenience class that hides the inner workings of taulu as much as possible.
+
+    For more advanced use cases, it might be useful to implement the workflow directly yourself,
+    in order to have control over the intermediate steps.
+    &#34;&#34;&#34;
+
+    def __init__(
+        self,
+        header_path: PathLike[str]
+        | str
+        | Tuple[PathLike[str] | str, PathLike[str] | str],
+        sauvola_k: float = 0.25,
+        search_region: int = 60,
+        distance_penalty: float = 0.4,
+        cross_width: int = 10,
+        morph_size: int = 4,
+        kernel_size: int = 41,
+        processing_scale: float = 1.0,
+    ):
+        self._processing_scale = processing_scale
+
+        if isinstance(header_path, Tuple):
+            header = Split(Path(header_path[0]), Path(header_path[1]))
+
+            if not exists(header.left.with_suffix(&#34;.png&#34;)) or not exists(
+                header.right.with_suffix(&#34;.png&#34;)
+            ):
+                raise TauluException(&#34;The header images you provided do not exist&#34;)
+            if not exists(header.left.with_suffix(&#34;.json&#34;)) or not exists(
+                header.right.with_suffix(&#34;.json&#34;)
+            ):
+                raise TauluException(
+                    &#34;You need to annotate the headers of your table first\n\nsee the Taulu.annotate method&#34;
+                )
+
+            template_left = HeaderTemplate.from_saved(header.left.with_suffix(&#34;.json&#34;))
+            template_right = HeaderTemplate.from_saved(
+                header.right.with_suffix(&#34;.json&#34;)
+            )
+
+            self._header = Split(
+                cv2.imread(os.fspath(header.left)), cv2.imread(os.fspath(header.right))
+            )
+
+            self._aligner = Split(
+                HeaderAligner(self._header.left, scale=self._processing_scale),
+                HeaderAligner(self._header.right, scale=self._processing_scale),
+            )
+
+            self._template = Split(template_left, template_right)
+
+        else:
+            header_path = Path(header_path)
+            self._header = cv2.imread(os.fspath(header_path))
+            self._aligner = HeaderAligner(self._header)
+            self._template = HeaderTemplate.from_saved(header_path.with_suffix(&#34;.json&#34;))
+
+        # TODO: currently, these parameters are fixed and optimized for the example
+        #       image specifically (which is probably a good starting point,
+        #       espeicially after normalizing the image size)
+        self._grid_detector = GridDetector(
+            kernel_size=kernel_size,
+            cross_width=cross_width,
+            morph_size=morph_size,
+            search_region=search_region,
+            sauvola_k=sauvola_k,
+            distance_penalty=distance_penalty,
+            scale=self._processing_scale,
+        )
+
+        if isinstance(self._template, Split):
+            self._grid_detector = Split(self._grid_detector, self._grid_detector)
+
+    @staticmethod
+    def annotate(image_path: PathLike[str] | str, output_path: PathLike[str] | str):
+        &#34;&#34;&#34;
+        Annotate the header of a table image.
+
+        Saves the annotated header image and a json file containing the
+        header template to the output path.
+
+        Args:
+            image_path (PathLike[str]): the path of the image which you want to annotate
+            output_path (PathLike[str]): the path where the output files should go (image files and json files)
+        &#34;&#34;&#34;
+
+        if not exists(image_path):
+            raise TauluException(f&#34;Image path {image_path} does not exist&#34;)
+
+        if os.path.isdir(output_path):
+            raise TauluException(&#34;Output path should be a file&#34;)
+
+        output_path = Path(output_path)
+
+        template = HeaderTemplate.annotate_image(
+            os.fspath(image_path), crop=output_path.with_suffix(&#34;.png&#34;)
+        )
+
+        template.save(output_path.with_suffix(&#34;.json&#34;))
+
+    # TODO: check if PathLike works like this
+    # TODO: get rid of cell_height and make this part of the header template
+    def segment_table(
+        self,
+        image: MatLike | PathLike[str] | str,
+        cell_height_factor: float | List[float] | Dict[str, float | List[float]],
+        debug_view: bool = False,
+    ) -&gt; TableGrid:
+        &#34;&#34;&#34;
+        Main function of the class, segmenting the input image into cells.
+
+        Returns a TableGrid object, which has methods with which you can find
+        the location of cells in the table
+
+        Args:
+            image (MatLike | PathLike[str]): The image to segment (path or np.ndarray)
+
+            cell_height_factor (float | list[float] | dict[str, float | list[float]]): The height factor of a row. This factor is the fraction of the header height each row is.
+                If your header has height 12 and your rows are of height 8, you should pass 8/12 as this argument.
+                Also accepts a list of heights, useful if your row heights are not constant (often, the first row is
+                higher than the others). The last entry in the list is used repeatedly when there are more
+                rows in the image than there are entries in your list.
+
+                By passing a dictionary with keys &#34;left&#34; and &#34;right&#34;, you can specify a different cell_height_factor
+                for the different sides of your table.
+
+            debug_view (bool): By setting this setting to True, an OpenCV window will open and show the results of intermediate steps.
+                Press `n` for advancing to the next image, and `q` to quit.
+        &#34;&#34;&#34;
+
+        if not isinstance(image, MatLike):
+            image = cv2.imread(os.fspath(image))
+
+        # TODO: perform checks on the image
+
+        now = perf_counter()
+        h = self._aligner.align(image, visual=debug_view)
+        align_time = perf_counter() - now
+        logger.info(f&#34;Header alignment took {align_time:.2f} seconds&#34;)
+
+        # find the starting point for the table grid algorithm
+        left_top_template = self._template.intersection((1, 0))
+        if isinstance(left_top_template, Split):
+            left_top_template = Split(
+                (int(left_top_template.left[0]), int(left_top_template.left[1])),
+                (int(left_top_template.right[0]), int(left_top_template.right[1])),
+            )
+        else:
+            left_top_template = (int(left_top_template[0]), int(left_top_template[1]))
+
+        left_top_table = self._aligner.template_to_img(h, left_top_template)
+
+        if isinstance(cell_height_factor, dict):
+            if not isinstance(self._template, Split):
+                raise TauluException(
+                    &#34;You provided a cell_height_factor dictionary, but the header is not a Split&#34;
+                )
+            if &#34;left&#34; not in cell_height_factor or &#34;right&#34; not in cell_height_factor:
+                raise TauluException(
+                    &#34;When providing a cell_height_factor dictionary, it should contain both &#39;left&#39; and &#39;right&#39; keys&#34;
+                )
+            cell_heights = Split(
+                self._template.left.cell_heights(cell_height_factor.get(&#34;left&#34;, 1.0)),
+                self._template.right.cell_heights(cell_height_factor.get(&#34;right&#34;, 1.0)),
+            )
+        else:
+            cell_heights = self._template.cell_heights(cell_height_factor)
+
+        now = perf_counter()
+        table = self._grid_detector.find_table_points(
+            image,
+            left_top_table,
+            self._template.cell_widths(0),
+            cell_heights,
+            visual=debug_view,
+        )
+        grid_time = perf_counter() - now
+        logger.info(f&#34;Grid detection took {grid_time:.2f} seconds&#34;)
+
+        if isinstance(table, Split):
+            table = TableGrid.from_split(table, (0, 0))
+
+        return table</code></pre>
+</details>
+<div class="desc"><p>The Taulu class is a convenience class that hides the inner workings of taulu as much as possible.</p>
+<p>For more advanced use cases, it might be useful to implement the workflow directly yourself,
+in order to have control over the intermediate steps.</p></div>
+<h3>Static methods</h3>
+<dl>
+<dt id="taulu.Taulu.annotate"><code class="name flex">
+<span>def <span class="ident">annotate</span></span>(<span>image_path: os.PathLike[str] | str, output_path: os.PathLike[str] | str)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@staticmethod
+def annotate(image_path: PathLike[str] | str, output_path: PathLike[str] | str):
+    &#34;&#34;&#34;
+    Annotate the header of a table image.
+
+    Saves the annotated header image and a json file containing the
+    header template to the output path.
+
+    Args:
+        image_path (PathLike[str]): the path of the image which you want to annotate
+        output_path (PathLike[str]): the path where the output files should go (image files and json files)
+    &#34;&#34;&#34;
+
+    if not exists(image_path):
+        raise TauluException(f&#34;Image path {image_path} does not exist&#34;)
+
+    if os.path.isdir(output_path):
+        raise TauluException(&#34;Output path should be a file&#34;)
+
+    output_path = Path(output_path)
+
+    template = HeaderTemplate.annotate_image(
+        os.fspath(image_path), crop=output_path.with_suffix(&#34;.png&#34;)
+    )
+
+    template.save(output_path.with_suffix(&#34;.json&#34;))</code></pre>
+</details>
+<div class="desc"><p>Annotate the header of a table image.</p>
+<p>Saves the annotated header image and a json file containing the
+header template to the output path.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>image_path</code></strong> :&ensp;<code>PathLike[str]</code></dt>
+<dd>the path of the image which you want to annotate</dd>
+<dt><strong><code>output_path</code></strong> :&ensp;<code>PathLike[str]</code></dt>
+<dd>the path where the output files should go (image files and json files)</dd>
+</dl></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.Taulu.segment_table"><code class="name flex">
+<span>def <span class="ident">segment_table</span></span>(<span>self,<br>image: cv2.Mat | numpy.ndarray | os.PathLike[str] | str,<br>cell_height_factor: float | List[float] | Dict[str, float | List[float]],<br>debug_view: bool = False) ‑> <a title="taulu.grid.TableGrid" href="grid.html#taulu.grid.TableGrid">TableGrid</a></span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def segment_table(
+    self,
+    image: MatLike | PathLike[str] | str,
+    cell_height_factor: float | List[float] | Dict[str, float | List[float]],
+    debug_view: bool = False,
+) -&gt; TableGrid:
+    &#34;&#34;&#34;
+    Main function of the class, segmenting the input image into cells.
+
+    Returns a TableGrid object, which has methods with which you can find
+    the location of cells in the table
+
+    Args:
+        image (MatLike | PathLike[str]): The image to segment (path or np.ndarray)
+
+        cell_height_factor (float | list[float] | dict[str, float | list[float]]): The height factor of a row. This factor is the fraction of the header height each row is.
+            If your header has height 12 and your rows are of height 8, you should pass 8/12 as this argument.
+            Also accepts a list of heights, useful if your row heights are not constant (often, the first row is
+            higher than the others). The last entry in the list is used repeatedly when there are more
+            rows in the image than there are entries in your list.
+
+            By passing a dictionary with keys &#34;left&#34; and &#34;right&#34;, you can specify a different cell_height_factor
+            for the different sides of your table.
+
+        debug_view (bool): By setting this setting to True, an OpenCV window will open and show the results of intermediate steps.
+            Press `n` for advancing to the next image, and `q` to quit.
+    &#34;&#34;&#34;
+
+    if not isinstance(image, MatLike):
+        image = cv2.imread(os.fspath(image))
+
+    # TODO: perform checks on the image
+
+    now = perf_counter()
+    h = self._aligner.align(image, visual=debug_view)
+    align_time = perf_counter() - now
+    logger.info(f&#34;Header alignment took {align_time:.2f} seconds&#34;)
+
+    # find the starting point for the table grid algorithm
+    left_top_template = self._template.intersection((1, 0))
+    if isinstance(left_top_template, Split):
+        left_top_template = Split(
+            (int(left_top_template.left[0]), int(left_top_template.left[1])),
+            (int(left_top_template.right[0]), int(left_top_template.right[1])),
+        )
+    else:
+        left_top_template = (int(left_top_template[0]), int(left_top_template[1]))
+
+    left_top_table = self._aligner.template_to_img(h, left_top_template)
+
+    if isinstance(cell_height_factor, dict):
+        if not isinstance(self._template, Split):
+            raise TauluException(
+                &#34;You provided a cell_height_factor dictionary, but the header is not a Split&#34;
+            )
+        if &#34;left&#34; not in cell_height_factor or &#34;right&#34; not in cell_height_factor:
+            raise TauluException(
+                &#34;When providing a cell_height_factor dictionary, it should contain both &#39;left&#39; and &#39;right&#39; keys&#34;
+            )
+        cell_heights = Split(
+            self._template.left.cell_heights(cell_height_factor.get(&#34;left&#34;, 1.0)),
+            self._template.right.cell_heights(cell_height_factor.get(&#34;right&#34;, 1.0)),
+        )
+    else:
+        cell_heights = self._template.cell_heights(cell_height_factor)
+
+    now = perf_counter()
+    table = self._grid_detector.find_table_points(
+        image,
+        left_top_table,
+        self._template.cell_widths(0),
+        cell_heights,
+        visual=debug_view,
+    )
+    grid_time = perf_counter() - now
+    logger.info(f&#34;Grid detection took {grid_time:.2f} seconds&#34;)
+
+    if isinstance(table, Split):
+        table = TableGrid.from_split(table, (0, 0))
+
+    return table</code></pre>
+</details>
+<div class="desc"><p>Main function of the class, segmenting the input image into cells.</p>
+<p>Returns a TableGrid object, which has methods with which you can find
+the location of cells in the table</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>image</code></strong> :&ensp;<code>MatLike | PathLike[str]</code></dt>
+<dd>The image to segment (path or np.ndarray)</dd>
+<dt><strong><code>cell_height_factor</code></strong> :&ensp;<code>float | list[float] | dict[str, float | list[float]]</code></dt>
+<dd>
+<p>The height factor of a row. This factor is the fraction of the header height each row is.
+If your header has height 12 and your rows are of height 8, you should pass 8/12 as this argument.
+Also accepts a list of heights, useful if your row heights are not constant (often, the first row is
+higher than the others). The last entry in the list is used repeatedly when there are more
+rows in the image than there are entries in your list.</p>
+<p>By passing a dictionary with keys "left" and "right", you can specify a different cell_height_factor
+for the different sides of your table.</p>
+</dd>
+<dt><strong><code>debug_view</code></strong> :&ensp;<code>bool</code></dt>
+<dd>By setting this setting to True, an OpenCV window will open and show the results of intermediate steps.
+Press <code>n</code> for advancing to the next image, and <code>q</code> to quit.</dd>
+</dl></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<svg class="typst-doc" viewBox="0 0 192.75590551181102 99.21259842519684" width="192.75590551181102pt" height="99.21259842519684pt" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
+<path class="typst-shape" fill="#ffffff" fill-rule="nonzero" d="M 0 0 L 0 99.2126 L 192.7559 99.2126 L 192.7559 0 Z "/>
+<g>
+<g transform="translate(11.338582677165354 11.338582677165354)">
+<g class="typst-group">
+<g>
+<g transform="translate(25.511811023622048 0)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(65.19685039370079 2.8346456692913287)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(102.04724409448819 8.50393700787401)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(124.72440944881892 5.66929133858267)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(0 14.173228346456686)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 0 L 170.07874 5.6692915 "/>
+</g>
+<g transform="translate(0 65.19685039370079)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 2.8346457 L 170.07874 0 "/>
+</g>
+<g transform="translate(0 14.031496062992122)">
+<path class="typst-shape" fill="none" d="M 0 0 L 162.49606 0 L 162.49606 50.31496 L 0 50.31496 L 0 0 Z "/>
+</g>
+<g transform="translate(-0.000000000000014322751209022492 14.031496062992119)">
+<g class="typst-group">
+<g>
+<g transform="translate(0 0)">
+<g class="typst-group">
+<g>
+<g transform="translate(0 49.46456692913386)">
+<g class="typst-text" transform="scale(1, -1)">
+<use xlink:href="#g60E63192F9394D36DD991E83B7DA70A9" x="0" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#g6ABAA43E743E3E202E556EE721D84EF1" x="24.874015748031496" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#gC261177E87EBA3F4BCD6813A7432AF7A" x="62.71653543307087" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#gCEC7CECAD513869F11E8D4B4B926CD3" x="102.96850393700787" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#gC261177E87EBA3F4BCD6813A7432AF7A" x="122.24409448818898" fill="#000000" fill-rule="nonzero"/>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+<g transform="translate(24.661417322834644 66.89763779527559)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(64.34645669291339 66.33070866141732)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(101.1968503937008 65.48031496062991)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(123.8740157480315 65.19685039370079)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(24.661417322834644 14.173228346456686)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(64.34645669291339 15.307086614173222)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(101.1968503937008 16.724409448818893)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(123.8740157480315 17.574803149606296)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+</g>
+</g>
+</g>
+</g>
+<defs id="glyph">
+<symbol id="g60E63192F9394D36DD991E83B7DA70A9" overflow="visible">
+<path d="M 14.102363 0 Q 11.125985 0 9.602363 1.6653544 Q 8.07874 3.3307087 8.07874 6.0236225 L 8.07874 31.6063 L 2.0551183 31.6063 L 2.0551183 36.566933 L 5.456693 36.566933 Q 7.299213 36.566933 7.972441 37.311024 Q 8.64567 38.05512 8.64567 39.89764 L 8.64567 46.70079 L 13.748033 46.70079 L 13.748033 36.566933 L 21.755907 36.566933 L 21.755907 31.6063 L 13.748033 31.6063 L 13.748033 4.96063 L 21.188978 4.96063 L 21.188978 0 L 14.102363 0 Z "/>
+</symbol>
+<symbol id="g6ABAA43E743E3E202E556EE721D84EF1" overflow="visible">
+<path d="M 32.598427 0 Q 29.40945 0 28.027561 1.7007875 Q 26.64567 3.401575 26.29134 5.9527564 L 25.93701 5.9527564 Q 24.732285 2.5511813 21.968506 0.8503938 Q 19.204725 -0.8503938 15.377954 -0.8503938 Q 9.56693 -0.8503938 6.3425198 2.1259844 Q 3.1181104 5.1023626 3.1181104 10.204725 Q 3.1181104 15.377954 6.909449 18.141733 Q 10.700788 20.905514 18.708662 20.905514 L 25.93701 20.905514 L 25.93701 24.519686 Q 25.93701 28.417324 23.811026 30.472443 Q 21.68504 32.52756 17.29134 32.52756 Q 13.96063 32.52756 11.728347 31.039371 Q 9.496063 29.551182 8.0078745 27.070868 L 4.6062994 30.259844 Q 6.0944886 33.23622 9.354331 35.326775 Q 12.614174 37.417324 17.574804 37.417324 Q 24.236221 37.417324 27.92126 34.157482 Q 31.6063 30.89764 31.6063 25.086615 L 31.6063 4.96063 L 35.787403 4.96063 L 35.787403 0 L 32.598427 0 Z M 16.299213 3.9685042 Q 18.425198 3.9685042 20.196852 4.464567 Q 21.968506 4.96063 23.244095 5.88189 Q 24.519686 6.80315 25.228348 8.0078745 Q 25.93701 9.212599 25.93701 10.629922 L 25.93701 16.653543 L 18.425198 16.653543 Q 13.535434 16.653543 11.30315 15.236221 Q 9.070867 13.818898 9.070867 11.125985 L 9.070867 9.637795 Q 9.070867 6.9448824 11.019686 5.456693 Q 12.968505 3.9685042 16.299213 3.9685042 Z "/>
+</symbol>
+<symbol id="gC261177E87EBA3F4BCD6813A7432AF7A" overflow="visible">
+<path d="M 28.559057 5.9527564 L 28.275593 5.9527564 Q 27.708662 4.6771655 26.893702 3.4370081 Q 26.078741 2.1968505 24.874018 1.2401575 Q 23.669292 0.28346458 21.968506 -0.28346458 Q 20.267717 -0.8503938 18 -0.8503938 Q 12.330709 -0.8503938 9 2.7992127 Q 5.6692915 6.448819 5.6692915 13.110237 L 5.6692915 36.566933 L 11.338583 36.566933 L 11.338583 14.102363 Q 11.338583 4.251969 19.700788 4.251969 Q 21.401575 4.251969 22.996063 4.6771655 Q 24.590553 5.1023626 25.83071 5.9527564 Q 27.070868 6.80315 27.814962 8.114174 Q 28.559057 9.425198 28.559057 11.267717 L 28.559057 36.566933 L 34.228348 36.566933 L 34.228348 0 L 28.559057 0 L 28.559057 5.9527564 Z "/>
+</symbol>
+<symbol id="gCEC7CECAD513869F11E8D4B4B926CD3" overflow="visible">
+<path d="M 12.047245 0 Q 9.070867 0 7.5472445 1.6653544 Q 6.0236225 3.3307087 6.0236225 5.88189 L 6.0236225 52.44095 L 11.692914 52.44095 L 11.692914 4.96063 L 17.078741 4.96063 L 17.078741 0 L 12.047245 0 Z "/>
+</symbol>
+</defs>
+</svg>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-submodules">Sub-modules</a></h3>
+<ul>
+<li><code><a title="taulu.grid" href="grid.html">taulu.grid</a></code></li>
+<li><code><a title="taulu.header_aligner" href="header_aligner.html">taulu.header_aligner</a></code></li>
+<li><code><a title="taulu.header_template" href="header_template.html">taulu.header_template</a></code></li>
+<li><code><a title="taulu.split" href="split.html">taulu.split</a></code></li>
+<li><code><a title="taulu.table_indexer" href="table_indexer.html">taulu.table_indexer</a></code></li>
+<li><code><a title="taulu.taulu" href="taulu.html">taulu.taulu</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="taulu.GridDetector" href="#taulu.GridDetector">GridDetector</a></code></h4>
+<ul class="">
+<li><code><a title="taulu.GridDetector.apply" href="#taulu.GridDetector.apply">apply</a></code></li>
+<li><code><a title="taulu.GridDetector.find_nearest" href="#taulu.GridDetector.find_nearest">find_nearest</a></code></li>
+<li><code><a title="taulu.GridDetector.find_table_points" href="#taulu.GridDetector.find_table_points">find_table_points</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="taulu.HeaderAligner" href="#taulu.HeaderAligner">HeaderAligner</a></code></h4>
+<ul class="">
+<li><code><a title="taulu.HeaderAligner.align" href="#taulu.HeaderAligner.align">align</a></code></li>
+<li><code><a title="taulu.HeaderAligner.template" href="#taulu.HeaderAligner.template">template</a></code></li>
+<li><code><a title="taulu.HeaderAligner.template_to_img" href="#taulu.HeaderAligner.template_to_img">template_to_img</a></code></li>
+<li><code><a title="taulu.HeaderAligner.view_alignment" href="#taulu.HeaderAligner.view_alignment">view_alignment</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="taulu.HeaderTemplate" href="#taulu.HeaderTemplate">HeaderTemplate</a></code></h4>
+<ul class="two-column">
+<li><code><a title="taulu.HeaderTemplate.annotate_image" href="#taulu.HeaderTemplate.annotate_image">annotate_image</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.cell" href="#taulu.HeaderTemplate.cell">cell</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.cell_height" href="#taulu.HeaderTemplate.cell_height">cell_height</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.cell_heights" href="#taulu.HeaderTemplate.cell_heights">cell_heights</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.cell_polygon" href="#taulu.HeaderTemplate.cell_polygon">cell_polygon</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.cell_width" href="#taulu.HeaderTemplate.cell_width">cell_width</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.cell_widths" href="#taulu.HeaderTemplate.cell_widths">cell_widths</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.cols" href="#taulu.HeaderTemplate.cols">cols</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.from_saved" href="#taulu.HeaderTemplate.from_saved">from_saved</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.from_vgg_annotation" href="#taulu.HeaderTemplate.from_vgg_annotation">from_vgg_annotation</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.intersection" href="#taulu.HeaderTemplate.intersection">intersection</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.rows" href="#taulu.HeaderTemplate.rows">rows</a></code></li>
+<li><code><a title="taulu.HeaderTemplate.save" href="#taulu.HeaderTemplate.save">save</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="taulu.Split" href="#taulu.Split">Split</a></code></h4>
+<ul class="">
+<li><code><a title="taulu.Split.append" href="#taulu.Split.append">append</a></code></li>
+<li><code><a title="taulu.Split.apply" href="#taulu.Split.apply">apply</a></code></li>
+<li><code><a title="taulu.Split.left" href="#taulu.Split.left">left</a></code></li>
+<li><code><a title="taulu.Split.right" href="#taulu.Split.right">right</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="taulu.TableGrid" href="#taulu.TableGrid">TableGrid</a></code></h4>
+<ul class="two-column">
+<li><code><a title="taulu.TableGrid.add_left_col" href="#taulu.TableGrid.add_left_col">add_left_col</a></code></li>
+<li><code><a title="taulu.TableGrid.add_top_row" href="#taulu.TableGrid.add_top_row">add_top_row</a></code></li>
+<li><code><a title="taulu.TableGrid.anneal" href="#taulu.TableGrid.anneal">anneal</a></code></li>
+<li><code><a title="taulu.TableGrid.cols" href="#taulu.TableGrid.cols">cols</a></code></li>
+<li><code><a title="taulu.TableGrid.from_saved" href="#taulu.TableGrid.from_saved">from_saved</a></code></li>
+<li><code><a title="taulu.TableGrid.from_split" href="#taulu.TableGrid.from_split">from_split</a></code></li>
+<li><code><a title="taulu.TableGrid.points" href="#taulu.TableGrid.points">points</a></code></li>
+<li><code><a title="taulu.TableGrid.row" href="#taulu.TableGrid.row">row</a></code></li>
+<li><code><a title="taulu.TableGrid.rows" href="#taulu.TableGrid.rows">rows</a></code></li>
+<li><code><a title="taulu.TableGrid.save" href="#taulu.TableGrid.save">save</a></code></li>
+<li><code><a title="taulu.TableGrid.visualize_points" href="#taulu.TableGrid.visualize_points">visualize_points</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="taulu.TableIndexer" href="#taulu.TableIndexer">TableIndexer</a></code></h4>
+<ul class="two-column">
+<li><code><a title="taulu.TableIndexer.cell" href="#taulu.TableIndexer.cell">cell</a></code></li>
+<li><code><a title="taulu.TableIndexer.cell_polygon" href="#taulu.TableIndexer.cell_polygon">cell_polygon</a></code></li>
+<li><code><a title="taulu.TableIndexer.cells" href="#taulu.TableIndexer.cells">cells</a></code></li>
+<li><code><a title="taulu.TableIndexer.col_offset" href="#taulu.TableIndexer.col_offset">col_offset</a></code></li>
+<li><code><a title="taulu.TableIndexer.cols" href="#taulu.TableIndexer.cols">cols</a></code></li>
+<li><code><a title="taulu.TableIndexer.crop_cell" href="#taulu.TableIndexer.crop_cell">crop_cell</a></code></li>
+<li><code><a title="taulu.TableIndexer.crop_region" href="#taulu.TableIndexer.crop_region">crop_region</a></code></li>
+<li><code><a title="taulu.TableIndexer.highlight_all_cells" href="#taulu.TableIndexer.highlight_all_cells">highlight_all_cells</a></code></li>
+<li><code><a title="taulu.TableIndexer.region" href="#taulu.TableIndexer.region">region</a></code></li>
+<li><code><a title="taulu.TableIndexer.rows" href="#taulu.TableIndexer.rows">rows</a></code></li>
+<li><code><a title="taulu.TableIndexer.select_one_cell" href="#taulu.TableIndexer.select_one_cell">select_one_cell</a></code></li>
+<li><code><a title="taulu.TableIndexer.show_cells" href="#taulu.TableIndexer.show_cells">show_cells</a></code></li>
+<li><code><a title="taulu.TableIndexer.text_regions" href="#taulu.TableIndexer.text_regions">text_regions</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="taulu.Taulu" href="#taulu.Taulu">Taulu</a></code></h4>
+<ul class="">
+<li><code><a title="taulu.Taulu.annotate" href="#taulu.Taulu.annotate">annotate</a></code></li>
+<li><code><a title="taulu.Taulu.segment_table" href="#taulu.Taulu.segment_table">segment_table</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>

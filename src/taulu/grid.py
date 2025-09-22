@@ -1,3 +1,7 @@
+"""
+Implements the grid finding algorithm, that is able to find the intersections of horizontal and vertical rules.
+"""
+
 import math
 from typing import cast
 import os
@@ -25,9 +29,6 @@ from ._core import TableGrower, median_slope as _core_median_slope
 show_time = 0
 
 logger = logging.getLogger(__name__)
-
-
-"""inclusive clamping"""
 
 
 def clamp(
@@ -116,8 +117,11 @@ def median_slope(lines: List[Tuple[PointFloat, PointFloat]]) -> float:
 
 class GridDetector:
     """
-    Implements filters that show high activation where the image has an intersection of a vertical
-    and horizontal rule, useful for finding the bounding boxes of cells
+    Implements a filters result in high activation where the image has an intersection of a vertical
+    and horizontal rule, useful for finding the bounding boxes of cells.
+
+    Also implements the search algorithm that uses the output of this filter to build a tabular structure of
+    corner points (in row major order).
     """
 
     def __init__(
@@ -126,11 +130,11 @@ class GridDetector:
         cross_width: int = 6,
         cross_height: Optional[int] = None,
         morph_size: Optional[int] = None,
-        search_region: int = 40,
         sauvola_k: float = 0.04,
         sauvola_window: int = 15,
-        distance_penalty: float = 0.4,
         scale: float = 1.0,
+        search_region: int = 40,
+        distance_penalty: float = 0.4,
     ):
         """
         Args:
@@ -139,15 +143,15 @@ class GridDetector:
                 to more sparse results
             cross_width (int): the width of one of the edges in the cross filter, should be
                 roughly equal to the width of the rules in the image after morphology is applied
-            cross_height (int | None (default)): useful if the horizontal rules and vertical rules
+            cross_height (int | None): useful if the horizontal rules and vertical rules
                 have different sizes
-            morph_size (int | None (default)): the size of the morphology operators that are applied before
+            morph_size (int | None): the size of the morphology operators that are applied before
                 the cross kernel. 'bridges the gaps' of broken-up lines
-            search_region (int): area in which to search for a new max value in `find_nearest` etc.
             sauvola_k (float): threshold parameter for sauvola thresholding
             sauvola_window (int): window_size parameter for sauvola thresholding
+            scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
+            search_region (int): area in which to search for a new max value in `find_nearest` etc.
             distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
-            scale(float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
         """
         self._validate_parameters(
             kernel_size,
@@ -273,6 +277,17 @@ class GridDetector:
         return filtered.astype(np.uint8)
 
     def apply(self, img: MatLike, visual: bool = False) -> MatLike:
+        """
+        Apply the grid detection filter to the input image.
+
+        Args:
+            img (MatLike): the input image
+            visual (bool): whether to show intermediate steps
+
+        Returns:
+            MatLike: the filtered image, with high values (whiter pixels) at intersections of horizontal and vertical rules
+        """
+
         if img is None or img.size == 0:
             raise ValueError("Input image is empty or None")
 
@@ -300,7 +315,7 @@ class GridDetector:
         Args:
             filtered (MatLike): the filtered image (obtained through `apply`)
             point (tuple[int, int]): the approximate target point (x, y)
-            region (None (default) | int): alternative value for search region,
+            region (None | int): alternative value for search region,
                 overwriting the `__init__` parameter `region`
         """
 
@@ -386,6 +401,10 @@ class GridDetector:
             cell_widths (list[int]): the expected widths of the cells (based on a header template)
             cell_heights (list[int]): the expected height of the rows of data.
                 The last value from this list is used until the image has no more vertical space.
+            visual (bool): whether to show intermediate steps
+            window (str): the name of the OpenCV window to use for visualization
+            goals_width (int | None): the width of the goal region when searching for the next point.
+                If None, defaults to 1.5 * search_region
 
         Returns:
             a TableGrid object

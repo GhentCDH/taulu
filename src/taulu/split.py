@@ -1,3 +1,9 @@
+"""
+A module that provides a Split class to handle data with left and right variants.
+
+The Split class allows for easy management and manipulation of paired data, such as images or templates, by providing properties and methods to access and modify the left and right components. It also supports applying functions to both components simultaneously and accessing attributes of the contained objects.
+"""
+
 from typing import Generic, TypeVar, Callable, Any
 
 T = TypeVar("T")

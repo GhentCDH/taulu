@@ -1,3 +1,8 @@
+"""
+Defines an abstract class TableIndexer, which provides methods for mapping pixel coordinates
+in an image to table cell indices and for cropping images to specific table cells or regions.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Generator, Tuple
 import os

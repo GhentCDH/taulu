@@ -142,11 +142,9 @@ class Taulu:
         the location of cells in the table
 
         Args:
-            image (MatLike | PathLike[str]):
-                The image to segment (path or np.ndarray)
+            image (MatLike | PathLike[str]): The image to segment (path or np.ndarray)
 
-            cell_height_factor (float | list[float] | dict[str, float | list[float]]):
-                The height factor of a row. This factor is the fraction of the header height each row is.
+            cell_height_factor (float | list[float] | dict[str, float | list[float]]): The height factor of a row. This factor is the fraction of the header height each row is.
                 If your header has height 12 and your rows are of height 8, you should pass 8/12 as this argument.
                 Also accepts a list of heights, useful if your row heights are not constant (often, the first row is
                 higher than the others). The last entry in the list is used repeatedly when there are more
@@ -155,8 +153,7 @@ class Taulu:
                 By passing a dictionary with keys "left" and "right", you can specify a different cell_height_factor
                 for the different sides of your table.
 
-            debug_view (bool):
-                By setting this setting to True, an OpenCV window will open and show the results of intermediate steps.
+            debug_view (bool): By setting this setting to True, an OpenCV window will open and show the results of intermediate steps.
                 Press `n` for advancing to the next image, and `q` to quit.
         """
 

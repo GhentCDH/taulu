@@ -92,37 +92,17 @@ The Taulu class combines the components into one simple API, as seen in [Usage](
 
 The algorithm identifies the header's location in the input image, which provides a starting point. From there, it scans the image to find intersections of the rules (borders) and segments the image into cells accordingly.
 
-The output is a `TableGrid` object that contains the detected intersections, enabling you to segment the image into rows, columns, and cells.
+The output is a `TableGrid` object that contains the detected intersections and which defines some useful methods, enabling you to segment the image into rows, columns, and cells.
 
-Here is a visualization of the workflow and the components:
-
-```mermaid
-flowchart LR
-    h(header.png) --> A[HeaderAligner]
-    t(table.png) --> C[PageCropper]
-    j(header.json) --> T[HeaderTemplate]
-    C --> F[GridDetector]
-    A --> H((h))
-    C --> H
-    T --> S((s))
-    H --> S
-    F --> R
-    S --> R(result)
-    T --> R
-```
-
-The components are:
+The main classes are:
 
 - `HeaderAligner`: Uses template matching to identify the header's location in the input images.
-- `PageCropper`: An optional component that crops the image to a region containing a given color. This is useful if your image contains a lot of background, but can be skipped if the table occupies most of the image. Only works if your table has a distinct color from the background.
-- `HeaderTemplate`: Stores table template information by reading an annotation JSON file. You can create this file by running `HeaderTemplate.annotate_image` on a cropped image of your table’s header.
-- `GridDetector`: Processes the image to identify intersections of horizontal and vertical lines (borders).
-- `h`: A transformation matrix that maps points from the header template to the input image.
-- `s`: The starting point of the segmentation algorithm (typically the top-left intersection, just below the header).
+- `HeaderTemplate`: Stores header template information by reading an annotation JSON file. You can create this file by running `HeaderTemplate.annotate_image`.
+- `GridDetector`: Processes the image to identify intersections of horizontal and vertical lines (borders). To see its progress, you can run it with `debug_view=True`. This should allow you to tune the parameters to your data.
 
-## Parameters
+## Parameters and Methods
 
-The taulu algorithm has a few parameters which you might need to tune in order for it to fit your data's characteristics.
+The taulu algorithm has a number of parameters which you might need to tune in order for it to fit your data's characteristics.
 The following is a summary of the most important parameters and how you could tune them to your data.
 
 ### `Taulu`
@@ -141,6 +121,11 @@ The following is a summary of the most important parameters and how you could tu
 
   A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too. You can see this region as blue squares when running the segmentation with `debug_view=True`
 - `sauvola_k`: This parameter adjusts the threshold that is used when binarizing the image. The larger `sauvola_k` more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table.
+
+**These methods are the most useful**:
+- `Taulu.annotate`: create an annotation file for a header image. This requires an image of a table with a clear header. Taulu will first ask you to crop the header in the image (by clicking four points, one for each corner). Then, it will ask you to annotate the lines in the header (by clicking two points per line, one for each endpoint). The annotation file will be saved as a `json` file and a `png` with the same name.
+- `Taulu.segment_table`: given an input image, segment into a `TableGrid` object.
+    - `cell_height_factor`: a float or a list of floats that determine the expected height of each row in the table, relative to the height of the header. If the list is shorter than the number of rows, the last value will be repeated for the remaining rows. If a single float is given, it will be used for all rows.
 
 ### `TableGrid`
 

@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+<meta name="generator" content="pdoc3 0.11.6">
+<title>taulu.split API documentation</title>
+<meta name="description" content="A module that provides a Split class to handle data with left and right variants …">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/sanitize.min.css" integrity="sha512-y1dtMcuvtTMJc1yPgEqF0ZjQbhnc/bFhyvIyVNb9Zk5mIGtqVaAB1Ttl28su8AvFMOY0EwRbAe+HCLqj6W7/KA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/13.0.0/typography.min.css" integrity="sha512-Y1DYSb995BAfxobCkKepB1BqJJTPrOp3zPL74AWFugHHmmdcvO+C48WLrUOlhGMc0QG7AE3f7gmvvcrmX2fDoA==" crossorigin>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:1.5em;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:2em 0 .50em 0}h3{font-size:1.4em;margin:1.6em 0 .7em 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .2s ease-in-out}a:visited{color:#503}a:hover{color:#b62}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900;font-weight:bold}pre code{font-size:.8em;line-height:1.4em;padding:1em;display:block}code{background:#f3f3f3;font-family:"DejaVu Sans Mono",monospace;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source > summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible;min-width:max-content}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em 1em;margin:1em 0}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul ul{padding-left:1em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" integrity="sha512-D9gUyxqja7hBtkWpPWGt9wfbfaMGVt9gnyCvYa+jojwwPHLCzUm5i8rpk7vD7wNee9bA35eYIjobYPaQuKS1MQ==" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => {
+hljs.configure({languages: ['bash', 'css', 'diff', 'graphql', 'ini', 'javascript', 'json', 'plaintext', 'python', 'python-repl', 'rust', 'shell', 'sql', 'typescript', 'xml', 'yaml']});
+hljs.highlightAll();
+/* Collapse source docstrings */
+setTimeout(() => {
+[...document.querySelectorAll('.hljs.language-python > .hljs-string')]
+.filter(el => el.innerHTML.length > 200 && ['"""', "'''"].includes(el.innerHTML.substring(0, 3)))
+.forEach(el => {
+let d = document.createElement('details');
+d.classList.add('hljs-string');
+d.innerHTML = '<summary>"""</summary>' + el.innerHTML.substring(3);
+el.replaceWith(d);
+});
+}, 100);
+})</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>taulu.split</code></h1>
+</header>
+<section id="section-intro">
+<p>A module that provides a Split class to handle data with left and right variants.</p>
+<p>The Split class allows for easy management and manipulation of paired data, such as images or templates, by providing properties and methods to access and modify the left and right components. It also supports applying functions to both components simultaneously and accessing attributes of the contained objects.</p>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="taulu.split.Split"><code class="flex name class">
+<span>class <span class="ident">Split</span></span>
+<span>(</span><span>left: ~T | None = None, right: ~T | None = None)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Split(Generic[T]):
+    &#34;&#34;&#34;Wrapper for data that has both a left and a right variant&#34;&#34;&#34;
+
+    def __init__(self, left: T | None = None, right: T | None = None):
+        self._left = left
+        self._right = right
+
+    @property
+    def left(self) -&gt; T:
+        assert self._left is not None
+        return self._left
+
+    @left.setter
+    def left(self, value: T):
+        self._left = value
+
+    @property
+    def right(self) -&gt; T:
+        assert self._right is not None
+        return self._right
+
+    @right.setter
+    def right(self, value: T):
+        self._right = value
+
+    def append(self, value: T):
+        if self._left is None:
+            self._left = value
+        else:
+            self._right = value
+
+    def __repr__(self) -&gt; str:
+        return f&#34;left: {self._left}, right: {self._right}&#34;
+
+    def __iter__(self):
+        assert self._left is not None
+        assert self._right is not None
+        return iter((self._left, self._right))
+
+    def __getitem__(self, index: bool) -&gt; T:
+        assert self._left is not None
+        assert self._right is not None
+        if int(index) == 0:
+            return self._left
+        else:
+            return self._right
+
+    def apply(
+        self,
+        funcs: &#34;Split[Callable[[T, *Any], V]] | Callable[[T, *Any], V]&#34;,
+        *args,
+        **kwargs,
+    ) -&gt; &#34;Split[V]&#34;:
+        if not isinstance(funcs, Split):
+            funcs = Split(funcs, funcs)
+
+        def get_arg(side: str, arg):
+            if isinstance(arg, Split):
+                return getattr(arg, side)
+            return arg
+
+        def call(side: str):
+            func = getattr(funcs, side)
+            target = getattr(self, side)
+
+            side_args = [get_arg(side, arg) for arg in args]
+            side_kwargs = {k: get_arg(side, v) for k, v in kwargs.items()}
+
+            return func(target, *side_args, **side_kwargs)
+
+        return Split(call(&#34;left&#34;), call(&#34;right&#34;))
+
+    def __getattr__(self, attr_name: str):
+        if attr_name in self.__dict__:
+            return getattr(self, attr_name)
+
+        def wrapper(*args, **kwargs):
+            return self.apply(
+                Split(
+                    getattr(self.left.__class__, attr_name),
+                    getattr(self.right.__class__, attr_name),
+                ),
+                *args,
+                **kwargs,
+            )
+
+        return wrapper</code></pre>
+</details>
+<div class="desc"><p>Wrapper for data that has both a left and a right variant</p></div>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>typing.Generic</li>
+</ul>
+<h3>Instance variables</h3>
+<dl>
+<dt id="taulu.split.Split.left"><code class="name">prop <span class="ident">left</span> : ~T</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def left(self) -&gt; T:
+    assert self._left is not None
+    return self._left</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.split.Split.right"><code class="name">prop <span class="ident">right</span> : ~T</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">@property
+def right(self) -&gt; T:
+    assert self._right is not None
+    return self._right</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="taulu.split.Split.append"><code class="name flex">
+<span>def <span class="ident">append</span></span>(<span>self, value: ~T)</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def append(self, value: T):
+    if self._left is None:
+        self._left = value
+    else:
+        self._right = value</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+<dt id="taulu.split.Split.apply"><code class="name flex">
+<span>def <span class="ident">apply</span></span>(<span>self,<br>funcs: <a title="taulu.split.Split" href="#taulu.split.Split">Split</a>[Callable[[T, *Any], V]] | Callable[[T, *Any], V],<br>*args,<br>**kwargs) ‑> <a title="taulu.split.Split" href="#taulu.split.Split">Split</a>[V]</span>
+</code></dt>
+<dd>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def apply(
+    self,
+    funcs: &#34;Split[Callable[[T, *Any], V]] | Callable[[T, *Any], V]&#34;,
+    *args,
+    **kwargs,
+) -&gt; &#34;Split[V]&#34;:
+    if not isinstance(funcs, Split):
+        funcs = Split(funcs, funcs)
+
+    def get_arg(side: str, arg):
+        if isinstance(arg, Split):
+            return getattr(arg, side)
+        return arg
+
+    def call(side: str):
+        func = getattr(funcs, side)
+        target = getattr(self, side)
+
+        side_args = [get_arg(side, arg) for arg in args]
+        side_kwargs = {k: get_arg(side, v) for k, v in kwargs.items()}
+
+        return func(target, *side_args, **side_kwargs)
+
+    return Split(call(&#34;left&#34;), call(&#34;right&#34;))</code></pre>
+</details>
+<div class="desc"></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<svg class="typst-doc" viewBox="0 0 192.75590551181102 99.21259842519684" width="192.75590551181102pt" height="99.21259842519684pt" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:h5="http://www.w3.org/1999/xhtml">
+<path class="typst-shape" fill="#ffffff" fill-rule="nonzero" d="M 0 0 L 0 99.2126 L 192.7559 99.2126 L 192.7559 0 Z "/>
+<g>
+<g transform="translate(11.338582677165354 11.338582677165354)">
+<g class="typst-group">
+<g>
+<g transform="translate(25.511811023622048 0)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(65.19685039370079 2.8346456692913287)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(102.04724409448819 8.50393700787401)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(124.72440944881892 5.66929133858267)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 70.86614 L 0 0 "/>
+</g>
+<g transform="translate(0 14.173228346456686)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 0 L 170.07874 5.6692915 "/>
+</g>
+<g transform="translate(0 65.19685039370079)">
+<path class="typst-shape" fill="none" stroke="#000000" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0 2.8346457 L 170.07874 0 "/>
+</g>
+<g transform="translate(0 14.031496062992122)">
+<path class="typst-shape" fill="none" d="M 0 0 L 162.49606 0 L 162.49606 50.31496 L 0 50.31496 L 0 0 Z "/>
+</g>
+<g transform="translate(-0.000000000000014322751209022492 14.031496062992119)">
+<g class="typst-group">
+<g>
+<g transform="translate(0 0)">
+<g class="typst-group">
+<g>
+<g transform="translate(0 49.46456692913386)">
+<g class="typst-text" transform="scale(1, -1)">
+<use xlink:href="#g60E63192F9394D36DD991E83B7DA70A9" x="0" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#g6ABAA43E743E3E202E556EE721D84EF1" x="24.874015748031496" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#gC261177E87EBA3F4BCD6813A7432AF7A" x="62.71653543307087" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#gCEC7CECAD513869F11E8D4B4B926CD3" x="102.96850393700787" fill="#000000" fill-rule="nonzero"/>
+<use xlink:href="#gC261177E87EBA3F4BCD6813A7432AF7A" x="122.24409448818898" fill="#000000" fill-rule="nonzero"/>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+</g>
+<g transform="translate(24.661417322834644 66.89763779527559)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(64.34645669291339 66.33070866141732)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(101.1968503937008 65.48031496062991)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(123.8740157480315 65.19685039370079)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(24.661417322834644 14.173228346456686)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(64.34645669291339 15.307086614173222)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(101.1968503937008 16.724409448818893)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+<g transform="translate(123.8740157480315 17.574803149606296)">
+<path class="typst-shape" fill="#ff4136" fill-rule="nonzero" stroke="#ff4136" stroke-width="1" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" d="M 0.8503937 0 C 0.38116005 0 0 0.38116005 0 0.8503937 C 0 1.3196273 0.38116005 1.7007874 0.8503937 1.7007874 C 1.3196273 1.7007874 1.7007874 1.3196273 1.7007874 0.8503937 C 1.7007874 0.38116005 1.3196273 0 0.8503937 0 Z "/>
+</g>
+</g>
+</g>
+</g>
+</g>
+<defs id="glyph">
+<symbol id="g60E63192F9394D36DD991E83B7DA70A9" overflow="visible">
+<path d="M 14.102363 0 Q 11.125985 0 9.602363 1.6653544 Q 8.07874 3.3307087 8.07874 6.0236225 L 8.07874 31.6063 L 2.0551183 31.6063 L 2.0551183 36.566933 L 5.456693 36.566933 Q 7.299213 36.566933 7.972441 37.311024 Q 8.64567 38.05512 8.64567 39.89764 L 8.64567 46.70079 L 13.748033 46.70079 L 13.748033 36.566933 L 21.755907 36.566933 L 21.755907 31.6063 L 13.748033 31.6063 L 13.748033 4.96063 L 21.188978 4.96063 L 21.188978 0 L 14.102363 0 Z "/>
+</symbol>
+<symbol id="g6ABAA43E743E3E202E556EE721D84EF1" overflow="visible">
+<path d="M 32.598427 0 Q 29.40945 0 28.027561 1.7007875 Q 26.64567 3.401575 26.29134 5.9527564 L 25.93701 5.9527564 Q 24.732285 2.5511813 21.968506 0.8503938 Q 19.204725 -0.8503938 15.377954 -0.8503938 Q 9.56693 -0.8503938 6.3425198 2.1259844 Q 3.1181104 5.1023626 3.1181104 10.204725 Q 3.1181104 15.377954 6.909449 18.141733 Q 10.700788 20.905514 18.708662 20.905514 L 25.93701 20.905514 L 25.93701 24.519686 Q 25.93701 28.417324 23.811026 30.472443 Q 21.68504 32.52756 17.29134 32.52756 Q 13.96063 32.52756 11.728347 31.039371 Q 9.496063 29.551182 8.0078745 27.070868 L 4.6062994 30.259844 Q 6.0944886 33.23622 9.354331 35.326775 Q 12.614174 37.417324 17.574804 37.417324 Q 24.236221 37.417324 27.92126 34.157482 Q 31.6063 30.89764 31.6063 25.086615 L 31.6063 4.96063 L 35.787403 4.96063 L 35.787403 0 L 32.598427 0 Z M 16.299213 3.9685042 Q 18.425198 3.9685042 20.196852 4.464567 Q 21.968506 4.96063 23.244095 5.88189 Q 24.519686 6.80315 25.228348 8.0078745 Q 25.93701 9.212599 25.93701 10.629922 L 25.93701 16.653543 L 18.425198 16.653543 Q 13.535434 16.653543 11.30315 15.236221 Q 9.070867 13.818898 9.070867 11.125985 L 9.070867 9.637795 Q 9.070867 6.9448824 11.019686 5.456693 Q 12.968505 3.9685042 16.299213 3.9685042 Z "/>
+</symbol>
+<symbol id="gC261177E87EBA3F4BCD6813A7432AF7A" overflow="visible">
+<path d="M 28.559057 5.9527564 L 28.275593 5.9527564 Q 27.708662 4.6771655 26.893702 3.4370081 Q 26.078741 2.1968505 24.874018 1.2401575 Q 23.669292 0.28346458 21.968506 -0.28346458 Q 20.267717 -0.8503938 18 -0.8503938 Q 12.330709 -0.8503938 9 2.7992127 Q 5.6692915 6.448819 5.6692915 13.110237 L 5.6692915 36.566933 L 11.338583 36.566933 L 11.338583 14.102363 Q 11.338583 4.251969 19.700788 4.251969 Q 21.401575 4.251969 22.996063 4.6771655 Q 24.590553 5.1023626 25.83071 5.9527564 Q 27.070868 6.80315 27.814962 8.114174 Q 28.559057 9.425198 28.559057 11.267717 L 28.559057 36.566933 L 34.228348 36.566933 L 34.228348 0 L 28.559057 0 L 28.559057 5.9527564 Z "/>
+</symbol>
+<symbol id="gCEC7CECAD513869F11E8D4B4B926CD3" overflow="visible">
+<path d="M 12.047245 0 Q 9.070867 0 7.5472445 1.6653544 Q 6.0236225 3.3307087 6.0236225 5.88189 L 6.0236225 52.44095 L 11.692914 52.44095 L 11.692914 4.96063 L 17.078741 4.96063 L 17.078741 0 L 12.047245 0 Z "/>
+</symbol>
+</defs>
+</svg>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="taulu" href="index.html">taulu</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="taulu.split.Split" href="#taulu.split.Split">Split</a></code></h4>
+<ul class="">
+<li><code><a title="taulu.split.Split.append" href="#taulu.split.Split.append">append</a></code></li>
+<li><code><a title="taulu.split.Split.apply" href="#taulu.split.Split.apply">apply</a></code></li>
+<li><code><a title="taulu.split.Split.left" href="#taulu.split.Split.left">left</a></code></li>
+<li><code><a title="taulu.split.Split.right" href="#taulu.split.Split.right">right</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>
