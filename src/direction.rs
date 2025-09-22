@@ -1,4 +1,4 @@
-use crate::{point::Point, table_grower::Step};
+use crate::{Step, point::Point};
 
 #[derive(Debug)]
 pub enum Direction {

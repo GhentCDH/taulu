@@ -2,9 +2,10 @@ use std::ops::{Add, Mul, Sub};
 
 use pyo3::{FromPyObject, IntoPyObject};
 
-use crate::Image;
-use crate::table_grower::Step;
-use crate::{Direction, traits};
+use crate::{
+    Direction, Image, Step,
+    traits::{self, Xy as _},
+};
 
 /// x, y
 #[derive(FromPyObject, IntoPyObject, PartialEq, PartialOrd, Eq, Hash, Clone, Copy, Debug)]
@@ -13,11 +14,8 @@ pub struct Point(pub i32, pub i32);
 fn image_cost(img: &Image, p: Point) -> Option<u32> {
     Some(
         u32::from(
-            img.get((
-                usize::try_from(p.1).expect("point should have posive y"),
-                usize::try_from(p.1).expect("point should have posive x"),
-            ))
-            .copied()?,
+            img.get((usize::try_from(p.1).ok()?, usize::try_from(p.1).ok()?))
+                .copied()?,
         ) / 25,
     )
 }
@@ -83,6 +81,14 @@ impl<'a> Add<&'a Point> for &'_ Point {
     }
 }
 
+impl Add<Point> for Point {
+    type Output = Point;
+
+    fn add(self, rhs: Point) -> Self::Output {
+        Point(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
 impl<'a> Sub<&'a Point> for &'_ Point {
     type Output = Point;
 
@@ -91,7 +97,20 @@ impl<'a> Sub<&'a Point> for &'_ Point {
     }
 }
 
-impl<'a> Mul<f32> for &'_ Point {
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+impl Mul<f32> for &'_ Point {
+    type Output = Point;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Point(
+            (self.0 as f32 * rhs).round() as i32,
+            (self.1 as f32 * rhs).round() as i32,
+        )
+    }
+}
+
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+impl Mul<f32> for Point {
     type Output = Point;
 
     fn mul(self, rhs: f32) -> Self::Output {
@@ -125,5 +144,14 @@ impl traits::Xy<i32> for Point {
     }
     fn y(&self) -> i32 {
         self.1
+    }
+}
+
+impl From<crate::Coord> for Point {
+    fn from(val: crate::Coord) -> Self {
+        Point(
+            i32::try_from(val.x()).expect("conversion"),
+            i32::try_from(val.y()).expect("conversion"),
+        )
     }
 }

@@ -1,76 +1,18 @@
 use std::collections::HashMap;
 use std::convert::Into;
-use std::ops::{Add, Index, Neg};
+use std::ops::{Index, Neg};
 
 use numpy::PyReadonlyArray2;
 use pathfinding::prelude::astar;
+use pyo3::PyResult;
 use pyo3::prelude::*;
-use pyo3::{FromPyObject, PyResult};
 use rayon::prelude::*;
 
-use crate::geom_util::{evaluate_polynomial, gaussian_1d, linear_polynomial_least_squares};
+use crate::geom_util::{
+    evaluate_polynomial, gaussian_1d, linear_polynomial_least_squares, normalize,
+};
 use crate::traits::Xy;
-use crate::{Image, Point};
-
-// A coordinate of the grid (row, col)
-// This struct is used to make clear that the order is (row, col) not (x, y)
-#[derive(FromPyObject, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct Coord(usize, usize);
-
-impl Xy<usize> for Coord {
-    #[inline]
-    fn x(&self) -> usize {
-        self.1
-    }
-
-    #[inline]
-    fn y(&self) -> usize {
-        self.0
-    }
-}
-
-impl Coord {
-    #[must_use]
-    pub fn new(x: usize, y: usize) -> Self {
-        Self(y, x)
-    }
-
-    #[must_use]
-    pub fn take_amount_of_steps(&self, amount: usize, step: Step) -> Option<Coord> {
-        if match step {
-            Step::Right | Step::Down => false,
-            Step::Left => self.1 < amount,
-            Step::Up => self.0 < amount,
-        } {
-            return None;
-        }
-
-        Some(match step {
-            Step::Right => Coord(self.0, self.1 + amount),
-            Step::Down => Coord(self.0 + amount, self.1),
-            Step::Left => Coord(self.0, self.1 - amount),
-            Step::Up => Coord(self.0 - amount, self.1),
-        })
-    }
-}
-
-impl From<Coord> for Point {
-    fn from(val: Coord) -> Self {
-        Point(
-            i32::try_from(val.x()).expect("conversion"),
-            i32::try_from(val.y()).expect("conversion"),
-        )
-    }
-}
-
-impl From<Point> for Coord {
-    fn from(val: Point) -> Self {
-        Coord(
-            usize::try_from(val.1).expect("conversion"),
-            usize::try_from(val.0).expect("convertion"),
-        )
-    }
-}
+use crate::{Coord, Image, Point, Step};
 
 /// A selection of rows of points that make up the corners of a table.
 #[pyclass]
@@ -92,51 +34,6 @@ pub struct TableGrower {
     pub look_distance: usize,
     pub grow_threshold: f64,
     pub min_row_count: usize,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Step {
-    Right,
-    Down,
-    Left,
-    Up,
-}
-
-impl Add<Step> for Coord {
-    type Output = Coord;
-
-    fn add(self, rhs: Step) -> Self::Output {
-        match rhs {
-            Step::Right => Coord(self.0, self.1 + 1),
-            Step::Down => Coord(self.0 + 1, self.1),
-            Step::Left => Coord(self.0, self.1 - 1),
-            Step::Up => Coord(self.0 - 1, self.1),
-        }
-    }
-}
-
-impl Neg for Step {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        match self {
-            Step::Right => Self::Left,
-            Step::Down => Self::Up,
-            Step::Left => Self::Right,
-            Step::Up => Self::Down,
-        }
-    }
-}
-
-impl Step {
-    fn rotate_ninety(self) -> Self {
-        match self {
-            Step::Right => Step::Up,
-            Step::Up => Step::Left,
-            Step::Left => Step::Down,
-            Step::Down => Step::Right,
-        }
-    }
 }
 
 #[pymethods]
@@ -174,18 +71,18 @@ impl TableGrower {
             &table_image.as_array(),
             &cross_correlation.as_array(),
             start_point,
-            Coord(0, 0),
+            Coord::new(0, 0),
         );
 
         table_grower
     }
 
     fn get_corner(&self, coord: Coord) -> Option<Point> {
-        if coord.0 >= self.corners.len() || coord.1 >= self.corners[coord.0].len() {
+        if coord.y() >= self.corners.len() || coord.x() >= self.corners[coord.y()].len() {
             return None;
         }
 
-        self.corners[coord.0][coord.1]
+        self.corners[coord.y()][coord.x()]
     }
 
     fn all_rows_complete(&self) -> bool {
@@ -368,13 +265,9 @@ impl TableGrower {
         while self.corners.len() <= coord.y() {
             self.corners.push(vec![None; self.columns]);
         }
-        let row = &mut self.corners[coord.0];
+        let row = &mut self.corners[coord.y()];
 
-        if row.len() == coord.x() {
-            row.push(Some(corner_point));
-        } else {
-            row[coord.x()] = Some(corner_point);
-        }
+        row[coord.x()] = Some(corner_point);
 
         // Update edge: Remove current point from edge
         self.edge.remove(&coord);
@@ -418,20 +311,21 @@ impl TableGrower {
         edge_added
     }
 
+    /// Find the step size to take as an estimation based on the column width and row height of the
+    /// table header
     fn header_based_step_from_coord(&self, coord: Coord, step: Step) -> Option<Point> {
-        let current_point = self[coord]?;
         match step {
             Step::Right => {
                 if coord.x() + 1 >= self.columns {
                     return None;
                 }
-                Some(&current_point + &Point(self.column_widths[coord.x()], 0))
+                Some(Point(self.column_widths[coord.x()], 0))
             }
             Step::Left => {
                 if coord.x() == 0 {
                     return None;
                 }
-                Some(&current_point + &Point(-self.column_widths[coord.x() - 1], 0))
+                Some(Point(-self.column_widths[coord.x() - 1], 0))
             }
             Step::Down => {
                 // extend row heights with last value if necessary
@@ -443,7 +337,7 @@ impl TableGrower {
                 } else {
                     self.row_heights[coord.y()]
                 };
-                Some(&current_point + &Point(0, h))
+                Some(Point(0, h))
             }
             Step::Up => {
                 if coord.y() == 0 {
@@ -460,11 +354,12 @@ impl TableGrower {
                     self.row_heights[coord.y() - 1]
                 };
 
-                Some(&current_point + &Point(0, -h))
+                Some(Point(0, -h))
             }
         }
     }
 
+    /// Find the best corner match when taking a step in given direction from the given coord
     fn step_from_coord(
         &self,
         table_image: &Image,
@@ -481,24 +376,24 @@ impl TableGrower {
         let width = image_size[1];
 
         // let estimated_new_point = self.header_based_step_from_coord(coord, step)?;
-        let estimated_new_point = &self.approximate_best_step(coord, step)? + &current_point;
+        let estimated_new_point = self.approximate_best_step(coord, step)? + current_point;
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let goals = match step {
             Step::Right => (0..(self.search_region as i32))
-                .map(|i| &estimated_new_point + &Point(0, i - self.search_region as i32 / 2))
+                .map(|i| estimated_new_point + Point(0, i - self.search_region as i32 / 2))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect(),
             Step::Down => (0..(self.search_region as i32))
-                .map(|i| &estimated_new_point + &Point(i - self.search_region as i32 / 2, 0))
+                .map(|i| estimated_new_point + Point(i - self.search_region as i32 / 2, 0))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect::<Vec<_>>(),
             Step::Left => (0..(self.search_region as i32))
-                .map(|i| &estimated_new_point + &Point(0, i - self.search_region as i32 / 2))
+                .map(|i| estimated_new_point + Point(0, i - self.search_region as i32 / 2))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect::<Vec<_>>(),
             Step::Up => (0..(self.search_region as i32))
-                .map(|i| &estimated_new_point + &Point(i - self.search_region as i32 / 2, 0))
+                .map(|i| estimated_new_point + Point(i - self.search_region as i32 / 2, 0))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect::<Vec<_>>(),
         };
@@ -530,6 +425,7 @@ impl TableGrower {
         )
     }
 
+    /// Update the edge with a new corner point and its confidence for the given coord
     fn update_edge(&mut self, coord: Coord, corner: Point, confidence: f64) {
         self.edge
             .entry(coord)
@@ -550,32 +446,6 @@ impl TableGrower {
     #[must_use]
     pub fn height(&self) -> usize {
         self.corners.len()
-    }
-
-    #[must_use]
-    pub fn count_neighbours(&self, loc: Coord) -> u32 {
-        let mut count = 0;
-        // up
-        if loc.y() > 0 && self.corners[loc.y() - 1][loc.x()].is_some() {
-            count += 1;
-        }
-
-        // down
-        if loc.y() + 1 < self.height() && self.corners[loc.y() + 1][loc.x()].is_some() {
-            count += 1;
-        }
-
-        // left
-        if loc.x() > 0 && self.corners[loc.y()][loc.x() - 1].is_some() {
-            count += 1;
-        }
-
-        // right
-        if loc.x() + 1 < self.width() && self.corners[loc.y()][loc.x() + 1].is_some() {
-            count += 1;
-        }
-
-        count
     }
 
     /// Rerturns the next-best empty corner to be used for extrapolation
@@ -867,11 +737,11 @@ impl Index<Coord> for TableGrower {
     type Output = Option<Point>;
 
     fn index(&self, index: Coord) -> &Self::Output {
-        if index.0 >= self.corners.len() || index.1 >= self.corners[index.0].len() {
+        if index.y() >= self.corners.len() || index.x() >= self.corners[index.y()].len() {
             return &None;
         }
 
-        &self.corners[index.0][index.1]
+        &self.corners[index.y()][index.x()]
     }
 }
 
@@ -1077,46 +947,6 @@ mod tests {
         assert_eq!(grower.height(), 3);
         assert_eq!(grower.corners.len(), 3);
         assert_eq!(grower.corners[0].len(), 4);
-    }
-
-    #[test]
-    fn test_count_neighbours() {
-        let grower = create_test_table_grower();
-
-        // o . x .
-        // x . . .
-        // x . . .
-
-        // Corner at (0,0) should have 1 neighbor (down)
-        assert_eq!(grower.count_neighbours(Coord::new(0, 0)), 1);
-
-        // x . x .
-        // o . . .
-        // x . . .
-
-        // Corner at (0,1) should have 2 neighbors (up and down)
-        assert_eq!(grower.count_neighbours(Coord::new(0, 1)), 2);
-
-        // x . x .
-        // x . . .
-        // o . . .
-
-        // Corner at (0,2) should have 1 neighbor (up)
-        assert_eq!(grower.count_neighbours(Coord::new(0, 2)), 1);
-
-        // x . x .
-        // x o . .
-        // x . . .
-
-        // Empty position (1,1) should have 1 neighbor (left)
-        assert_eq!(grower.count_neighbours(Coord::new(1, 1)), 1);
-
-        // x . o .
-        // x . . .
-        // x . . .
-
-        // Position (2,0) should have 0 neighbors
-        assert_eq!(grower.count_neighbours(Coord::new(2, 0)), 0);
     }
 
     #[test]

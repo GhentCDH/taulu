@@ -7,16 +7,19 @@ use numpy::{
 use pathfinding::prelude::astar as astar_rust;
 use pyo3::prelude::*;
 
+mod coord;
 mod direction;
 mod geom_util;
 mod invert;
 mod point;
+mod step;
 mod table_grower;
 mod traits;
 
+pub use coord::Coord;
 pub use direction::Direction;
 pub use point::Point;
-pub use table_grower::Coord;
+pub use step::Step;
 pub use table_grower::TableGrower;
 
 type Image<'a> = ArrayBase<ViewRepr<&'a u8>, Dim<[usize; 2]>>;
@@ -29,6 +32,8 @@ fn astar(
     direction: &str,
 ) -> PyResult<Option<Vec<(i32, i32)>>> {
     let direction: Direction = direction.try_into()?;
+
+    dbg!(start, &goals, &direction);
 
     Ok(astar_rust(
         &start,
