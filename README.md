@@ -10,6 +10,10 @@
   <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/ghentcdh/taulu/maturin.yml">
 </p>
 
+<p align="center">
+<a href="https://ghentcdh.github.io/taulu/taulu/">Documentation</a>
+</p>
+
 ## Data Requirements 
 
 This package assumes that you are working with images of tables that have **clearly visible rules** (the lines that divide the table into cells).
