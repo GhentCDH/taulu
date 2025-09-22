@@ -25,10 +25,10 @@ class TableGrower:
         row_heights: list[int],
         start_point: tuple[int, int],
         search_region: int,
-        distance_penalty: float,
-        look_distance: int,
-        grow_threshold: float,
-        min_row_count: int,
+        distance_penalty: float = 0.5,
+        look_distance: int = 3,
+        grow_threshold: float = 0.5,
+        min_row_count: int = 5,
     ): ...
     def get_corner(self, coord: tuple[int, int]) -> Optional[Point]: ...
     def all_rows_complete(self) -> bool: ...
@@ -54,3 +54,4 @@ class TableGrower:
         cross_correlation: np.ndarray,
     ): ...
     def set_threshold(self, value: float): ...
+    def smooth_grid(self, degree: int = 1, amount: float = 1.0): ...

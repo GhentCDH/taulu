@@ -33,8 +33,6 @@ fn astar(
 ) -> PyResult<Option<Vec<(i32, i32)>>> {
     let direction: Direction = direction.try_into()?;
 
-    dbg!(start, &goals, &direction);
-
     Ok(astar_rust(
         &start,
         |p| {

@@ -40,6 +40,18 @@ pub struct TableGrower {
 impl TableGrower {
     #[new]
     #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (
+        table_image,
+        cross_correlation,
+        column_widths,
+        row_heights,
+        start_point,
+        search_region,
+        distance_penalty = 0.5,
+        look_distance = 3,
+        grow_threshold = 0.5,
+        min_row_count = 5,
+    ))]
     /// Notice that the `start_point` is given as (x, y), both being integers
     fn new(
         table_image: PyReadonlyArray2<'_, u8>,
@@ -223,6 +235,32 @@ impl TableGrower {
                 }
             }
         }
+    }
+
+    #[pyo3(signature= (degree = 1, amount = 1.0))]
+    fn smooth_grid(&mut self, degree: usize, amount: f32) {
+        let degree = degree.clamp(1, 2);
+        let amount = amount.clamp(0.0, 1.0);
+
+        let mut new_corners = Vec::with_capacity(self.corners.len());
+
+        for (y, row) in self.corners.iter().enumerate() {
+            let mut new_row = Vec::with_capacity(row.len());
+            for (x, cell) in row.iter().enumerate() {
+                if cell.is_some()
+                    && let Some(extrapolated) = self.extrapolate_coord(Coord::new(x, y), degree)
+                {
+                    let current = cell.expect("cell is some");
+                    let extrapolated = current * (1.0 - amount) + extrapolated * amount;
+                    new_row.push(Some(extrapolated));
+                } else {
+                    new_row.push(None);
+                }
+            }
+            new_corners.push(new_row);
+        }
+
+        self.corners = new_corners;
     }
 }
 
@@ -448,16 +486,15 @@ impl TableGrower {
         self.corners.len()
     }
 
-    /// Rerturns the next-best empty corner to be used for extrapolation
+    /// Returns the next-best empty corner to be used for extrapolation
     #[must_use]
-    pub fn extendable_corner_and_neighbours(
-        &self,
-        look_distance: usize,
-    ) -> Option<(Coord, Vec<Point>, Vec<Point>)> {
+    pub fn extendable_corner_and_neighbours(&self) -> Option<(Coord, Vec<Point>, Vec<Point>)> {
         self.corners
             .par_iter()
             .enumerate()
             .map(|(y, row)| {
+                // TODO: try optimizing by only outputting number of neighbours here and
+                // recalculate later
                 (
                     y,
                     row.iter()
@@ -466,8 +503,8 @@ impl TableGrower {
                         .map(|(x, _cell)| {
                             (
                                 x,
-                                self.neighbour_points_x(Coord::new(x, y), look_distance),
-                                self.neighbour_points_y(Coord::new(x, y), look_distance),
+                                self.neighbour_points_x(Coord::new(x, y)),
+                                self.neighbour_points_y(Coord::new(x, y)),
                             )
                         })
                         .max_by_key(|(_x, x_nbs, y_nbs)| x_nbs.len().min(y_nbs.len())),
@@ -491,9 +528,9 @@ impl TableGrower {
     }
 
     #[must_use]
-    pub fn neighbour_points_x(&self, loc: Coord, look_distance: usize) -> Vec<Point> {
+    pub fn neighbour_points_x(&self, loc: Coord) -> Vec<Point> {
         let mut points: Vec<Point> = Vec::new();
-        for dx in 1..=look_distance {
+        for dx in 1..=self.look_distance {
             let right = Coord::new(loc.x() + dx, loc.y());
             if self.in_bounds(right)
                 && self.corners[right.y()][right.x()].is_some()
@@ -519,9 +556,9 @@ impl TableGrower {
     }
 
     #[must_use]
-    pub fn neighbour_points_y(&self, loc: Coord, look_distance: usize) -> Vec<Point> {
+    pub fn neighbour_points_y(&self, loc: Coord) -> Vec<Point> {
         let mut points = Vec::new();
-        for dy in 1..=look_distance {
+        for dy in 1..=self.look_distance {
             let down = Coord::new(loc.x(), loc.y() + dy);
             if self.in_bounds(down)
                 && self.corners[down.y()][down.x()].is_some()
@@ -546,115 +583,27 @@ impl TableGrower {
         points
     }
 
-    #[allow(clippy::similar_names)]
+    fn extrapolate_coord(&self, coord: Coord, degree: usize) -> Option<Point> {
+        let neighbours_x = self.neighbour_points_x(coord);
+        let neighbours_y = self.neighbour_points_y(coord);
+
+        if neighbours_y.len() < degree + 1 || neighbours_x.len() < degree + 1 {
+            return None;
+        }
+
+        intersect_regressions(&neighbours_x, &neighbours_y, degree)
+    }
+
     fn extrapolate_one_internal(&self) -> Option<(Coord, Point)> {
         // Get the missing corner with the maxmin neighbours in each direction
         let (selected_location, neighbours_x, neighbours_y) =
-            self.extendable_corner_and_neighbours(self.look_distance)?;
-
-        if neighbours_x.is_empty() && neighbours_y.is_empty() {
-            return None;
-        }
-
-        #[allow(clippy::cast_precision_loss)]
-        let horizontal_xs = neighbours_x
-            .iter()
-            .map(|p| p.x() as f32)
-            .collect::<Vec<_>>();
-        #[allow(clippy::cast_precision_loss)]
-        let horizontal_ys = neighbours_x
-            .iter()
-            .map(|p| p.y() as f32)
-            .collect::<Vec<_>>();
-        #[allow(clippy::cast_precision_loss)]
-        let vertical_xs = neighbours_y
-            .iter()
-            .map(|p| p.x() as f32)
-            .collect::<Vec<_>>();
-        #[allow(clippy::cast_precision_loss)]
-        let vertical_ys = neighbours_y
-            .iter()
-            .map(|p| p.y() as f32)
-            .collect::<Vec<_>>();
+            self.extendable_corner_and_neighbours()?;
 
         let degree = 1;
-        let horizontal_coeffs =
-            linear_polynomial_least_squares(degree, &horizontal_xs, &horizontal_ys).ok()?;
-        let vertical_coeffs =
-            linear_polynomial_least_squares(degree, &vertical_ys, &vertical_xs).ok()?;
 
-        // iteratively solve for the intersection of both
-        let (mut x, mut y) = {
-            let point = neighbours_x.first()?;
-            #[allow(clippy::cast_precision_loss)]
-            (point.x() as f32, point.y() as f32)
-        };
+        let intersection = intersect_regressions(&neighbours_x, &neighbours_y, degree)?;
 
-        let ho = &horizontal_coeffs;
-        let ve = &vertical_coeffs;
-
-        // Newton's method
-        let (h, h_derivative) = match degree {
-            1 => {
-                let h = vec![ho[0] + ho[1] * ve[0], ho[1] * ve[1] - 1.0];
-                let h_derivative = vec![ho[1] * ve[1] - 1.0];
-                (h, h_derivative)
-            }
-            2 => {
-                let h = vec![
-                    ho[0] + ho[1] * ve[0] + ho[2] * ve[0] * ve[0],
-                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
-                    ho[1] * ve[2] + 2.0 * ho[2] * ve[0] * ve[2] + ho[2] * ve[1] * ve[1],
-                    2.0 * ho[2] * ve[1] * ve[2],
-                    ho[2] * ve[2] * ve[2],
-                ];
-                let h_derivative = vec![
-                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
-                    2.0 * ho[1] * ve[2] + 4.0 * ho[2] * ve[0] * ve[2] + 2.0 * ho[2] * ve[1] * ve[1],
-                    6.0 * ho[2] * ve[1] * ve[2],
-                    4.0 * ho[2] * ve[2] * ve[2],
-                ];
-                (h, h_derivative)
-            }
-            _ => {
-                return None;
-            }
-        };
-
-        let mut done = false;
-        for _ in 0..20 {
-            // let new_x = evaluate_polynomial(&vertical_coeffs, y);
-            // let new_y = evaluate_polynomial(&horizontal_coeffs, new_x);
-            let h_y = evaluate_polynomial(&h, y);
-            let h_der_y = evaluate_polynomial(&h_derivative, y);
-            let new_y = y - h_y / h_der_y;
-
-            // let dist = (x - new_x).powi(2) + (y - new_y).powi(2);
-            let dist = (y - new_y).abs();
-
-            if dist < 1e-6 {
-                x = evaluate_polynomial(&vertical_coeffs, new_y);
-                y = new_y;
-                // x = new_x;
-                // y = new_y;
-                done = true;
-                break;
-            }
-
-            if dist.is_nan() {
-                return None;
-            }
-
-            // x = new_x;
-            y = new_y;
-        }
-
-        if !done {
-            return None;
-        }
-
-        #[allow(clippy::cast_possible_truncation)]
-        Some((selected_location, Point(x.round() as i32, y.round() as i32)))
+        Some((selected_location, intersection))
     }
 
     /// Approximates the best step size to take from `current` in `step` direction
@@ -774,6 +723,112 @@ fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec
     });
 
     weights
+}
+
+/// Given a set of horizontal and vertical points, fit polynomial regressions
+/// of the given degree to each set, and find their intersection point.
+#[allow(clippy::similar_names)]
+fn intersect_regressions(
+    horizontal_points: &[Point],
+    vertical_points: &[Point],
+    degree: usize,
+) -> Option<Point> {
+    if horizontal_points.len() < degree + 1 && vertical_points.len() < degree + 1 {
+        return None;
+    }
+
+    #[allow(clippy::cast_precision_loss)]
+    let horizontal_xs = horizontal_points
+        .iter()
+        .map(|p| p.x() as f32)
+        .collect::<Vec<_>>();
+    #[allow(clippy::cast_precision_loss)]
+    let horizontal_ys = horizontal_points
+        .iter()
+        .map(|p| p.y() as f32)
+        .collect::<Vec<_>>();
+    #[allow(clippy::cast_precision_loss)]
+    let vertical_xs = vertical_points
+        .iter()
+        .map(|p| p.x() as f32)
+        .collect::<Vec<_>>();
+    #[allow(clippy::cast_precision_loss)]
+    let vertical_ys = vertical_points
+        .iter()
+        .map(|p| p.y() as f32)
+        .collect::<Vec<_>>();
+
+    let horizontal_coeffs =
+        linear_polynomial_least_squares(degree, &horizontal_xs, &horizontal_ys).ok()?;
+    let vertical_coeffs =
+        linear_polynomial_least_squares(degree, &vertical_ys, &vertical_xs).ok()?;
+
+    // iteratively solve for the intersection of both
+    let (mut x, mut y) = {
+        let point = horizontal_points.first()?;
+        #[allow(clippy::cast_precision_loss)]
+        (point.x() as f32, point.y() as f32)
+    };
+
+    let ho = &horizontal_coeffs;
+    let ve = &vertical_coeffs;
+
+    // Newton's method
+    let (h, h_derivative) = match degree {
+        1 => {
+            let h = vec![ho[0] + ho[1] * ve[0], ho[1] * ve[1] - 1.0];
+            let h_derivative = vec![ho[1] * ve[1] - 1.0];
+            (h, h_derivative)
+        }
+        2 => {
+            let h = vec![
+                ho[0] + ho[1] * ve[0] + ho[2] * ve[0] * ve[0],
+                ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                ho[1] * ve[2] + 2.0 * ho[2] * ve[0] * ve[2] + ho[2] * ve[1] * ve[1],
+                2.0 * ho[2] * ve[1] * ve[2],
+                ho[2] * ve[2] * ve[2],
+            ];
+            let h_derivative = vec![
+                ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                2.0 * ho[1] * ve[2] + 4.0 * ho[2] * ve[0] * ve[2] + 2.0 * ho[2] * ve[1] * ve[1],
+                6.0 * ho[2] * ve[1] * ve[2],
+                4.0 * ho[2] * ve[2] * ve[2],
+            ];
+            (h, h_derivative)
+        }
+        _ => {
+            return None;
+        }
+    };
+
+    let mut done = false;
+    for _ in 0..20 {
+        let h_y = evaluate_polynomial(&h, y);
+        let h_der_y = evaluate_polynomial(&h_derivative, y);
+        let new_y = y - h_y / h_der_y;
+
+        let dist = (y - new_y).abs();
+
+        if dist < 1e-6 {
+            x = evaluate_polynomial(&vertical_coeffs, new_y);
+            y = new_y;
+            done = true;
+            break;
+        }
+
+        if dist.is_nan() {
+            return None;
+        }
+
+        y = new_y;
+    }
+
+    if !done {
+        return None;
+    }
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    Some(Point(x.round() as i32, y.round() as i32))
 }
 
 #[allow(
@@ -964,7 +1019,7 @@ mod tests {
     fn test_neighbour_points_x() {
         let grower = create_test_table_grower();
 
-        let neighbors = grower.neighbour_points_x(Coord::new(1, 0), 3);
+        let neighbors = grower.neighbour_points_x(Coord::new(1, 0));
 
         // Should find the point at (0,0) and (2,0)
         assert!(!neighbors.is_empty());
@@ -976,7 +1031,7 @@ mod tests {
     fn test_neighbour_points_y() {
         let grower = create_test_table_grower();
 
-        let neighbors = grower.neighbour_points_y(Coord::new(0, 1), 3);
+        let neighbors = grower.neighbour_points_y(Coord::new(0, 1));
 
         // Should find points at (0,0) and (0,2)
         assert!(!neighbors.is_empty());

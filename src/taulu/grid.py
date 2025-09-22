@@ -400,8 +400,6 @@ class GridDetector:
         if not isinstance(img, np.ndarray):
             img = cv.imread(os.fspath(img))
 
-        gray = imu.ensure_gray(img)
-
         filtered = self.apply(img, visual)
 
         if visual:
@@ -435,9 +433,12 @@ class GridDetector:
         look_distance = 5
         min_rows = 30
 
+        img_gray = ensure_gray(img)
+        filtered_gray = ensure_gray(filtered)
+
         table_grower = TableGrower(
-            ensure_gray(img),
-            ensure_gray(filtered),
+            img_gray,
+            filtered_gray,
             cell_widths,  # pyright: ignore
             cell_heights,  # pyright: ignore
             left_top,
@@ -447,9 +448,6 @@ class GridDetector:
             threshold,
             min_rows,
         )
-
-        img_gray = ensure_gray(img)
-        filtered_gray = ensure_gray(filtered)
 
         def show_grower_progress(wait: bool = False):
             img_orig = np.copy(img)
@@ -517,6 +515,7 @@ class GridDetector:
         else:
             table_grower.grow_table(img_gray, filtered_gray)
 
+        table_grower.smooth_grid()
         corners = table_grower.get_all_corners()
         logger.info(
             f"Table growth complete, found {len(corners)} rows and {len(corners[0])} columns"
@@ -527,52 +526,11 @@ class GridDetector:
                 for x in range(len(corners[y])):
                     if corners[y][x] is not None:
                         corners[y][x] = (
-                            int(corners[y][x][0] / self._scale),
-                            int(corners[y][x][1] / self._scale),
+                            int(corners[y][x][0] / self._scale),  # pyright:ignore
+                            int(corners[y][x][1] / self._scale),  # pyright:ignore
                         )
-        return TableGrid(corners)
 
-        points = []
-        current = left_top
-
-        for row_idx in range(200):  # bound loop with reasonable max
-            row_points = self._build_table_row(
-                gray,
-                filtered,
-                current,
-                cell_widths,
-                row_idx,
-                goals_width,
-                points[-1] if len(points) > 0 else None,
-                visual,
-            )
-
-            if not row_points:
-                logger.info(f"Stopped at row {row_idx}, no more points found")
-                break
-
-            points.append(row_points)
-            next_row_point = self._find_next_row_start(
-                gray,
-                filtered,
-                row_points[0],
-                row_idx,
-                cell_heights,
-                goals_width,
-                visual,
-            )
-
-            if next_row_point is None:
-                logger.info(f"Stopped at row {row_idx}, no more rows found")
-                break
-
-            current = next_row_point
-
-        if visual and points:
-            screen = imu.pop()
-            self._visualize_grid(screen, points)
-
-        return TableGrid(points)
+        return TableGrid(corners)  # pyright: ignore
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def _build_table_row(
