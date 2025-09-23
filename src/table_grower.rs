@@ -247,12 +247,13 @@ impl TableGrower {
         for (y, row) in self.corners.iter().enumerate() {
             let mut new_row = Vec::with_capacity(row.len());
             for (x, cell) in row.iter().enumerate() {
-                if cell.is_some()
+                if let Some(current) = cell
                     && let Some(extrapolated) = self.extrapolate_coord(Coord::new(x, y), degree)
                 {
-                    let current = cell.expect("cell is some");
                     let extrapolated = current * (1.0 - amount) + extrapolated * amount;
                     new_row.push(Some(extrapolated));
+                } else if cell.is_some() {
+                    new_row.push(*cell);
                 } else {
                     new_row.push(None);
                 }
