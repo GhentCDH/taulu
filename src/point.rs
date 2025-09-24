@@ -14,7 +14,7 @@ pub struct Point(pub i32, pub i32);
 fn image_cost(img: &Image, p: Point) -> Option<u32> {
     Some(
         u32::from(
-            img.get((usize::try_from(p.1).ok()?, usize::try_from(p.1).ok()?))
+            img.get((usize::try_from(p.y()).ok()?, usize::try_from(p.x()).ok()?))
                 .copied()?,
         ) / 25,
     )
@@ -39,7 +39,7 @@ impl Point {
     #[must_use]
     pub fn within(self, rect: (i32, i32, i32, i32)) -> bool {
         let (x1, y1, x2, y2) = rect;
-        self.0 >= x1 && self.0 < x2 && self.1 >= y1 && self.1 < y2
+        self.x() >= x1 && self.x() < x2 && self.y() >= y1 && self.y() < y2
     }
 
     #[must_use]
@@ -60,7 +60,7 @@ impl Point {
             .map(|offset| {
                 let n = &self + offset;
                 image_cost(img, n).map(|icost| {
-                    let cost = icost + 15 * step_cost(x, y, n.0, n.1, dir);
+                    let cost = icost + 10 * step_cost(x, y, n.x(), n.y(), dir);
                     (n, cost)
                 })
             })

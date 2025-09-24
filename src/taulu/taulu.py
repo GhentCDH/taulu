@@ -45,6 +45,9 @@ class Taulu:
         morph_size: int = 4,
         kernel_size: int = 41,
         processing_scale: float = 1.0,
+        min_rows: int = 5,
+        look_distance: int = 3,
+        grow_threshold: float = 0.3,
     ):
         self._processing_scale = processing_scale
 
@@ -95,6 +98,9 @@ class Taulu:
             sauvola_k=sauvola_k,
             distance_penalty=distance_penalty,
             scale=self._processing_scale,
+            min_rows=min_rows,
+            look_distance=look_distance,
+            grow_threshold=grow_threshold,
         )
 
         if isinstance(self._template, Split):

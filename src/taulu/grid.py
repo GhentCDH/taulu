@@ -135,6 +135,9 @@ class GridDetector:
         scale: float = 1.0,
         search_region: int = 40,
         distance_penalty: float = 0.4,
+        min_rows: int = 5,
+        grow_threshold: float = 0.3,
+        look_distance: int = 4,
     ):
         """
         Args:
@@ -152,6 +155,9 @@ class GridDetector:
             scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
             search_region (int): area in which to search for a new max value in `find_nearest` etc.
             distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
+            min_rows (int): minimum number of rows to find before stopping the table finding algorithm
+            grow_threshold (float): the threshold for accepting a new point when growing the table
+            look_distance (int): how many points away to look when calculating the median slope
         """
         self._validate_parameters(
             kernel_size,
@@ -173,6 +179,9 @@ class GridDetector:
         self._sauvola_window = sauvola_window
         self._distance_penalty = distance_penalty
         self._scale = scale
+        self._min_rows = min_rows
+        self._grow_threshold = grow_threshold
+        self._look_distance = look_distance
 
         self._cross_kernel = self._create_cross_kernel()
 
@@ -448,9 +457,8 @@ class GridDetector:
         left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
         self._search_region = int(self._search_region * self._scale)
 
-        threshold = 0.65
-        look_distance = 5
-        min_rows = 30
+        threshold = self._grow_threshold
+        look_distance = self._look_distance
 
         img_gray = ensure_gray(img)
         filtered_gray = ensure_gray(filtered)
@@ -465,7 +473,7 @@ class GridDetector:
             self._distance_penalty,
             look_distance,
             threshold,
-            min_rows,
+            self._min_rows,
         )
 
         def show_grower_progress(wait: bool = False):

@@ -84,6 +84,7 @@ impl TableGrower {
             &cross_correlation.as_array(),
             start_point,
             Coord::new(0, 0),
+            None,
         );
 
         table_grower
@@ -119,10 +120,14 @@ impl TableGrower {
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
     ) -> Option<f64> {
-        self.grow_point_internal(
-            &table_image.as_array(),
-            &cross_correlation.as_array(),
-            self.grow_threshold,
+        Some(
+            self.grow_point_internal(
+                &table_image.as_array(),
+                &cross_correlation.as_array(),
+                self.grow_threshold,
+                None,
+            )?
+            .1,
         )
     }
 
@@ -137,6 +142,7 @@ impl TableGrower {
                     &table_image.as_array(),
                     &cross_correlation.as_array(),
                     self.grow_threshold,
+                    None,
                 )
                 .is_none()
             {
@@ -157,6 +163,7 @@ impl TableGrower {
             &cross_correlation.as_array(),
             point,
             selected_location,
+            None,
         );
 
         Some(point)
@@ -176,6 +183,27 @@ impl TableGrower {
         cross_correlation: PyReadonlyArray2<'_, u8>,
         // TODO: extract into struct field
     ) {
+        let rec = rerun::RecordingStreamBuilder::new("taulu").spawn().unwrap();
+
+        rec.log(
+            "table_image",
+            &rerun::Image::from_color_model_and_tensor(
+                rerun::ColorModel::L,
+                table_image.as_array().to_owned(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        rec.log(
+            "cross_correlation",
+            &rerun::Image::from_color_model_and_tensor(
+                rerun::ColorModel::L,
+                cross_correlation.as_array().to_owned(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+
         let mut threshold = self.grow_threshold;
 
         assert!(threshold <= 1.0, "threshold should be <= 1.0");
@@ -188,11 +216,17 @@ impl TableGrower {
         // first grow all points with the initial threshold until
         // there are no good candidates left
         loop {
-            if self
-                .grow_point_internal(&table, &cross, threshold)
-                .is_none()
-            {
-                break;
+            match self.grow_point_internal(&table, &cross, threshold, Some(&rec)) {
+                Some((point, _)) => rec
+                    .log(
+                        format!("points/grown/{:04}", self.len()),
+                        &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
+                            .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
+                    )
+                    .unwrap(),
+                None => {
+                    break;
+                }
             }
         }
 
@@ -207,15 +241,27 @@ impl TableGrower {
             }
 
             if let Some((coord, point)) = self.extrapolate_one_internal() {
-                self.add_corner(&table, &cross, point, coord);
+                self.add_corner(&table, &cross, point, coord, Some(&rec));
+
+                rec.log(
+                    format!("points/extrapolated/{:04}", self.len()),
+                    &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
+                        .with_colors([rerun::Color::from_rgb(0, 0, 255)]),
+                )
+                .unwrap();
 
                 loops_without_change = 0;
 
                 let mut grown = false;
-                while self
-                    .grow_point_internal(&table, &cross, threshold)
-                    .is_some()
+                while let Some((p, _)) =
+                    self.grow_point_internal(&table, &cross, threshold, Some(&rec))
                 {
+                    rec.log(
+                        format!("points/grown/{:04}", self.len()),
+                        &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
+                            .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
+                    )
+                    .unwrap();
                     grown = true;
                     // increase the threshold
                     threshold = (0.1 + 0.9 * threshold).min(original_threshold);
@@ -227,10 +273,15 @@ impl TableGrower {
             } else {
                 // couldn't extrapolate a corner, grow a new corner with a lowered threshold
                 threshold *= 0.9;
-                if self
-                    .grow_point_internal(&table, &cross, threshold)
-                    .is_some()
+                if let Some((p, _)) =
+                    self.grow_point_internal(&table, &cross, threshold, Some(&rec))
                 {
+                    rec.log(
+                        format!("points/grown/{:04}", self.len()),
+                        &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
+                            .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
+                    )
+                    .unwrap();
                     loops_without_change = 0;
                 }
             }
@@ -274,7 +325,8 @@ impl TableGrower {
         table_image: &Image,
         cross_correlation: &Image,
         threshold: f64,
-    ) -> Option<f64> {
+        rec: Option<&rerun::RecordingStream>,
+    ) -> Option<(Point, f64)> {
         // find the edge point with the highest confidence
         // without emptying the edge
         let (&coord, &(corner, confidence)) = self.edge.iter().max_by(|a, b| {
@@ -287,9 +339,20 @@ impl TableGrower {
             return None;
         }
 
-        let _ = self.add_corner(table_image, cross_correlation, corner, coord);
+        let _ = self.add_corner(table_image, cross_correlation, corner, coord, rec);
 
-        Some(confidence)
+        Some((corner, confidence))
+    }
+
+    fn len(&self) -> usize {
+        self.corners
+            .iter()
+            .map(|row| row.iter().filter(|c| c.is_some()).count())
+            .sum()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     fn add_corner(
@@ -298,6 +361,7 @@ impl TableGrower {
         cross_correlation: &Image,
         corner_point: Point,
         coord: Coord,
+        rec: Option<&rerun::RecordingStream>,
     ) -> bool {
         assert!(coord.x() < self.columns);
 
@@ -327,7 +391,7 @@ impl TableGrower {
             .map(|(step, new_coord, condition)| {
                 if *condition && self[*new_coord].is_none() {
                     if let Some((corner, confidence)) =
-                        self.step_from_coord(table_image, cross_correlation, coord, *step)
+                        self.step_from_coord(table_image, cross_correlation, coord, *step, rec)
                     {
                         #[allow(clippy::cast_possible_truncation)]
                         Some((*new_coord, corner, confidence as f32))
@@ -405,6 +469,7 @@ impl TableGrower {
         cross_correlation: &Image,
         coord: Coord,
         step: Step,
+        rec: Option<&rerun::RecordingStream>,
     ) -> Option<(Point, f64)> {
         // construct the goals based on the step direction,
         // known column widths and row heights, and existing points
@@ -419,20 +484,20 @@ impl TableGrower {
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let goals = match step {
-            Step::Right => (0..(self.search_region as i32))
-                .map(|i| estimated_new_point + Point(0, i - self.search_region as i32 / 2))
+            Step::Right => (0..(self.search_region * 2) as i32)
+                .map(|i| estimated_new_point + Point(0, i - self.search_region as i32))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect(),
-            Step::Down => (0..(self.search_region as i32))
-                .map(|i| estimated_new_point + Point(i - self.search_region as i32 / 2, 0))
+            Step::Down => (0..(self.search_region * 2) as i32)
+                .map(|i| estimated_new_point + Point(i - self.search_region as i32, 0))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect::<Vec<_>>(),
-            Step::Left => (0..(self.search_region as i32))
-                .map(|i| estimated_new_point + Point(0, i - self.search_region as i32 / 2))
+            Step::Left => (0..(self.search_region * 2) as i32)
+                .map(|i| estimated_new_point + Point(0, i - self.search_region as i32))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect::<Vec<_>>(),
-            Step::Up => (0..(self.search_region as i32))
-                .map(|i| estimated_new_point + Point(i - self.search_region as i32 / 2, 0))
+            Step::Up => (0..(self.search_region * 2) as i32)
+                .map(|i| estimated_new_point + Point(i - self.search_region as i32, 0))
                 .filter(|p| p.within((0, 0, width as i32, height as i32)))
                 .collect::<Vec<_>>(),
         };
@@ -443,6 +508,23 @@ impl TableGrower {
             return None;
         }
 
+        if let Some(rec) = rec {
+            rec.log(
+                format!(
+                    "goals/{1}_{0}",
+                    estimated_new_point.x()
+                        + estimated_new_point.y()
+                        + coord.x() as i32
+                        + coord.y() as i32,
+                    self.len()
+                ),
+                &rerun::LineStrips2D::new([goals.iter().map(|p| (p.x() as f32, p.y() as f32))])
+                    .with_colors([rerun::Color::from_rgb(255, 255, 255)])
+                    .with_radii([3.0]),
+            )
+            .unwrap();
+        }
+
         let path: Vec<(i32, i32)> = astar::<crate::Point, u32, _, _, _, _>(
             &current_point,
             |p| p.successors(&direction, table_image).unwrap_or_default(),
@@ -450,6 +532,16 @@ impl TableGrower {
             |p| p.at_goal(&goals),
         )
         .map(|r| r.0.into_iter().map(Into::into).collect())?;
+
+        if let Some(rec) = rec {
+            rec.log(
+                format!("paths/{1}_{0}", path.len(), self.len()),
+                &rerun::LineStrips2D::new([path.iter().map(|(x, y)| (*x as f32, *y as f32))])
+                    .with_colors([rerun::Color::from_rgb(0, 255, 0)])
+                    .with_radii([3.0]),
+            )
+            .unwrap();
+        }
 
         let approx = {
             let last = path.last().expect("path should have at least one entry");

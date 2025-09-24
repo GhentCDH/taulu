@@ -33,3 +33,4 @@ numpy = "0.26.0"
 rayon = "1.11.0"
 approx = "0.5.1"
 ndarray = { version = "0.16.1", default-features = false }
+rerun = "0.25.1"
