@@ -14,6 +14,9 @@ use crate::geom_util::{
 use crate::traits::Xy;
 use crate::{Coord, Image, Point, Step};
 
+#[cfg(feature = "debug-tools")]
+const RERUN_EXPECT: &str = "Should be able to log values to rerun server";
+
 /// A selection of rows of points that make up the corners of a table.
 #[pyclass]
 #[derive(Debug)]
@@ -34,6 +37,8 @@ pub struct TableGrower {
     pub look_distance: usize,
     pub grow_threshold: f64,
     pub min_row_count: usize,
+    #[cfg(feature = "debug-tools")]
+    rec: rerun::RecordingStream,
 }
 
 #[pymethods]
@@ -77,6 +82,10 @@ impl TableGrower {
             look_distance,
             grow_threshold,
             min_row_count,
+            #[cfg(feature = "debug-tools")]
+            rec: rerun::RecordingStreamBuilder::new("taulu")
+                .spawn()
+                .expect("rerun recorder should spawn"),
         };
 
         table_grower.add_corner(
@@ -84,7 +93,6 @@ impl TableGrower {
             &cross_correlation.as_array(),
             start_point,
             Coord::new(0, 0),
-            None,
         );
 
         table_grower
@@ -125,7 +133,6 @@ impl TableGrower {
                 &table_image.as_array(),
                 &cross_correlation.as_array(),
                 self.grow_threshold,
-                None,
             )?
             .1,
         )
@@ -142,7 +149,6 @@ impl TableGrower {
                     &table_image.as_array(),
                     &cross_correlation.as_array(),
                     self.grow_threshold,
-                    None,
                 )
                 .is_none()
             {
@@ -163,7 +169,6 @@ impl TableGrower {
             &cross_correlation.as_array(),
             point,
             selected_location,
-            None,
         );
 
         Some(point)
@@ -183,26 +188,29 @@ impl TableGrower {
         cross_correlation: PyReadonlyArray2<'_, u8>,
         // TODO: extract into struct field
     ) {
-        let rec = rerun::RecordingStreamBuilder::new("taulu").spawn().unwrap();
-
-        rec.log(
-            "table_image",
-            &rerun::Image::from_color_model_and_tensor(
-                rerun::ColorModel::L,
-                table_image.as_array().to_owned(),
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        rec.log(
-            "cross_correlation",
-            &rerun::Image::from_color_model_and_tensor(
-                rerun::ColorModel::L,
-                cross_correlation.as_array().to_owned(),
-            )
-            .unwrap(),
-        )
-        .unwrap();
+        #[cfg(feature = "debug-tools")]
+        {
+            self.rec
+                .log(
+                    "table_image",
+                    &rerun::Image::from_color_model_and_tensor(
+                        rerun::ColorModel::L,
+                        table_image.as_array().to_owned(),
+                    )
+                    .expect("should be able to create rerun image"),
+                )
+                .expect(RERUN_EXPECT);
+            self.rec
+                .log(
+                    "cross_correlation",
+                    &rerun::Image::from_color_model_and_tensor(
+                        rerun::ColorModel::L,
+                        cross_correlation.as_array().to_owned(),
+                    )
+                    .expect("should be able to create rerun image"),
+                )
+                .expect(RERUN_EXPECT);
+        }
 
         let mut threshold = self.grow_threshold;
 
@@ -215,20 +223,23 @@ impl TableGrower {
 
         // first grow all points with the initial threshold until
         // there are no good candidates left
-        loop {
-            match self.grow_point_internal(&table, &cross, threshold, Some(&rec)) {
-                Some((point, _)) => rec
-                    .log(
-                        format!("points/grown/{:04}", self.len()),
-                        &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
-                            .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
-                    )
-                    .unwrap(),
-                None => {
-                    break;
-                }
-            }
+        #[cfg(feature = "debug-tools")]
+        while let Some((point, _)) = self.grow_point_internal(&table, &cross, threshold) {
+            #[allow(clippy::cast_precision_loss)]
+            self.rec
+                .log(
+                    format!("points/grown/{:04}", self.len()),
+                    &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
+                        .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
+                )
+                .expect(RERUN_EXPECT);
         }
+
+        #[cfg(not(feature = "debug-tools"))]
+        while self
+            .grow_point_internal(&table, &cross, threshold)
+            .is_some()
+        {}
 
         let mut loops_without_change = 0;
 
@@ -241,27 +252,32 @@ impl TableGrower {
             }
 
             if let Some((coord, point)) = self.extrapolate_one_internal() {
-                self.add_corner(&table, &cross, point, coord, Some(&rec));
+                self.add_corner(&table, &cross, point, coord);
 
-                rec.log(
-                    format!("points/extrapolated/{:04}", self.len()),
-                    &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
-                        .with_colors([rerun::Color::from_rgb(0, 0, 255)]),
-                )
-                .unwrap();
+                #[cfg(feature = "debug-tools")]
+                #[allow(clippy::cast_precision_loss)]
+                self.rec
+                    .log(
+                        format!("points/extrapolated/{:04}", self.len()),
+                        &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
+                            .with_colors([rerun::Color::from_rgb(0, 0, 255)]),
+                    )
+                    .expect(RERUN_EXPECT);
 
                 loops_without_change = 0;
 
                 let mut grown = false;
-                while let Some((p, _)) =
-                    self.grow_point_internal(&table, &cross, threshold, Some(&rec))
-                {
-                    rec.log(
-                        format!("points/grown/{:04}", self.len()),
-                        &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
-                            .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
-                    )
-                    .unwrap();
+                #[allow(unused_variables)]
+                while let Some((p, _)) = self.grow_point_internal(&table, &cross, threshold) {
+                    #[cfg(feature = "debug-tools")]
+                    #[allow(clippy::cast_precision_loss)]
+                    self.rec
+                        .log(
+                            format!("points/grown/{:04}", self.len()),
+                            &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
+                                .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
+                        )
+                        .expect(RERUN_EXPECT);
                     grown = true;
                     // increase the threshold
                     threshold = (0.1 + 0.9 * threshold).min(original_threshold);
@@ -273,15 +289,17 @@ impl TableGrower {
             } else {
                 // couldn't extrapolate a corner, grow a new corner with a lowered threshold
                 threshold *= 0.9;
-                if let Some((p, _)) =
-                    self.grow_point_internal(&table, &cross, threshold, Some(&rec))
-                {
-                    rec.log(
-                        format!("points/grown/{:04}", self.len()),
-                        &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
-                            .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
-                    )
-                    .unwrap();
+                #[allow(unused_variables)]
+                if let Some((p, _)) = self.grow_point_internal(&table, &cross, threshold) {
+                    #[cfg(feature = "debug-tools")]
+                    #[allow(clippy::cast_precision_loss)]
+                    self.rec
+                        .log(
+                            format!("points/grown/{:04}", self.len()),
+                            &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
+                                .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
+                        )
+                        .expect(RERUN_EXPECT);
                     loops_without_change = 0;
                 }
             }
@@ -325,7 +343,6 @@ impl TableGrower {
         table_image: &Image,
         cross_correlation: &Image,
         threshold: f64,
-        rec: Option<&rerun::RecordingStream>,
     ) -> Option<(Point, f64)> {
         // find the edge point with the highest confidence
         // without emptying the edge
@@ -339,19 +356,21 @@ impl TableGrower {
             return None;
         }
 
-        let _ = self.add_corner(table_image, cross_correlation, corner, coord, rec);
+        let _ = self.add_corner(table_image, cross_correlation, corner, coord);
 
         Some((corner, confidence))
     }
 
-    fn len(&self) -> usize {
+    #[must_use]
+    pub fn len(&self) -> usize {
         self.corners
             .iter()
             .map(|row| row.iter().filter(|c| c.is_some()).count())
             .sum()
     }
 
-    fn is_empty(&self) -> bool {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
@@ -361,7 +380,6 @@ impl TableGrower {
         cross_correlation: &Image,
         corner_point: Point,
         coord: Coord,
-        rec: Option<&rerun::RecordingStream>,
     ) -> bool {
         assert!(coord.x() < self.columns);
 
@@ -391,7 +409,7 @@ impl TableGrower {
             .map(|(step, new_coord, condition)| {
                 if *condition && self[*new_coord].is_none() {
                     if let Some((corner, confidence)) =
-                        self.step_from_coord(table_image, cross_correlation, coord, *step, rec)
+                        self.step_from_coord(table_image, cross_correlation, coord, *step)
                     {
                         #[allow(clippy::cast_possible_truncation)]
                         Some((*new_coord, corner, confidence as f32))
@@ -469,7 +487,6 @@ impl TableGrower {
         cross_correlation: &Image,
         coord: Coord,
         step: Step,
-        rec: Option<&rerun::RecordingStream>,
     ) -> Option<(Point, f64)> {
         // construct the goals based on the step direction,
         // known column widths and row heights, and existing points
@@ -508,8 +525,14 @@ impl TableGrower {
             return None;
         }
 
-        if let Some(rec) = rec {
-            rec.log(
+        #[cfg(feature = "debug-tools")]
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_possible_wrap,
+            clippy::cast_precision_loss
+        )]
+        self.rec
+            .log(
                 format!(
                     "goals/{1}_{0}",
                     estimated_new_point.x()
@@ -522,8 +545,7 @@ impl TableGrower {
                     .with_colors([rerun::Color::from_rgb(255, 255, 255)])
                     .with_radii([3.0]),
             )
-            .unwrap();
-        }
+            .expect("Should be able to send to rerun");
 
         let path: Vec<(i32, i32)> = astar::<crate::Point, u32, _, _, _, _>(
             &current_point,
@@ -533,15 +555,20 @@ impl TableGrower {
         )
         .map(|r| r.0.into_iter().map(Into::into).collect())?;
 
-        if let Some(rec) = rec {
-            rec.log(
+        #[cfg(feature = "debug-tools")]
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_possible_wrap,
+            clippy::cast_precision_loss
+        )]
+        self.rec
+            .log(
                 format!("paths/{1}_{0}", path.len(), self.len()),
                 &rerun::LineStrips2D::new([path.iter().map(|(x, y)| (*x as f32, *y as f32))])
                     .with_colors([rerun::Color::from_rgb(0, 255, 0)])
                     .with_radii([3.0]),
             )
-            .unwrap();
-        }
+            .expect("Should be able to send to rerun");
 
         let approx = {
             let last = path.last().expect("path should have at least one entry");
@@ -1067,6 +1094,7 @@ mod tests {
             look_distance: 3,
             grow_threshold: 1.0,
             min_row_count: 2,
+            rec: start_debug_recorder(),
         }
     }
 
@@ -1084,6 +1112,7 @@ mod tests {
             look_distance: 3,
             grow_threshold: 1.0,
             min_row_count: 2,
+            rec: start_debug_recorder(),
         }
     }
 
