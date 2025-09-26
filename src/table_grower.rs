@@ -182,12 +182,13 @@ impl TableGrower {
         self.grow_threshold = value;
     }
 
+    #[allow(clippy::too_many_lines)]
     fn grow_table(
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
-        // TODO: extract into struct field
-    ) {
+        py: Python,
+    ) -> PyResult<()> {
         #[cfg(feature = "debug-tools")]
         {
             self.rec
@@ -234,13 +235,17 @@ impl TableGrower {
                         .with_radii([3.0]),
                 )
                 .expect(RERUN_EXPECT);
+
+            py.check_signals()?;
         }
 
         #[cfg(not(feature = "debug-tools"))]
         while self
             .grow_point_internal(&table, &cross, threshold)
             .is_some()
-        {}
+        {
+            py.check_signals()?;
+        }
 
         let mut loops_without_change = 0;
 
@@ -251,6 +256,8 @@ impl TableGrower {
             if loops_without_change > 50 {
                 break;
             }
+
+            py.check_signals()?;
 
             if let Some((coord, point)) = self.extrapolate_one_internal() {
                 self.add_corner(&table, &cross, point, coord);
@@ -311,6 +318,8 @@ impl TableGrower {
                 }
             }
         }
+
+        Ok(())
     }
 
     #[pyo3(signature= (degree = 1, amount = 1.0))]
