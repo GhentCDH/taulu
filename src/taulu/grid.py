@@ -457,9 +457,6 @@ class GridDetector:
         left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
         self._search_region = int(self._search_region * self._scale)
 
-        threshold = self._grow_threshold
-        look_distance = self._look_distance
-
         img_gray = ensure_gray(img)
         filtered_gray = ensure_gray(filtered)
 
@@ -471,8 +468,8 @@ class GridDetector:
             left_top,
             self._search_region,
             self._distance_penalty,
-            look_distance,
-            threshold,
+            self._look_distance,
+            self._grow_threshold,
             self._min_rows,
         )
 
@@ -498,6 +495,9 @@ class GridDetector:
             imu.show(img_orig, wait=wait)
 
         if visual:
+            threshold = self._grow_threshold
+            look_distance = self._look_distance
+
             # python implementation of rust loops, for visualization purposes
             # note this is a LOT slower
             while table_grower.grow_point(img_gray, filtered_gray) is not None:
