@@ -34,7 +34,7 @@ class HeaderAligner:
         match_fraction: float = 0.6,
         scale: float = 1.0,
         max_dist: float = 1.00,
-        k: float | None = None,
+        k: float | None = 0.05,
     ):
         """
         Args:
