@@ -46,6 +46,7 @@ impl Coord {
         })
     }
 }
+
 impl Add<Step> for Coord {
     type Output = Coord;
 
@@ -53,8 +54,8 @@ impl Add<Step> for Coord {
         match rhs {
             Step::Right => Coord(self.0, self.1 + 1),
             Step::Down => Coord(self.0 + 1, self.1),
-            Step::Left => Coord(self.0, self.1 - 1),
-            Step::Up => Coord(self.0 - 1, self.1),
+            Step::Left => Coord(self.0, self.1.saturating_sub(1)),
+            Step::Up => Coord(self.0.saturating_sub(1), self.1),
         }
     }
 }

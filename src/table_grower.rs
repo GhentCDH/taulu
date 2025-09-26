@@ -792,7 +792,8 @@ impl TableGrower {
             .for_each(|(i, nb)| {
                 let nb = nb.expect("filter");
                 if let Some(current_point) = self[nb]
-                    && let Some(next_point) = self[nb + step]
+                    && let Some(step_coord) = nb.take_amount_of_steps(1, step)
+                    && let Some(next_point) = self[step_coord]
                 {
                     steps[i] = Some(&next_point - &current_point);
                 }
