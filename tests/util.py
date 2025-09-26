@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import pytest
 
 this_dir = Path(__file__).parent
 

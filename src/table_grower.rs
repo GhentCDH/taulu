@@ -230,7 +230,8 @@ impl TableGrower {
                 .log(
                     format!("points/grown/{:04}", self.len()),
                     &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
-                        .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
+                        .with_colors([rerun::Color::from_rgb(255, 0, 0)])
+                        .with_radii([3.0]),
                 )
                 .expect(RERUN_EXPECT);
         }
@@ -260,13 +261,14 @@ impl TableGrower {
                     .log(
                         format!("points/extrapolated/{:04}", self.len()),
                         &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
+                            .with_radii([3.0])
                             .with_colors([rerun::Color::from_rgb(0, 0, 255)]),
                     )
                     .expect(RERUN_EXPECT);
 
                 loops_without_change = 0;
-
                 let mut grown = false;
+
                 #[allow(unused_variables)]
                 while let Some((p, _)) = self.grow_point_internal(&table, &cross, threshold) {
                     #[cfg(feature = "debug-tools")]
@@ -275,9 +277,11 @@ impl TableGrower {
                         .log(
                             format!("points/grown/{:04}", self.len()),
                             &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
+                                .with_radii([3.0])
                                 .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
                         )
                         .expect(RERUN_EXPECT);
+
                     grown = true;
                     // increase the threshold
                     threshold = (0.1 + 0.9 * threshold).min(original_threshold);
@@ -289,6 +293,7 @@ impl TableGrower {
             } else {
                 // couldn't extrapolate a corner, grow a new corner with a lowered threshold
                 threshold *= 0.9;
+
                 #[allow(unused_variables)]
                 if let Some((p, _)) = self.grow_point_internal(&table, &cross, threshold) {
                     #[cfg(feature = "debug-tools")]
@@ -297,9 +302,11 @@ impl TableGrower {
                         .log(
                             format!("points/grown/{:04}", self.len()),
                             &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
+                                .with_radii([3.0])
                                 .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
                         )
                         .expect(RERUN_EXPECT);
+
                     loops_without_change = 0;
                 }
             }
@@ -534,7 +541,7 @@ impl TableGrower {
         self.rec
             .log(
                 format!(
-                    "goals/{1}_{0}",
+                    "astar/goals/{1}_{0}",
                     estimated_new_point.x()
                         + estimated_new_point.y()
                         + coord.x() as i32
@@ -563,7 +570,7 @@ impl TableGrower {
         )]
         self.rec
             .log(
-                format!("paths/{1}_{0}", path.len(), self.len()),
+                format!("astar/paths/{1}_{0}", path.len(), self.len()),
                 &rerun::LineStrips2D::new([path.iter().map(|(x, y)| (*x as f32, *y as f32))])
                     .with_colors([rerun::Color::from_rgb(0, 255, 0)])
                     .with_radii([3.0]),
@@ -1095,7 +1102,10 @@ mod tests {
             look_distance: 3,
             grow_threshold: 1.0,
             min_row_count: 2,
-            rec: start_debug_recorder(),
+            #[cfg(feature = "debug-tools")]
+            rec: rerun::RecordingStreamBuilder::new("taulu")
+                .spawn()
+                .expect("rerun recorder should spawn"),
         }
     }
 
@@ -1113,7 +1123,10 @@ mod tests {
             look_distance: 3,
             grow_threshold: 1.0,
             min_row_count: 2,
-            rec: start_debug_recorder(),
+            #[cfg(feature = "debug-tools")]
+            rec: rerun::RecordingStreamBuilder::new("taulu")
+                .spawn()
+                .expect("rerun recorder should spawn"),
         }
     }
 
