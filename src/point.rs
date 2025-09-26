@@ -24,9 +24,9 @@ fn step_cost(x: i32, y: i32, nx: i32, ny: i32, dir: &Direction) -> u32 {
     let dx = (x - nx).abs();
     let dy = (y - ny).abs();
     if (dx != 0 && dy != 0) || dir.perpendicular(dx, dy) {
-        2
+        14
     } else {
-        1
+        10
     }
 }
 
@@ -60,7 +60,7 @@ impl Point {
             .map(|offset| {
                 let n = &self + offset;
                 image_cost(img, n).map(|icost| {
-                    let cost = icost + 10 * step_cost(x, y, n.x(), n.y(), dir);
+                    let cost = icost + 4 * step_cost(x, y, n.x(), n.y(), dir);
                     (n, cost)
                 })
             })
