@@ -215,7 +215,7 @@ impl TableGrower {
         let mut threshold = self.grow_threshold;
 
         assert!(threshold <= 1.0, "threshold should be <= 1.0");
-        assert!(threshold > 0.0, "threshold should be > 0.0");
+        assert!(threshold >= 0.0, "threshold should be >= 0.0");
 
         let original_threshold = threshold;
         let table = table_image.as_array();
