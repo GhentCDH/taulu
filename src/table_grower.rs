@@ -41,6 +41,13 @@ pub struct TableGrower {
     rec: rerun::RecordingStream,
 }
 
+#[cfg(feature = "debug-tools")]
+fn start_rerun() -> rerun::RecordingStream {
+    rerun::RecordingStreamBuilder::new("taulu")
+        .connect_grpc()
+        .expect("rerun recorder should spawn")
+}
+
 #[pymethods]
 impl TableGrower {
     #[new]
@@ -83,9 +90,7 @@ impl TableGrower {
             grow_threshold,
             min_row_count,
             #[cfg(feature = "debug-tools")]
-            rec: rerun::RecordingStreamBuilder::new("taulu")
-                .spawn()
-                .expect("rerun recorder should spawn"),
+            rec: start_rerun(),
         };
 
         table_grower.add_corner(
@@ -1112,9 +1117,7 @@ mod tests {
             grow_threshold: 1.0,
             min_row_count: 2,
             #[cfg(feature = "debug-tools")]
-            rec: rerun::RecordingStreamBuilder::new("taulu")
-                .spawn()
-                .expect("rerun recorder should spawn"),
+            rec: start_rerun(),
         }
     }
 
@@ -1133,9 +1136,7 @@ mod tests {
             grow_threshold: 1.0,
             min_row_count: 2,
             #[cfg(feature = "debug-tools")]
-            rec: rerun::RecordingStreamBuilder::new("taulu")
-                .spawn()
-                .expect("rerun recorder should spawn"),
+            rec: start_rerun(),
         }
     }
 
