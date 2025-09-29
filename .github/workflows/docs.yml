@@ -1,0 +1,70 @@
+name: Deploy Docs to GitHub Pages
+
+on:
+  push:
+    tags:
+      # Triggers on version tags like v1.0.0, v2.1.3, etc.
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      # Also catches pre-releases like v1.0.0-beta.1
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for all tags and branches
+          fetch-depth: 0
+
+      - name: Verify tag is on main branch
+        run: |
+          # Get the commit SHA of the tag
+          TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref_name }})
+          
+          # Check if this commit exists on main branch
+          if git merge-base --is-ancestor $TAG_COMMIT origin/main; then
+            echo "✅ Tag ${{ github.ref_name }} is on main branch"
+          else
+            echo "❌ Tag ${{ github.ref_name }} is not on main branch"
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Create .nojekyll file
+        run: |
+          touch ./docs/.nojekyll
+          echo "Added .nojekyll to serve files as-is without Jekyll processing"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload entire docs directory as-is
+          path: ./docs
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
