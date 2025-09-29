@@ -50,7 +50,7 @@ el.replaceWith(d);
 <dl>
 <dt id="taulu.header_aligner.HeaderAligner"><code class="flex name class">
 <span>class <span class="ident">HeaderAligner</span></span>
-<span>(</span><span>template: cv2.Mat | numpy.ndarray | os.PathLike[str] | str | None = None,<br>max_features: int = 25000,<br>patch_size: int = 31,<br>match_fraction: float = 0.6,<br>scale: float = 1.0,<br>max_dist: float = 1.0,<br>k: float | None = None)</span>
+<span>(</span><span>template: cv2.Mat | numpy.ndarray | os.PathLike[str] | str | None = None,<br>max_features: int = 25000,<br>patch_size: int = 31,<br>match_fraction: float = 0.6,<br>scale: float = 1.0,<br>max_dist: float = 1.0,<br>k: float | None = 0.05)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -71,7 +71,7 @@ el.replaceWith(d);
         match_fraction: float = 0.6,
         scale: float = 1.0,
         max_dist: float = 1.00,
-        k: float | None = None,
+        k: float | None = 0.05,
     ):
         &#34;&#34;&#34;
         Args:

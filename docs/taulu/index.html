@@ -117,7 +117,7 @@ of taulu as much as possible.</p></div>
 <dl>
 <dt id="taulu.GridDetector"><code class="flex name class">
 <span>class <span class="ident">GridDetector</span></span>
-<span>(</span><span>kernel_size: int = 21,<br>cross_width: int = 6,<br>cross_height: int | None = None,<br>morph_size: int | None = None,<br>sauvola_k: float = 0.04,<br>sauvola_window: int = 15,<br>scale: float = 1.0,<br>search_region: int = 40,<br>distance_penalty: float = 0.4)</span>
+<span>(</span><span>kernel_size: int = 21,<br>cross_width: int = 6,<br>cross_height: int | None = None,<br>morph_size: int | None = None,<br>sauvola_k: float = 0.04,<br>sauvola_window: int = 15,<br>scale: float = 1.0,<br>search_region: int = 40,<br>distance_penalty: float = 0.4,<br>min_rows: int = 5,<br>grow_threshold: float = 0.3,<br>look_distance: int = 4)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -144,6 +144,9 @@ of taulu as much as possible.</p></div>
         scale: float = 1.0,
         search_region: int = 40,
         distance_penalty: float = 0.4,
+        min_rows: int = 5,
+        grow_threshold: float = 0.3,
+        look_distance: int = 4,
     ):
         &#34;&#34;&#34;
         Args:
@@ -161,6 +164,9 @@ of taulu as much as possible.</p></div>
             scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
             search_region (int): area in which to search for a new max value in `find_nearest` etc.
             distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
+            min_rows (int): minimum number of rows to find before stopping the table finding algorithm
+            grow_threshold (float): the threshold for accepting a new point when growing the table
+            look_distance (int): how many points away to look when calculating the median slope
         &#34;&#34;&#34;
         self._validate_parameters(
             kernel_size,
@@ -182,6 +188,9 @@ of taulu as much as possible.</p></div>
         self._sauvola_window = sauvola_window
         self._distance_penalty = distance_penalty
         self._scale = scale
+        self._min_rows = min_rows
+        self._grow_threshold = grow_threshold
+        self._look_distance = look_distance
 
         self._cross_kernel = self._create_cross_kernel()
 
@@ -437,7 +446,7 @@ of taulu as much as possible.</p></div>
             cell_heights = [cell_heights]
 
         left_top, confidence = self.find_nearest(
-            filtered, left_top, int(self._search_region * 1.5)
+            filtered, left_top, int(self._search_region * 3)
         )
 
         if confidence &lt; 0.1:
@@ -457,10 +466,6 @@ of taulu as much as possible.</p></div>
         left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
         self._search_region = int(self._search_region * self._scale)
 
-        threshold = 0.65
-        look_distance = 5
-        min_rows = 30
-
         img_gray = ensure_gray(img)
         filtered_gray = ensure_gray(filtered)
 
@@ -472,9 +477,9 @@ of taulu as much as possible.</p></div>
             left_top,
             self._search_region,
             self._distance_penalty,
-            look_distance,
-            threshold,
-            min_rows,
+            self._look_distance,
+            self._grow_threshold,
+            self._min_rows,
         )
 
         def show_grower_progress(wait: bool = False):
@@ -499,6 +504,9 @@ of taulu as much as possible.</p></div>
             imu.show(img_orig, wait=wait)
 
         if visual:
+            threshold = self._grow_threshold
+            look_distance = self._look_distance
+
             # python implementation of rust loops, for visualization purposes
             # note this is a LOT slower
             while table_grower.grow_point(img_gray, filtered_gray) is not None:
@@ -871,6 +879,12 @@ the cross kernel. 'bridges the gaps' of broken-up lines</dd>
 <dd>area in which to search for a new max value in <code>find_nearest</code> etc.</dd>
 <dt><strong><code>distance_penalty</code></strong> :&ensp;<code>float</code></dt>
 <dd>how much the point finding algorithm penalizes points that are further in the region [0, 1]</dd>
+<dt><strong><code>min_rows</code></strong> :&ensp;<code>int</code></dt>
+<dd>minimum number of rows to find before stopping the table finding algorithm</dd>
+<dt><strong><code>grow_threshold</code></strong> :&ensp;<code>float</code></dt>
+<dd>the threshold for accepting a new point when growing the table</dd>
+<dt><strong><code>look_distance</code></strong> :&ensp;<code>int</code></dt>
+<dd>how many points away to look when calculating the median slope</dd>
 </dl></div>
 <h3>Methods</h3>
 <dl>
@@ -1076,7 +1090,7 @@ overwriting the <code>__init__</code> parameter <code>region</code></dd>
         cell_heights = [cell_heights]
 
     left_top, confidence = self.find_nearest(
-        filtered, left_top, int(self._search_region * 1.5)
+        filtered, left_top, int(self._search_region * 3)
     )
 
     if confidence &lt; 0.1:
@@ -1096,10 +1110,6 @@ overwriting the <code>__init__</code> parameter <code>region</code></dd>
     left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
     self._search_region = int(self._search_region * self._scale)
 
-    threshold = 0.65
-    look_distance = 5
-    min_rows = 30
-
     img_gray = ensure_gray(img)
     filtered_gray = ensure_gray(filtered)
 
@@ -1111,9 +1121,9 @@ overwriting the <code>__init__</code> parameter <code>region</code></dd>
         left_top,
         self._search_region,
         self._distance_penalty,
-        look_distance,
-        threshold,
-        min_rows,
+        self._look_distance,
+        self._grow_threshold,
+        self._min_rows,
     )
 
     def show_grower_progress(wait: bool = False):
@@ -1138,6 +1148,9 @@ overwriting the <code>__init__</code> parameter <code>region</code></dd>
         imu.show(img_orig, wait=wait)
 
     if visual:
+        threshold = self._grow_threshold
+        look_distance = self._look_distance
+
         # python implementation of rust loops, for visualization purposes
         # note this is a LOT slower
         while table_grower.grow_point(img_gray, filtered_gray) is not None:
@@ -1227,7 +1240,7 @@ If None, defaults to 1.5 * search_region</dd>
 </dd>
 <dt id="taulu.HeaderAligner"><code class="flex name class">
 <span>class <span class="ident">HeaderAligner</span></span>
-<span>(</span><span>template: cv2.Mat | numpy.ndarray | os.PathLike[str] | str | None = None,<br>max_features: int = 25000,<br>patch_size: int = 31,<br>match_fraction: float = 0.6,<br>scale: float = 1.0,<br>max_dist: float = 1.0,<br>k: float | None = None)</span>
+<span>(</span><span>template: cv2.Mat | numpy.ndarray | os.PathLike[str] | str | None = None,<br>max_features: int = 25000,<br>patch_size: int = 31,<br>match_fraction: float = 0.6,<br>scale: float = 1.0,<br>max_dist: float = 1.0,<br>k: float | None = 0.05)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -1248,7 +1261,7 @@ If None, defaults to 1.5 * search_region</dd>
         match_fraction: float = 0.6,
         scale: float = 1.0,
         max_dist: float = 1.00,
-        k: float | None = None,
+        k: float | None = 0.05,
     ):
         &#34;&#34;&#34;
         Args:
@@ -3875,7 +3888,7 @@ list[tuple[int, int]]: a list of spans (start col, end col)</p></div>
 </dd>
 <dt id="taulu.Taulu"><code class="flex name class">
 <span>class <span class="ident">Taulu</span></span>
-<span>(</span><span>header_path: os.PathLike[str] | str | Tuple[os.PathLike[str] | str, os.PathLike[str] | str],<br>sauvola_k: float = 0.25,<br>search_region: int = 60,<br>distance_penalty: float = 0.4,<br>cross_width: int = 10,<br>morph_size: int = 4,<br>kernel_size: int = 41,<br>processing_scale: float = 1.0)</span>
+<span>(</span><span>header_path: os.PathLike[str] | str | Tuple[os.PathLike[str] | str, os.PathLike[str] | str],<br>sauvola_k: float = 0.25,<br>search_region: int = 60,<br>distance_penalty: float = 0.4,<br>cross_width: int = 10,<br>morph_size: int = 4,<br>kernel_size: int = 41,<br>processing_scale: float = 1.0,<br>min_rows: int = 5,<br>look_distance: int = 3,<br>grow_threshold: float = 0.3)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -3902,6 +3915,9 @@ list[tuple[int, int]]: a list of spans (start col, end col)</p></div>
         morph_size: int = 4,
         kernel_size: int = 41,
         processing_scale: float = 1.0,
+        min_rows: int = 5,
+        look_distance: int = 3,
+        grow_threshold: float = 0.3,
     ):
         self._processing_scale = processing_scale
 
@@ -3952,6 +3968,9 @@ list[tuple[int, int]]: a list of spans (start col, end col)</p></div>
             sauvola_k=sauvola_k,
             distance_penalty=distance_penalty,
             scale=self._processing_scale,
+            min_rows=min_rows,
+            look_distance=look_distance,
+            grow_threshold=grow_threshold,
         )
 
         if isinstance(self._template, Split):

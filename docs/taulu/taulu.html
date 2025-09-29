@@ -52,7 +52,7 @@ of taulu as much as possible.</p>
 <dl>
 <dt id="taulu.taulu.Taulu"><code class="flex name class">
 <span>class <span class="ident">Taulu</span></span>
-<span>(</span><span>header_path: os.PathLike[str] | str | Tuple[os.PathLike[str] | str, os.PathLike[str] | str],<br>sauvola_k: float = 0.25,<br>search_region: int = 60,<br>distance_penalty: float = 0.4,<br>cross_width: int = 10,<br>morph_size: int = 4,<br>kernel_size: int = 41,<br>processing_scale: float = 1.0)</span>
+<span>(</span><span>header_path: os.PathLike[str] | str | Tuple[os.PathLike[str] | str, os.PathLike[str] | str],<br>sauvola_k: float = 0.25,<br>search_region: int = 60,<br>distance_penalty: float = 0.4,<br>cross_width: int = 10,<br>morph_size: int = 4,<br>kernel_size: int = 41,<br>processing_scale: float = 1.0,<br>min_rows: int = 5,<br>look_distance: int = 3,<br>grow_threshold: float = 0.3)</span>
 </code></dt>
 <dd>
 <details class="source">
@@ -79,6 +79,9 @@ of taulu as much as possible.</p>
         morph_size: int = 4,
         kernel_size: int = 41,
         processing_scale: float = 1.0,
+        min_rows: int = 5,
+        look_distance: int = 3,
+        grow_threshold: float = 0.3,
     ):
         self._processing_scale = processing_scale
 
@@ -129,6 +132,9 @@ of taulu as much as possible.</p>
             sauvola_k=sauvola_k,
             distance_penalty=distance_penalty,
             scale=self._processing_scale,
+            min_rows=min_rows,
+            look_distance=look_distance,
+            grow_threshold=grow_threshold,
         )
 
         if isinstance(self._template, Split):
