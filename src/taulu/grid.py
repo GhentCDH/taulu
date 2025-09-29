@@ -437,7 +437,7 @@ class GridDetector:
             cell_heights = [cell_heights]
 
         left_top, confidence = self.find_nearest(
-            filtered, left_top, int(self._search_region * 1.5)
+            filtered, left_top, int(self._search_region * 3)
         )
 
         if confidence < 0.1:

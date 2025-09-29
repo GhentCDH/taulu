@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 
 use crate::geom_util::{
-    evaluate_polynomial, gaussian_1d, linear_polynomial_least_squares, normalize,
+    evaluate_polynomial, gaussian_1d, linear_polynomial_least_squares, normalize, region_aware_fit,
 };
 use crate::traits::Xy;
 use crate::{Coord, Image, Point, Step};
@@ -732,7 +732,8 @@ impl TableGrower {
             return None;
         }
 
-        intersect_regressions(&neighbours_x, &neighbours_y, degree)
+        let region = self.get_region(coord);
+        self.intersect_regressions_region_aware(&neighbours_x, &neighbours_y, degree, &region)
     }
 
     fn extrapolate_one_internal(&self) -> Option<(Coord, Point)> {
@@ -742,9 +743,40 @@ impl TableGrower {
 
         let degree = 1;
 
-        let intersection = intersect_regressions(&neighbours_x, &neighbours_y, degree)?;
+        let region = self.get_region(selected_location);
+
+        let intersection =
+            self.intersect_regressions_region_aware(&neighbours_x, &neighbours_y, degree, &region)?;
 
         Some((selected_location, intersection))
+    }
+
+    /// Get a square region of size `look_distance` * 2 around the given coordinate
+    fn get_region(&self, coord: Coord) -> Vec<Vec<Option<Point>>> {
+        let mut region = vec![vec![None; self.look_distance * 2 + 1]; self.look_distance * 2 + 1];
+
+        #[allow(clippy::cast_possible_wrap)]
+        for (dy, row) in region.iter_mut().enumerate() {
+            for (dx, cell) in row.iter_mut().enumerate() {
+                let Ok(x) =
+                    usize::try_from(coord.x() as isize + dx as isize - self.look_distance as isize)
+                else {
+                    continue;
+                };
+                let Ok(y) =
+                    usize::try_from(coord.y() as isize + dy as isize - self.look_distance as isize)
+                else {
+                    continue;
+                };
+
+                let nb_coord = Coord::new(x, y);
+                if self.in_bounds(nb_coord) {
+                    *cell = self[nb_coord];
+                }
+            }
+        }
+
+        region
     }
 
     /// Approximates the best step size to take from `current` in `step` direction
@@ -822,6 +854,259 @@ impl TableGrower {
 
         steps
     }
+
+    /// Given a set of horizontal and vertical points, fit polynomial regressions
+    /// of the given degree to each set, and find their intersection point.
+    #[allow(clippy::pedantic)]
+    fn intersect_regressions_region_aware(
+        &self,
+        horizontal_points: &[Point],
+        vertical_points: &[Point],
+        degree: usize,
+        region: &[Vec<Option<Point>>],
+    ) -> Option<Point> {
+        if horizontal_points.len() < degree + 1 && vertical_points.len() < degree + 1 {
+            return None;
+        }
+
+        #[allow(clippy::cast_precision_loss)]
+        let horizontal_xs = horizontal_points
+            .iter()
+            .map(|p| p.x() as f32)
+            .collect::<Vec<_>>();
+        #[allow(clippy::cast_precision_loss)]
+        let horizontal_ys = horizontal_points
+            .iter()
+            .map(|p| p.y() as f32)
+            .collect::<Vec<_>>();
+        #[allow(clippy::cast_precision_loss)]
+        let vertical_xs = vertical_points
+            .iter()
+            .map(|p| p.x() as f32)
+            .collect::<Vec<_>>();
+        #[allow(clippy::cast_precision_loss)]
+        let vertical_ys = vertical_points
+            .iter()
+            .map(|p| p.y() as f32)
+            .collect::<Vec<_>>();
+
+        let mut region_horizontal_xs = Vec::new();
+        let mut region_horizontal_ys = Vec::new();
+
+        for (y, row) in region.iter().enumerate() {
+            let mut row_xs = Vec::new();
+            let mut row_ys = Vec::new();
+            for cell in row.iter() {
+                // don't do the current row
+                if y == region.len() / 2 {
+                    continue;
+                }
+                if let Some(p) = cell {
+                    row_xs.push(p.x() as f32);
+                    row_ys.push(p.y() as f32);
+                }
+            }
+            if row_xs.len() >= 2 && row_ys.len() >= 2 {
+                #[cfg(feature = "debug-tools")]
+                {
+                    self.rec
+                        .log(
+                            format!("regression/region_horizontal/{}", y),
+                            &rerun::Points2D::new(
+                                row_xs.iter().zip(row_ys.iter()).map(|(x, y)| (*x, *y)),
+                            )
+                            .with_colors([rerun::Color::from_rgb(255, 255, 0)])
+                            .with_radii([2.0]),
+                        )
+                        .expect(RERUN_EXPECT);
+                }
+
+                region_horizontal_xs.push(row_xs);
+                region_horizontal_ys.push(row_ys);
+            }
+        }
+
+        let mut region_vertical_xs = Vec::new();
+        let mut region_vertical_ys = Vec::new();
+
+        for x in 0..region[0].len() {
+            let mut column_xs = Vec::new();
+            let mut column_ys = Vec::new();
+
+            for y in 0..region.len() {
+                // don't do the current column
+                if x == region.len() / 2 {
+                    continue;
+                }
+
+                if let Some(p) = region[y][x] {
+                    column_xs.push(p.x() as f32);
+                    column_ys.push(p.y() as f32);
+                }
+            }
+
+            if column_xs.len() >= 2 && column_ys.len() >= 2 {
+                #[cfg(feature = "debug-tools")]
+                {
+                    self.rec
+                        .log(
+                            format!("regression/region_vertical/{}", x),
+                            &rerun::Points2D::new(
+                                column_xs
+                                    .iter()
+                                    .zip(column_ys.iter())
+                                    .map(|(x, y)| (*x, *y)),
+                            )
+                            .with_colors([rerun::Color::from_rgb(0, 255, 255)])
+                            .with_radii([2.0]),
+                        )
+                        .expect(RERUN_EXPECT);
+                }
+
+                region_vertical_xs.push(column_xs);
+                region_vertical_ys.push(column_ys);
+            }
+        }
+
+        let lambda = 0.2;
+        let horizontal_coeffs = region_aware_fit(
+            &horizontal_xs,
+            &horizontal_ys,
+            &region_horizontal_xs,
+            &region_horizontal_ys,
+            lambda,
+        )
+        .ok()?;
+
+        let vertical_coeffs = region_aware_fit(
+            &vertical_ys,
+            &vertical_xs,
+            &region_vertical_ys,
+            &region_vertical_xs,
+            lambda,
+        )
+        .ok()?;
+
+        // iteratively solve for the intersection of both
+        let (mut x, mut y) = {
+            let point = horizontal_points.first()?;
+            #[allow(clippy::cast_precision_loss)]
+            (point.x() as f32, point.y() as f32)
+        };
+
+        let ho = &horizontal_coeffs;
+        let ve = &vertical_coeffs;
+
+        // Newton's method
+        let (h, h_derivative) = match degree {
+            1 => {
+                let h = vec![ho[0] + ho[1] * ve[0], ho[1] * ve[1] - 1.0];
+                let h_derivative = vec![ho[1] * ve[1] - 1.0];
+                (h, h_derivative)
+            }
+            2 => {
+                let h = vec![
+                    ho[0] + ho[1] * ve[0] + ho[2] * ve[0] * ve[0],
+                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                    ho[1] * ve[2] + 2.0 * ho[2] * ve[0] * ve[2] + ho[2] * ve[1] * ve[1],
+                    2.0 * ho[2] * ve[1] * ve[2],
+                    ho[2] * ve[2] * ve[2],
+                ];
+                let h_derivative = vec![
+                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                    2.0 * ho[1] * ve[2] + 4.0 * ho[2] * ve[0] * ve[2] + 2.0 * ho[2] * ve[1] * ve[1],
+                    6.0 * ho[2] * ve[1] * ve[2],
+                    4.0 * ho[2] * ve[2] * ve[2],
+                ];
+                (h, h_derivative)
+            }
+            _ => {
+                return None;
+            }
+        };
+
+        let mut done = false;
+        for _ in 0..20 {
+            let h_y = evaluate_polynomial(&h, y);
+            let h_der_y = evaluate_polynomial(&h_derivative, y);
+            let new_y = y - h_y / h_der_y;
+
+            let dist = (y - new_y).abs();
+
+            if dist < 1e-6 {
+                x = evaluate_polynomial(&vertical_coeffs, new_y);
+                y = new_y;
+                done = true;
+                break;
+            }
+
+            if dist.is_nan() {
+                return None;
+            }
+
+            y = new_y;
+        }
+
+        if !done {
+            return None;
+        }
+
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let result = Point(x.round() as i32, y.round() as i32);
+
+        #[cfg(feature = "debug-tools")]
+        {
+            // get two points on the horizontal regression line
+            let h_start = Point(
+                horizontal_points.first()?.x(),
+                evaluate_polynomial(&horizontal_coeffs, horizontal_points.first()?.x() as f32)
+                    .round() as i32,
+            );
+            let h_end = Point(
+                horizontal_points.last()?.x(),
+                evaluate_polynomial(&horizontal_coeffs, horizontal_points.last()?.x() as f32)
+                    .round() as i32,
+            );
+
+            self.rec
+                .log(
+                    "regression/horizontal",
+                    &rerun::LineStrips2D::new([[
+                        (h_start.x() as f32, h_start.y() as f32),
+                        (h_end.x() as f32, h_end.y() as f32),
+                    ]])
+                    .with_colors([rerun::Color::from_rgb(255, 0, 255)])
+                    .with_radii([2.0]),
+                )
+                .expect(RERUN_EXPECT);
+
+            // get two points on the vertical regression line
+            let v_start = Point(
+                evaluate_polynomial(&vertical_coeffs, vertical_points.first()?.y() as f32).round()
+                    as i32,
+                vertical_points.first()?.y(),
+            );
+            let v_end = Point(
+                evaluate_polynomial(&vertical_coeffs, vertical_points.last()?.y() as f32).round()
+                    as i32,
+                vertical_points.last()?.y(),
+            );
+
+            self.rec
+                .log(
+                    "regression/vertical",
+                    &rerun::LineStrips2D::new([[
+                        (v_start.x() as f32, v_start.y() as f32),
+                        (v_end.x() as f32, v_end.y() as f32),
+                    ]])
+                    .with_colors([rerun::Color::from_rgb(255, 0, 255)])
+                    .with_radii([2.0]),
+                )
+                .expect(RERUN_EXPECT);
+        }
+
+        Some(result)
+    }
 }
 
 impl Index<Coord> for TableGrower {
@@ -869,7 +1154,7 @@ fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec
 
 /// Given a set of horizontal and vertical points, fit polynomial regressions
 /// of the given degree to each set, and find their intersection point.
-#[allow(clippy::similar_names)]
+#[allow(clippy::similar_names, dead_code)]
 fn intersect_regressions(
     horizontal_points: &[Point],
     vertical_points: &[Point],
