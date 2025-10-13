@@ -7,7 +7,6 @@ from time import perf_counter
 import os
 from os import PathLike
 from os.path import exists
-from typing import Dict, List, Tuple
 import cv2
 from cv2.typing import MatLike
 from pathlib import Path
@@ -25,6 +24,13 @@ from .error import TauluException
 logger = logging.getLogger(__name__)
 
 
+# Helper function to get parameter value for a side
+def get_param(param, side: str):
+    if isinstance(param, Split):
+        return getattr(param, side)
+    return param
+
+
 class Taulu:
     """
     The Taulu class is a convenience class that hides the inner workings of taulu as much as possible.
@@ -35,76 +41,155 @@ class Taulu:
 
     def __init__(
         self,
-        header_path: PathLike[str]
+        header_image_path: PathLike[str] | str | Split[PathLike[str] | str],
+        cell_height_factor: float | list[float] | Split[float | list[float]] = [1.0],
+        header_anno_path: PathLike[str]
         | str
-        | Tuple[PathLike[str] | str, PathLike[str] | str],
-        sauvola_k: float = 0.25,
-        search_region: int = 60,
-        distance_penalty: float = 0.4,
-        cross_width: int = 10,
-        morph_size: int = 4,
-        kernel_size: int = 41,
-        processing_scale: float = 1.0,
-        min_rows: int = 5,
-        look_distance: int = 3,
-        grow_threshold: float = 0.3,
+        | Split[PathLike[str] | str]
+        | None = None,
+        sauvola_k: float | Split[float] = 0.25,
+        search_region: int | Split[int] = 60,
+        distance_penalty: float | Split[float] = 0.4,
+        cross_width: int | Split[int] = 10,
+        morph_size: int | Split[int] = 4,
+        kernel_size: int | Split[int] = 41,
+        processing_scale: float | Split[float] = 1.0,
+        min_rows: int | Split[int] = 5,
+        look_distance: int | Split[int] = 3,
+        grow_threshold: float | Split[float] = 0.3,
     ):
         self._processing_scale = processing_scale
+        self._cell_height_factor = cell_height_factor
 
-        if isinstance(header_path, Tuple):
-            header = Split(Path(header_path[0]), Path(header_path[1]))
+        if isinstance(header_image_path, Split) or isinstance(header_anno_path, Split):
+            header = Split(Path(header_image_path.left), Path(header_image_path.right))
 
             if not exists(header.left.with_suffix(".png")) or not exists(
                 header.right.with_suffix(".png")
             ):
-                raise TauluException("The header images you provided do not exist")
-            if not exists(header.left.with_suffix(".json")) or not exists(
-                header.right.with_suffix(".json")
-            ):
                 raise TauluException(
-                    "You need to annotate the headers of your table first\n\nsee the Taulu.annotate method"
+                    "The header images you provided do not exist (or they aren't .png files)"
                 )
 
-            template_left = HeaderTemplate.from_saved(header.left.with_suffix(".json"))
-            template_right = HeaderTemplate.from_saved(
-                header.right.with_suffix(".json")
-            )
+            if header_anno_path is None:
+                if not exists(header.left.with_suffix(".json")) or not exists(
+                    header.right.with_suffix(".json")
+                ):
+                    raise TauluException(
+                        "You need to annotate the headers of your table first\n\nsee the Taulu.annotate method"
+                    )
+
+                template_left = HeaderTemplate.from_saved(
+                    header.left.with_suffix(".json")
+                )
+                template_right = HeaderTemplate.from_saved(
+                    header.right.with_suffix(".json")
+                )
+
+            else:
+                if not exists(header_anno_path.left) or not exists(
+                    header_anno_path.right
+                ):
+                    raise TauluException(
+                        "The header annotation files you provided do not exist (or they aren't .json files)"
+                    )
+
+                template_left = HeaderTemplate.from_saved(header_anno_path.left)
+                template_right = HeaderTemplate.from_saved(header_anno_path.right)
 
             self._header = Split(
                 cv2.imread(os.fspath(header.left)), cv2.imread(os.fspath(header.right))
             )
 
             self._aligner = Split(
-                HeaderAligner(self._header.left, scale=self._processing_scale),
-                HeaderAligner(self._header.right, scale=self._processing_scale),
+                HeaderAligner(
+                    self._header.left, scale=get_param(self._processing_scale, "left")
+                ),
+                HeaderAligner(
+                    self._header.right, scale=get_param(self._processing_scale, "right")
+                ),
             )
 
             self._template = Split(template_left, template_right)
 
+            self._cell_heights = Split(
+                self._template.left.cell_heights(get_param(cell_height_factor, "left")),
+                self._template.right.cell_heights(
+                    get_param(cell_height_factor, "right")
+                ),
+            )
+
+            # Create GridDetector for left and right with potentially different parameters
+            self._grid_detector = Split(
+                GridDetector(
+                    kernel_size=get_param(kernel_size, "left"),
+                    cross_width=get_param(cross_width, "left"),
+                    morph_size=get_param(morph_size, "left"),
+                    search_region=get_param(search_region, "left"),
+                    sauvola_k=get_param(sauvola_k, "left"),
+                    distance_penalty=get_param(distance_penalty, "left"),
+                    scale=get_param(self._processing_scale, "left"),
+                    min_rows=get_param(min_rows, "left"),
+                    look_distance=get_param(look_distance, "left"),
+                    grow_threshold=get_param(grow_threshold, "left"),
+                ),
+                GridDetector(
+                    kernel_size=get_param(kernel_size, "right"),
+                    cross_width=get_param(cross_width, "right"),
+                    morph_size=get_param(morph_size, "right"),
+                    search_region=get_param(search_region, "right"),
+                    sauvola_k=get_param(sauvola_k, "right"),
+                    distance_penalty=get_param(distance_penalty, "right"),
+                    scale=get_param(self._processing_scale, "right"),
+                    min_rows=get_param(min_rows, "right"),
+                    look_distance=get_param(look_distance, "right"),
+                    grow_threshold=get_param(grow_threshold, "right"),
+                ),
+            )
+
         else:
-            header_path = Path(header_path)
-            self._header = cv2.imread(os.fspath(header_path))
+            header_image_path = Path(header_image_path)
+            self._header = cv2.imread(os.fspath(header_image_path))
             self._aligner = HeaderAligner(self._header)
-            self._template = HeaderTemplate.from_saved(header_path.with_suffix(".json"))
+            self._template = HeaderTemplate.from_saved(
+                header_image_path.with_suffix(".json")
+            )
 
-        # TODO: currently, these parameters are fixed and optimized for the example
-        #       image specifically (which is probably a good starting point,
-        #       espeicially after normalizing the image size)
-        self._grid_detector = GridDetector(
-            kernel_size=kernel_size,
-            cross_width=cross_width,
-            morph_size=morph_size,
-            search_region=search_region,
-            sauvola_k=sauvola_k,
-            distance_penalty=distance_penalty,
-            scale=self._processing_scale,
-            min_rows=min_rows,
-            look_distance=look_distance,
-            grow_threshold=grow_threshold,
-        )
+            # For single header, parameters should not be Split objects
+            if any(
+                isinstance(param, Split)
+                for param in [
+                    sauvola_k,
+                    search_region,
+                    distance_penalty,
+                    cross_width,
+                    morph_size,
+                    kernel_size,
+                    processing_scale,
+                    min_rows,
+                    look_distance,
+                    grow_threshold,
+                    cell_height_factor,
+                ]
+            ):
+                raise TauluException(
+                    "Split parameters can only be used with split headers (tuple header_path)"
+                )
 
-        if isinstance(self._template, Split):
-            self._grid_detector = Split(self._grid_detector, self._grid_detector)
+            self._cell_heights = self._template.cell_heights(self._cell_height_factor)
+
+            self._grid_detector = GridDetector(
+                kernel_size=kernel_size,
+                cross_width=cross_width,
+                morph_size=morph_size,
+                search_region=search_region,
+                sauvola_k=sauvola_k,
+                distance_penalty=distance_penalty,
+                scale=self._processing_scale,
+                min_rows=min_rows,
+                look_distance=look_distance,
+                grow_threshold=grow_threshold,
+            )
 
     @staticmethod
     def annotate(image_path: PathLike[str] | str, output_path: PathLike[str] | str):
@@ -133,12 +218,9 @@ class Taulu:
 
         template.save(output_path.with_suffix(".json"))
 
-    # TODO: check if PathLike works like this
-    # TODO: get rid of cell_height and make this part of the header template
     def segment_table(
         self,
         image: MatLike | PathLike[str] | str,
-        cell_height_factor: float | List[float] | Dict[str, float | List[float]],
         debug_view: bool = False,
     ) -> TableGrid:
         """
@@ -166,8 +248,6 @@ class Taulu:
         if not isinstance(image, MatLike):
             image = cv2.imread(os.fspath(image))
 
-        # TODO: perform checks on the image
-
         now = perf_counter()
         h = self._aligner.align(image, visual=debug_view)
         align_time = perf_counter() - now
@@ -185,28 +265,12 @@ class Taulu:
 
         left_top_table = self._aligner.template_to_img(h, left_top_template)
 
-        if isinstance(cell_height_factor, dict):
-            if not isinstance(self._template, Split):
-                raise TauluException(
-                    "You provided a cell_height_factor dictionary, but the header is not a Split"
-                )
-            if "left" not in cell_height_factor or "right" not in cell_height_factor:
-                raise TauluException(
-                    "When providing a cell_height_factor dictionary, it should contain both 'left' and 'right' keys"
-                )
-            cell_heights = Split(
-                self._template.left.cell_heights(cell_height_factor.get("left", 1.0)),
-                self._template.right.cell_heights(cell_height_factor.get("right", 1.0)),
-            )
-        else:
-            cell_heights = self._template.cell_heights(cell_height_factor)
-
         now = perf_counter()
         table = self._grid_detector.find_table_points(
             image,
             left_top_table,
             self._template.cell_widths(0),
-            cell_heights,
+            self._cell_heights,
             visual=debug_view,
         )
         grid_time = perf_counter() - now
