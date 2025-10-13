@@ -22,4 +22,4 @@ profile-astar:
     timeout 10 uv run py-spy record --native -r 50 -o profile.svg -- python tests/bench_rust.py
 
 document:
-    uv run pdoc --html -f --template-dir ./pdoc/templates -o ./docs taulu
+    uv run pdoc --logo './logo.svg' --favicon './favicon.svg' -o ./docs --docformat google taulu

@@ -33,10 +33,4 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [dependency-groups]
-dev = [
-    "py-spy>=0.4.0",
-    "pytest>=8.3.5",
-    "pdoc3>=0.11.6",
-    "maturin>=1.0,<2.0",
-]
-
+dev = ["py-spy>=0.4.0", "pytest>=8.3.5", "pdoc>=15.0.4", "maturin>=1.0,<2.0"]

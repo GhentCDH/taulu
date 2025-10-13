@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-<a href="https://ghentcdh.github.io/taulu/taulu/">Documentation</a>
+<a href="https://ghentcdh.github.io/">Documentation</a>
 </p>
 
-## Data Requirements 
+## Data Requirements
 
 This package assumes that you are working with images of tables that have **clearly visible rules** (the lines that divide the table into cells).
 
@@ -22,15 +22,16 @@ To fully utilize the automated workflow, your tables should include a recognizab
 
 For optimal segmentation, ensure that the tables are rotated so the borders are approximately vertical and horizontal. Minor page warping is acceptable.
 
-
 ## Installation
 
 ### Using pip
+
 ```sh
 pip install taulu
 ```
 
 ### Using uv
+
 ```sh
 uv add taulu
 ```
@@ -70,7 +71,7 @@ if __name__ == "__main__":
         main()
 ```
 
-This file can be found at `examples/example.py`. To run it, clone this repository, create a uv 
+This file can be found at `examples/example.py`. To run it, clone this repository, create a uv
 project, and run the script:
 
 ```
@@ -79,6 +80,7 @@ cd taulu
 uv init --no-workspace --bare
 uv run example.py
 ```
+
 During this example, you will need to annotate the header image. You do this by simply clicking twice per line, once for each endpoint. It does not matter in which order you annotate the lines. Example:
 
 ![Table Header Annotation Example](./data/header_annotation.png)
@@ -86,7 +88,6 @@ During this example, you will need to annotate the header image. You do this by 
 Below is an example of table cell identification using the `Taulu` package:
 
 ![Table Cell Identification Example](./data/example_segmentation.gif)
-
 
 ## Workflow
 
@@ -111,35 +112,39 @@ The following is a summary of the most important parameters and how you could tu
 
 ### `Taulu`
 
-- `header_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a tuple of the left and right header images. 
+- `header_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a tuple of the left and right header images.
 - `kernel_size`, `cross_width`: The GridDetector uses a kernel to detect intersections of rules in the image. The kernel looks like this:
 
   ![kernel diagram](./data/kernel.svg)
 
   The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result (because `debug_view=True`), which you can use to estimate the `cross_width` and `kernel_size` values that fit your image.
   Note that the optimal values will depend on the `morph_size` parameter too.
+
 - `morph_size`: The GridDetector uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `morph_size`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As a result, this parameter affects the optimal `cross_width` and `cross_height`.
 - `region`: This parameter influences the search algorithm. The algorithm has a rough idea of where the next corner point should be. At that location, the algorithm then finds the best match that is within a square of size `region` around that point, and selects that as the detected corner. Visualized:
 
   ![search algorithm region](./data/search.svg)
 
   A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too. You can see this region as blue squares when running the segmentation with `debug_view=True`
+
 - `sauvola_k`: This parameter adjusts the threshold that is used when binarizing the image. The larger `sauvola_k` more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table.
 
 **These methods are the most useful**:
+
 - `Taulu.annotate`: create an annotation file for a header image. This requires an image of a table with a clear header. Taulu will first ask you to crop the header in the image (by clicking four points, one for each corner). Then, it will ask you to annotate the lines in the header (by clicking two points per line, one for each endpoint). The annotation file will be saved as a `json` file and a `png` with the same name.
 - `Taulu.segment_table`: given an input image, segment into a `TableGrid` object.
-    - `cell_height_factor`: a float or a list of floats that determine the expected height of each row in the table, relative to the height of the header. If the list is shorter than the number of rows, the last value will be repeated for the remaining rows. If a single float is given, it will be used for all rows.
+  - `cell_height_factor`: a float or a list of floats that determine the expected height of each row in the table, relative to the height of the header. If the list is shorter than the number of rows, the last value will be repeated for the remaining rows. If a single float is given, it will be used for all rows.
 
 ### `TableGrid`
 
-`Taulu.segment_table` returns a `TableGrid` instance, which you can use to get information about the location and bounding box of cells in your image. 
+`Taulu.segment_table` returns a `TableGrid` instance, which you can use to get information about the location and bounding box of cells in your image.
 
 These methods are the most useful:
+
 - `save`: save the `TableGrid` object as a `json` file
 - `from_saved`: restore a `TableGrid` object from a `json` file
 - `cell`: given a location in the image (`(tuple[float, float]`), return the cell index `(row, column)`
-- `cell_polygon`: get the polygon (left top, right top, right bottom, left bottom) of the cell in the image 
+- `cell_polygon`: get the polygon (left top, right top, right bottom, left bottom) of the cell in the image
 - `region`: given a start and end cell, get the polygon that surrounds all cells in between (inclusive range)
 - `highlight_all_cells`: highlight all cell edges on an image
 - `show_cells`: interactively highlight cells you click on in the image (in an OpenCV window)

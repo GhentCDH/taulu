@@ -1,3 +1,10 @@
+//! Core Rust implementations for taulu's table segmentation algorithms.
+//!
+//! This module provides high-performance implementations of:
+//! - A* pathfinding for rule following in table images
+//! - Table grid growing algorithms
+//! - Geometric utilities for line fitting and intersection detection
+
 use std::{convert::Into, f64::consts::PI};
 
 use numpy::{
@@ -24,6 +31,29 @@ pub use table_grower::TableGrower;
 
 type Image<'a> = ArrayBase<ViewRepr<&'a u8>, Dim<[usize; 2]>>;
 
+/// Finds the shortest path between a start point and one of multiple goal points
+/// using the A* algorithm, optimized for following table rules in binary images.
+///
+/// # Arguments
+///
+/// * `img` - Binary image where darker pixels indicate table rules
+/// * `start` - Starting point (x, y) coordinates
+/// * `goals` - List of possible goal points to reach
+/// * `direction` - Search direction: "right", "down", "left", "up", "any", "straight", or "diagonal"
+///
+/// # Returns
+///
+/// `Some(Vec<(i32, i32)>)` containing the path points if found, `None` otherwise
+///
+/// # Example
+///
+/// ```python
+/// from taulu._core import astar
+/// import numpy as np
+///
+/// img = np.array([[255, 0, 255], [255, 0, 255]], dtype=np.uint8)
+/// path = astar(img, (0, 0), [(2, 1)], "right")
+/// ```
 #[pyfunction]
 fn astar(
     img: PyReadonlyArray2<'_, u8>,

@@ -24,7 +24,7 @@ from .decorators import log_calls
 from .table_indexer import TableIndexer
 from .header_template import _Rule
 from .split import Split
-from ._core import TableGrower, median_slope as _core_median_slope
+from ._core import TableGrower
 
 show_time = 0
 
@@ -117,11 +117,31 @@ def median_slope(lines: List[Tuple[PointFloat, PointFloat]]) -> float:
 
 class GridDetector:
     """
-    Implements a filters result in high activation where the image has an intersection of a vertical
-    and horizontal rule, useful for finding the bounding boxes of cells.
+    Detects table grid intersections using morphological filtering and template matching.
 
-    Also implements the search algorithm that uses the output of this filter to build a tabular structure of
-    corner points (in row major order).
+    This detector implements a multi-stage pipeline:
+
+    1. **Binarization**: Sauvola adaptive thresholding to handle varying lighting
+    2. **Morphological operations**: Dilation to connect broken rule segments
+    3. **Cross-kernel matching**: Template matching with a cross-shaped kernel to find
+       rule intersections where horizontal and vertical lines meet
+    4. **Grid growing**: Iterative point detection starting from a known seed point
+
+    The cross-kernel is designed to match the specific geometry of your table rules.
+    It should be sized so that after morphology, it aligns with actual corner shapes.
+
+    ## Tuning Guidelines
+
+    - **kernel_size**: Increase if you need more selectivity (fewer false positives)
+    - **cross_width/height**: Should match rule thickness after morphology
+    - **morph_size**: Increase to connect more broken lines, but this thickens rules
+    - **sauvola_k**: Increase to threshold more aggressively (remove noise)
+    - **search_region**: Increase for documents with more warping/distortion
+    - **distance_penalty**: Increase to prefer corners closer to expected positions
+
+    ## Visual Debugging
+
+    Set `visual=True` in methods to see intermediate results and tune parameters.
     """
 
     def __init__(
@@ -1077,102 +1097,3 @@ class TableGrid(TableIndexer):
             result.append(((row, start), (row, self.cols - 1)))
 
         return result
-
-    def anneal(
-        self, img: MatLike, look_distance_main: int = 3, look_distance_alt: int = 3
-    ):
-        # how far to look in the main direction of the line
-        # that is currently being examined
-        LOOK_MAIN = look_distance_main
-
-        # how far to look in the perpendicular direction of the line
-        # that is currently being examined
-        LOOK_ALT = look_distance_alt
-
-        def _left_at(col: int, offset: int = LOOK_ALT) -> int:
-            if self._right_offset is not None and col > self._right_offset:
-                return int(clamp(col - offset, self._right_offset + 1, self.cols + 1))
-            else:
-                return int(clamp(col - offset, 0, self.cols + 1))
-
-        def _right_at(col: int, offset: int = LOOK_ALT) -> int:
-            if self._right_offset is not None and col <= self._right_offset:
-                return int(clamp(col + offset, 0, self._right_offset))
-            else:
-                return int(clamp(col + offset, 0, self.cols + 1))
-
-        def _median_slope(index: Point) -> Optional[float]:
-            (r, c) = index
-
-            left = _left_at(c)
-            right = _right_at(c)
-
-            if left == right:
-                return None
-
-            lines = []
-            for row in range(r - LOOK_MAIN, r + LOOK_MAIN):
-                if row < 0 or row == r or row >= len(self.points):
-                    continue
-
-                left_point = self.points[row][int(left)]
-                right_point = self.points[row][int(right)]
-
-                lines.append((left_point, right_point))
-
-            return _core_median_slope(lines)
-
-        new_points = []
-        for row in self.points:
-            new_points.append(row.copy())
-
-        for row in range(len(self.points)):
-            for col in range(len(self.points[0])):
-                slope = _median_slope((row, col))
-
-                if slope is None:
-                    continue
-
-                left = _left_at(col, 1)
-                left_point = self.points[row][int(left)]
-
-                right = _right_at(col, 1)
-                right_point = self.points[row][int(right)]
-
-                # img_ = np.copy(img)
-                # # draw a line through the left point with that slope
-                # cv.line(
-                #     img_,
-                #     (int(left_point[0]), int(left_point[1])),
-                #     (
-                #         int(right_point[0]),
-                #         int(slope * (right_point[0] - left_point[0]) + left_point[1]),
-                #     ),
-                #     (0, 255, 0),
-                #     3,
-                #     cv.LINE_AA,
-                # )
-                # imu.show(img_)
-
-                # extrapolate left point to this points x coordinate
-                new_y = (
-                    slope * (self.points[row][col][0] - left_point[0]) + left_point[1]
-                )
-
-                new_y = (
-                    new_y / 2
-                    + (
-                        slope * (right_point[0] - self.points[row][col][0])
-                        + right_point[1]
-                    )
-                    / 2
-                )
-
-                movement = new_y - self.points[row][col][1]
-
-                new_points[row][col] = (
-                    self.points[row][col][0],
-                    self.points[row][col][1] + movement * 0.8,
-                )
-
-        self._points = new_points

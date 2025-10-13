@@ -17,7 +17,37 @@ use crate::{Coord, Image, Point, Step};
 #[cfg(feature = "debug-tools")]
 const RERUN_EXPECT: &str = "Should be able to log values to rerun server";
 
-/// A selection of rows of points that make up the corners of a table.
+/// A table grid builder that grows from a seed point by detecting corner intersections.
+///
+/// This class implements an iterative algorithm that:
+/// 1. Starts from a known corner point (typically from header alignment)
+/// 2. Searches for adjacent corners using template matching on cross-correlation
+/// 3. Grows the grid both horizontally and vertically
+/// 4. Extrapolates missing corners using polynomial regression when detection fails
+///
+/// The algorithm adapts its confidence threshold dynamically to handle varying
+/// image quality across the document.
+///
+/// # Algorithm Details
+///
+/// The growing process uses:
+/// - **Cross-correlation scores** to identify high-confidence corners
+/// - **Weighted search regions** with Gaussian falloff for robustness
+/// - **Polynomial regression** (linear or quadratic) for extrapolation
+/// - **Region-aware fitting** that considers neighboring rows/columns for consistency
+///
+/// # Parameters
+///
+/// * `table_image` - Grayscale image of the table (used for pathfinding)
+/// * `cross_correlation` - Preprocessed image with high values at corner intersections
+/// * `column_widths` - Expected widths of each column from the header template
+/// * `row_heights` - Expected heights of rows (extends last value if needed)
+/// * `start_point` - Initial corner point (x, y) to begin growing from
+/// * `search_region` - Size of the square region to search for next corner (pixels)
+/// * `distance_penalty` - Weight factor [0, 1] penalizing corners far from expected position
+/// * `look_distance` - Number of adjacent rows/columns to consider for extrapolation
+/// * `grow_threshold` - Minimum confidence [0, 1] to accept a detected corner
+/// * `min_row_count` - Minimum rows required before considering table complete
 #[pyclass]
 #[derive(Debug)]
 pub struct TableGrower {

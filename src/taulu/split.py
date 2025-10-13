@@ -12,9 +12,49 @@ V = TypeVar("V")
 
 
 class Split(Generic[T]):
-    """Wrapper for data that has both a left and a right variant"""
+    """
+    Container for paired left/right data with convenient manipulation methods.
+
+    The Split class is designed for working with table images that span two pages
+    or have distinct left and right sections. It allows you to:
+    - Store related data for both sides
+    - Apply functions to both sides simultaneously
+    - Access attributes/methods of contained objects transparently
+
+    Examples:
+        >>> # Create a split with different parameters for each side
+        >>> thresholds = Split(0.25, 0.30)
+        >>>
+        >>> # Apply a function to both sides
+        >>> images = Split(left_img, right_img)
+        >>> processed = images.apply(lambda img: cv2.blur(img, (5, 5)))
+        >>>
+        >>> # Use with different parameters per side
+        >>> results = images.apply(
+        ...     lambda img, k: sauvola_threshold(img, k),
+        ...     k=thresholds  # k.left used for left img, k.right for right
+        ... )
+        >>>
+        >>> # Access methods of contained objects directly
+        >>> templates = Split(template_left, template_right)
+        >>> widths = templates.cell_widths(0)  # Calls on both templates
+
+    Type Parameters:
+        T: The type of objects stored in left and right
+    """
 
     def __init__(self, left: T | None = None, right: T | None = None):
+        """
+        Initialize a Split container.
+
+        Args:
+            left: Data for the left side
+            right: Data for the right side
+
+        Note:
+            Both can initially be None. Use the `append` method or set
+            properties directly to populate.
+        """
         self._left = left
         self._right = right
 
