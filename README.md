@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-<a href="https://ghentcdh.github.io/">Documentation</a>
+<a href="https://ghentcdh.github.io/taulu">Documentation</a>
 </p>
 
 ## Data Requirements
