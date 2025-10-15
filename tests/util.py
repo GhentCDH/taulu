@@ -36,5 +36,9 @@ def header_right_anno_path(index: int) -> str:
     return os.fspath((this_dir / f"../data/header_right_{index:02}.json").resolve())
 
 
+def table_filtered_path(index: int) -> str:
+    return os.fspath((this_dir / f"../data/filtered_{index:02}.png").resolve())
+
+
 def files_exist(*paths):
     return all(os.path.exists(p) for p in paths)
