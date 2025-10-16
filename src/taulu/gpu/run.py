@@ -7,7 +7,7 @@ from PIL import Image
 
 def apply_kernel_to_image_tiled(
     model: nn.Module,
-    image_path: Path,
+    image: Path | np.ndarray,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
     tile_size: int = 512,
     overlap: int = 64
@@ -19,9 +19,36 @@ def apply_kernel_to_image_tiled(
     model.eval()
     model = model.to(device)
 
-    # Load image
-    img = Image.open(image_path).convert("L")
-    img_array = np.array(img, dtype=np.float32) / 255.0
+    # Load or process image based on input type
+    if isinstance(image, (Path, str)):
+        # Load from file
+        img = Image.open(image).convert("L")
+        img_array = np.array(img, dtype=np.float32) / 255.0
+    elif isinstance(image, np.ndarray):
+        # Process numpy array
+        img_array = image.copy()
+        
+        # Handle different input shapes
+        if img_array.ndim == 3:
+            # If (H, W, 1), squeeze to (H, W)
+            if img_array.shape[2] == 1:
+                img_array = img_array.squeeze(axis=2)
+            else:
+                raise ValueError(f"Expected grayscale image, got shape {img_array.shape}")
+        elif img_array.ndim != 2:
+            raise ValueError(f"Expected 2D or 3D array, got shape {img_array.shape}")
+        
+        # Normalize to [0, 1] if needed
+        if img_array.dtype == np.uint8:
+            img_array = img_array.astype(np.float32) / 255.0
+        else:
+            img_array = img_array.astype(np.float32)
+            # Ensure values are in [0, 1] range
+            if img_array.max() > 1.0 or img_array.min() < 0.0:
+                img_array = np.clip(img_array, 0, 1)
+    else:
+        raise TypeError(f"imagemust be Path, str, or np.ndarray, got {type(image)}")
+
     h, w = img_array.shape
 
     # Calculate receptive field for overlap
