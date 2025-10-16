@@ -69,3 +69,11 @@ __all__ = [
     "Split",
     "Taulu",
 ]
+
+try:
+    from . import gpu
+
+    if gpu.GPU_AVAILABLE:
+        __all__.append("gpu")
+except ImportError:
+    pass
