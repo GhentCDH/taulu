@@ -99,4 +99,8 @@ def apply_kernel_to_image_tiled(
     # Average overlapping regions
     heatmap = np.divide(heatmap, count_map, where=count_map > 0)
 
+    # Ensure C-contiguous array for PyO3 compatibility
+    heatmap = (heatmap * 255).astype(np.uint8)
+    heatmap = np.ascontiguousarray(heatmap)
+
     return heatmap
