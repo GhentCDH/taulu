@@ -7,7 +7,7 @@ This module is only available when taulu is installed with GPU support:
 # from . import model, data, train, run
 
 try:
-    import pillow
+    import PIL
     GPU_AVAILABLE = True
 except ImportError:
     GPU_AVAILABLE = False
