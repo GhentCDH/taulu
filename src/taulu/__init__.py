@@ -72,8 +72,6 @@ __all__ = [
 
 try:
     from . import gpu
-
-    if gpu.GPU_AVAILABLE:
-        __all__.append("gpu")
+    __all__.append("gpu")
 except ImportError:
     pass
