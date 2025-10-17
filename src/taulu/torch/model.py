@@ -5,9 +5,30 @@ from os import PathLike
 
 
 class DeepConvNet(nn.Module):
+    """
+    Deep CNN for detecting table corner intersections.
+    
+    Outputs a probability [0,1] indicating if the center pixel is a corner.
+    
+    Example:
+        >>> model = DeepConvNet(kernel_size=9, initial_filters=8, num_layers=7)
+        >>> model.save("model.pth")
+        >>> 
+        >>> # Later...
+        >>> model = DeepConvNet.load("model.pth")
+        >>> model.eval()
+    """
+
     def __init__(
         self, kernel_size: int = 9, initial_filters: int = 8, num_layers: int = 7
     ):
+        """
+        Args:
+            kernel_size: Convolution kernel size (affects receptive field)
+            initial_filters: Starting number of filters (doubles each layer)
+            num_layers: Network depth
+        """
+
         super().__init__()
         self.kernel_size = kernel_size
         self.initial_filters = initial_filters

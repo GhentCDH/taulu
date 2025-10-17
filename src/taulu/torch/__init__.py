@@ -1,5 +1,23 @@
 """
-Torch based Corner Detection kernel using CNNs.
+GPU-accelerated corner detection using deep learning.
+
+Requires: `pip install taulu[torch]`
+
+You should install torch separately according to your system.
+See [PyTorch installation instructions](https://pytorch.org/get-started/locally/)
+
+Usage:
+    >>> from taulu.gpu import DeepConvNet, apply_kernel_to_image_tiled
+    >>> 
+    >>> # Load trained model
+    >>> model = DeepConvNet.load("model.pth")
+    >>> 
+    >>> # Generate heatmap for Taulu
+    >>> filtered = apply_kernel_to_image_tiled(model, "table.png")
+    >>> 
+    >>> # Use with Taulu
+    >>> taulu = Taulu("header.png")
+    >>> grid = taulu.segment_table("table.png", filtered=filtered)
 """
 
 GPU_AVAILABLE = False

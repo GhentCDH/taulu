@@ -119,6 +119,32 @@ def train_model(
     intersection_coords: List[List[Tuple[int, int]]],
     save_path: str | PathLike = "intersection_mode.pth",
 ):
+    """
+    Train corner detection model on annotated images.
+    
+    Args:
+        image_paths: Paths to training images
+        intersection_coords: List of corner coordinates for each image
+            Format: [[(x1,y1), (x2,y2), ...], ...] - one list per image
+        save_path: Where to save trained model
+        
+    Example:
+        >>> from pathlib import Path
+        >>> import json
+        >>> 
+        >>> # Load annotations from saved TableGrids
+        >>> images = [Path("table_01.png"), Path("table_02.png")]
+        >>> coords = []
+        >>> for img in images:
+        >>>     with open(img.with_suffix(".json")) as f:
+        >>>         data = json.load(f)
+        >>>         corners = [(x,y) for row in data["points"] 
+        >>>                   for (x,y) in row if x is not None]
+        >>>         coords.append(corners)
+        >>> 
+        >>> train_model(images, coords, "my_model.pth")
+    """
+
     dataset = IntersectionDataset(
         image_paths=image_paths,
         intersection_coords=intersection_coords,

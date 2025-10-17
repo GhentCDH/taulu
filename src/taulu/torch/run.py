@@ -16,7 +16,25 @@ def apply_kernel_to_image_tiled(
     overlap: int = 64,
 ) -> np.ndarray:
     """
-    Apply model in tiles to avoid GPU memory issues.
+    Apply trained model to image, producing corner detection heatmap.
+    
+    Processes image in tiles to avoid GPU memory issues.
+    
+    Args:
+        model: Trained DeepConvNet model (call model.eval() first)
+        image: Input image path or grayscale numpy array
+        device: 'cuda' or 'cpu'
+        tile_size: Tile size in pixels (smaller = less memory)
+        overlap: Overlap between tiles (must cover receptive field)
+        
+    Returns:
+        Grayscale uint8 image (0-255) with high values at corners
+        
+    Example:
+        >>> model = DeepConvNet.load("model.pth")
+        >>> filtered = apply_kernel_to_image_tiled(model, "table.png")
+        >>> # Use with Taulu
+        >>> taulu.segment_table("table.png", filtered=filtered)
     """
 
     model.eval()
