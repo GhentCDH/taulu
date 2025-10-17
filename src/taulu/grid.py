@@ -419,6 +419,7 @@ class GridDetector:
         visual: bool = False,
         window: str = WINDOW,
         goals_width: Optional[int] = None,
+        filtered: Optional[MatLike | PathLike[str]] = None,
     ) -> "TableGrid":
         """
         Parse the image to a `TableGrid` structure that holds all of the
@@ -434,6 +435,8 @@ class GridDetector:
             window (str): the name of the OpenCV window to use for visualization
             goals_width (int | None): the width of the goal region when searching for the next point.
                 If None, defaults to 1.5 * search_region
+            filtered (MatLike | PathLike[str] | None): if provided, this image is used instead of
+                calculating the filtered image from scratch
 
         Returns:
             a TableGrid object
@@ -448,7 +451,13 @@ class GridDetector:
         if not isinstance(img, np.ndarray):
             img = cv.imread(os.fspath(img))
 
-        filtered = self.apply(img, visual)
+        if filtered is None:
+            filtered = self.apply(img, visual)
+        else:
+            if not isinstance(filtered, np.ndarray):
+                filtered = cv.imread(os.fspath(filtered))
+
+            filtered = ensure_gray(filtered)
 
         if visual:
             imu.show(filtered, window=window)

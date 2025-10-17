@@ -11,6 +11,7 @@ import cv2
 from cv2.typing import MatLike
 from pathlib import Path
 import logging
+from typing import Optional
 
 from taulu.header_template import HeaderTemplate
 
@@ -510,6 +511,7 @@ class Taulu:
     def segment_table(
         self,
         image: MatLike | PathLike[str] | str,
+        filtered: Optional[MatLike | PathLike[str] | str] = None,
         debug_view: bool = False,
     ) -> TableGrid:
         """
@@ -552,6 +554,12 @@ class Taulu:
         Args:
             image (MatLike | PathLike[str] | str): Table image to segment.
                 Can be a file path or a numpy array (BGR or grayscale).
+
+            filtered (MatLike | PathLike[str] | str | None): Optional pre-filtered
+                binary image to use instead of computing it internally.
+                Must be the same size as `image`. If provided, parameters related
+                to filtering (e.g. `sauvola_k`, `morph_size`) are ignored.
+                Default: None
 
             debug_view (bool): If True, opens OpenCV windows showing intermediate
                 processing steps:
@@ -686,6 +694,7 @@ class Taulu:
             self._template.cell_widths(0),
             self._cell_heights,
             visual=debug_view,
+            filtered=filtered,
         )
         grid_time = perf_counter() - now
         logger.info(f"Grid detection took {grid_time:.2f} seconds")

@@ -69,3 +69,10 @@ __all__ = [
     "Split",
     "Taulu",
 ]
+
+try:
+    from . import gpu
+
+    __all__.append("gpu")
+except ImportError:
+    pass
