@@ -63,8 +63,10 @@ class DeepConvNet(nn.Module):
         )
 
     @classmethod
-    def load(cls, path):
-        checkpoint = torch.load(path)
+    def load(cls, path, device=None):
+        if device is None:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        checkpoint = torch.load(path, map_location=device)
         model = cls(**checkpoint["model_config"])
         model.load_state_dict(checkpoint["model_state_dict"])
         return model
