@@ -1,9 +1,12 @@
+import logging
+
 import torch
 import torch.nn as nn
 import numpy as np
 from pathlib import Path
 from PIL import Image
 
+logger = logging.getLogger(__name__)
 
 def apply_kernel_to_image_tiled(
     model: nn.Module,
@@ -100,7 +103,7 @@ def apply_kernel_to_image_tiled(
                 heatmap[out_y_start:out_y_end, out_x_start:out_x_end] += tile_heatmap
                 count_map[out_y_start:out_y_end, out_x_start:out_x_end] += 1
 
-                print(f"Processed tile ({x}, {y}) -> ({x_end}, {y_end})")
+                logger.debug(f"Processed tile ({x}, {y}) -> ({x_end}, {y_end})")
 
     # Average overlapping regions
     heatmap = np.divide(heatmap, count_map, where=count_map > 0)
