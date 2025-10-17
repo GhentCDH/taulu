@@ -7,13 +7,13 @@ from os import PathLike
 class DeepConvNet(nn.Module):
     """
     Deep CNN for detecting table corner intersections.
-    
+
     Outputs a probability [0,1] indicating if the center pixel is a corner.
-    
+
     Example:
         >>> model = DeepConvNet(kernel_size=9, initial_filters=8, num_layers=7)
         >>> model.save("model.pth")
-        >>> 
+        >>>
         >>> # Later...
         >>> model = DeepConvNet.load("model.pth")
         >>> model.eval()
@@ -86,7 +86,7 @@ class DeepConvNet(nn.Module):
     @classmethod
     def load(cls, path, device=None):
         if device is None:
-            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            device = "cuda" if torch.cuda.is_available() else "cpu"
         checkpoint = torch.load(path, map_location=device)
         model = cls(**checkpoint["model_config"])
         model.load_state_dict(checkpoint["model_state_dict"])

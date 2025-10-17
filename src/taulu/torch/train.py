@@ -121,27 +121,27 @@ def train_model(
 ):
     """
     Train corner detection model on annotated images.
-    
+
     Args:
         image_paths: Paths to training images
         intersection_coords: List of corner coordinates for each image
             Format: [[(x1,y1), (x2,y2), ...], ...] - one list per image
         save_path: Where to save trained model
-        
+
     Example:
         >>> from pathlib import Path
         >>> import json
-        >>> 
+        >>>
         >>> # Load annotations from saved TableGrids
         >>> images = [Path("table_01.png"), Path("table_02.png")]
         >>> coords = []
         >>> for img in images:
         >>>     with open(img.with_suffix(".json")) as f:
         >>>         data = json.load(f)
-        >>>         corners = [(x,y) for row in data["points"] 
+        >>>         corners = [(x,y) for row in data["points"]
         >>>                   for (x,y) in row if x is not None]
         >>>         coords.append(corners)
-        >>> 
+        >>>
         >>> train_model(images, coords, "my_model.pth")
     """
 

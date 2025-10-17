@@ -559,14 +559,14 @@ class Taulu:
                 binary image to use instead of computing it internally.
                 Must be the same size as `image`. If provided, parameters related
                 to filtering (e.g. `sauvola_k`, `morph_size`) are ignored.
-                
+
                 **GPU acceleration**: Use trained CNN model for corner detection:
-                
+
                 >>> from taulu.gpu import DeepConvNet, apply_kernel_to_image_tiled
                 >>> model = DeepConvNet.load("model.pth")
                 >>> filtered = apply_kernel_to_image_tiled(model, image)
                 >>> grid = taulu.segment_table(image, filtered=filtered)
-                
+
                 Default: None
 
             debug_view (bool): If True, opens OpenCV windows showing intermediate
