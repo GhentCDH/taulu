@@ -72,6 +72,7 @@ __all__ = [
 
 try:
     from . import gpu
+
     __all__.append("gpu")
 except ImportError:
     pass

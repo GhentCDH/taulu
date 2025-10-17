@@ -10,7 +10,7 @@ def apply_kernel_to_image_tiled(
     image: Path | np.ndarray,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
     tile_size: int = 512,
-    overlap: int = 64
+    overlap: int = 64,
 ) -> np.ndarray:
     """
     Apply model in tiles to avoid GPU memory issues.
@@ -27,17 +27,19 @@ def apply_kernel_to_image_tiled(
     elif isinstance(image, np.ndarray):
         # Process numpy array
         img_array = image.copy()
-        
+
         # Handle different input shapes
         if img_array.ndim == 3:
             # If (H, W, 1), squeeze to (H, W)
             if img_array.shape[2] == 1:
                 img_array = img_array.squeeze(axis=2)
             else:
-                raise ValueError(f"Expected grayscale image, got shape {img_array.shape}")
+                raise ValueError(
+                    f"Expected grayscale image, got shape {img_array.shape}"
+                )
         elif img_array.ndim != 2:
             raise ValueError(f"Expected 2D or 3D array, got shape {img_array.shape}")
-        
+
         # Normalize to [0, 1] if needed
         if img_array.dtype == np.uint8:
             img_array = img_array.astype(np.float32) / 255.0
@@ -52,7 +54,9 @@ def apply_kernel_to_image_tiled(
     h, w = img_array.shape
 
     # Calculate receptive field for overlap
-    rf = 1 + len([m for m in model.convs if isinstance(m, nn.Conv2d)]) * (model.kernel_size - 1)
+    rf = 1 + len([m for m in model.convs if isinstance(m, nn.Conv2d)]) * (
+        model.kernel_size - 1
+    )
     overlap = max(overlap, rf)  # Ensure overlap covers receptive field
 
     # Initialize output heatmap
@@ -70,7 +74,9 @@ def apply_kernel_to_image_tiled(
                 tile = img_array[y:y_end, x:x_end]
 
                 # Convert to tensor
-                tile_tensor = torch.from_numpy(tile).unsqueeze(0).unsqueeze(0).to(device)
+                tile_tensor = (
+                    torch.from_numpy(tile).unsqueeze(0).unsqueeze(0).to(device)
+                )
 
                 # Apply model
                 tile_out = model.convs(tile_tensor)

@@ -1,17 +1,30 @@
-"""GPU-accelerated components for taulu.
-
-This module is only available when taulu is installed with GPU support:
-    pip install taulu[gpu]
 """
+Torch based Corner Detection kernel using CNNs.
+"""
+
+GPU_AVAILABLE = False
 
 try:
     import torch
-    GPU_AVAILABLE = True
-except:
-    GPU_AVAILABLE = False
-
-if GPU_AVAILABLE:
     from . import model, data, train, run
-    __all__ = ['GPU_AVAILABLE', 'model', 'data', 'train', 'run']
-else:
-    __all__ = ['GPU_AVAILABLE']
+
+    from .model import DeepConvNet
+    from .run import apply_kernel_to_image_tiled
+    from .train import train_model
+
+    if torch.cuda.is_available():
+        GPU_AVAILABLE = True
+
+    __all__ = [
+        "GPU_AVAILABLE",
+        "model",
+        "DeepConvNet",
+        "apply_kernel_to_image_tiled",
+        "train_model",
+        "data",
+        "train",
+        "run",
+    ]
+
+except ImportError:
+    __all__ = ["GPU_AVAILABLE"]

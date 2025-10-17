@@ -16,7 +16,8 @@ KERNEL_SIZE = 9
 INITIAL_FILTERS = 8
 NUM_LAYERS = 7
 
-def train_model(
+
+def _train_model(
     model: nn.Module,
     train_loader: DataLoader,
     val_loader: Optional[DataLoader] = None,
@@ -102,7 +103,7 @@ def train_model(
             model.save(save_path)
 
     # Save final model regardless
-    final_path = save_path.replace('.pth', '_final.pth')
+    final_path = save_path.replace(".pth", "_final.pth")
     model.save(final_path)
     _logger.info(f"Final model saved to {final_path}")
     _logger.info(f""""Use model like this: 
@@ -113,7 +114,11 @@ def train_model(
     return model
 
 
-def train(image_paths: List[Path], intersection_coords: List[List[Tuple[int, int]]], save_path: str | PathLike = "intersection_mode.pth"):
+def train_model(
+    image_paths: List[Path],
+    intersection_coords: List[List[Tuple[int, int]]],
+    save_path: str | PathLike = "intersection_mode.pth",
+):
     dataset = IntersectionDataset(
         image_paths=image_paths,
         intersection_coords=intersection_coords,
@@ -129,5 +134,7 @@ def train(image_paths: List[Path], intersection_coords: List[List[Tuple[int, int
     val_loader = DataLoader(val_dataset, batch_size=32)
 
     _logger.info("Training deep convolutional model...")
-    model = DeepConvNet(kernel_size=KERNEL_SIZE, initial_filters=INITIAL_FILTERS, num_layers=NUM_LAYERS)
-    train_model(model, train_loader, val_loader, save_path=save_path)
+    model = DeepConvNet(
+        kernel_size=KERNEL_SIZE, initial_filters=INITIAL_FILTERS, num_layers=NUM_LAYERS
+    )
+    _train_model(model, train_loader, val_loader, save_path=save_path)

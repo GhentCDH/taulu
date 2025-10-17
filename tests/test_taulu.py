@@ -6,7 +6,7 @@ from util import (
     header_right_anno_path,
     header_right_image_path,
     table_image_path,
-    table_filtered_path
+    table_filtered_path,
 )
 import cv2
 
@@ -77,6 +77,7 @@ import cv2
 #     table.visualize_points(im)
 #     table.show_cells(im)
 
+
 @pytest.mark.visual
 # @pytest.mark.skipif(
 #     not files_exist(
@@ -115,4 +116,3 @@ def test_already_filtered():
 
     cells = table.highlight_all_cells(im)
     img_util.show(cells)
-

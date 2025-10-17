@@ -22,34 +22,34 @@ logger = logging.getLogger(__name__)
 class HeaderAligner:
     """
     Aligns table header templates to subject images using feature-based registration.
-    
+
     This class uses ORB (Oriented FAST and Rotated BRIEF) feature detection and
     matching to compute a homography transformation that maps points from a header
     template image to their corresponding locations in full table images.
-    
+
     ## How it Works
-    
+
     1. **Feature Detection**: Extracts ORB keypoints from both template and subject
     2. **Feature Matching**: Finds correspondences using Hamming distance
     3. **Filtering**: Keeps top matches and prunes based on spatial consistency
     4. **Homography Estimation**: Computes perspective transform using RANSAC
-    
+
     The computed homography can then transform any point from template space to
     image space, allowing you to locate table structures based on your annotation.
-    
+
     ## Preprocessing Options
-    
+
     - Set `k` parameter to apply Sauvola thresholding before feature detection.
       This can improve matching on documents with variable lighting.
     - Set `k=None` to use raw images (just extract blue channel for BGR images)
-    
+
     ## Tuning Guidelines
-    
+
     - **max_features**: Increase if matching fails on complex templates
     - **match_fraction**: Decrease if you get many incorrect matches
     - **max_dist**: Increase for documents with more warping/distortion
     - **scale**: Decrease (<1.0) to speed up on high-resolution images
-    
+
     Args:
         template (MatLike | PathLike[str] | str | None): Header template image or path.
             This should contain a clear, representative view of the table header.
