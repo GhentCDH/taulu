@@ -62,6 +62,13 @@ pub struct TableGrower {
     pub search_region: usize,
     /// The distance penalty to use when finding the best corner match
     pub distance_penalty: f64,
+    /// Cached flattened gaussian weights for the current `search_region` / `distance_penalty`.
+    /// Stored row-major as a single `Vec<f32>` of length `search_region * search_region`.
+    pub cached_weights: Option<Vec<f32>>,
+    /// Region size corresponding to `cached_weights`
+    pub cached_weights_region: usize,
+    /// Distance penalty corresponding to `cached_weights`
+    pub cached_weights_distance_penalty: f64,
     pub column_widths: Vec<i32>,
     pub row_heights: Vec<i32>,
     pub look_distance: usize,
@@ -108,6 +115,18 @@ impl TableGrower {
         min_row_count: usize,
     ) -> Self {
         let corners = Vec::new();
+
+        // Precompute flattened gaussian weights for this TableGrower instance.
+        // Flatten into a single Vec<f32> in row-major order.
+        let cached_weights = {
+            let weights_2d = create_gaussian_weights(search_region, distance_penalty);
+            let mut flat = Vec::with_capacity(search_region * search_region);
+            for row in weights_2d {
+                flat.extend(row);
+            }
+            Some(flat)
+        };
+
         let mut table_grower = Self {
             edge: HashMap::new(),
             corners,
@@ -116,6 +135,9 @@ impl TableGrower {
             row_heights,
             search_region,
             distance_penalty,
+            cached_weights,
+            cached_weights_region: search_region,
+            cached_weights_distance_penalty: distance_penalty,
             look_distance,
             grow_threshold,
             min_row_count,
@@ -626,12 +648,13 @@ impl TableGrower {
             Point(last.0, last.1)
         };
 
-        find_best_corner_match(
-            cross_correlation,
-            approx,
-            self.search_region,
-            self.distance_penalty,
-        )
+        // Use the cached flattened weights precomputed in the TableGrower instance.
+        let weights = self
+            .cached_weights
+            .as_ref()
+            .expect("cached weights missing on TableGrower");
+
+        find_best_corner_match_flat(cross_correlation, approx, self.search_region, weights)
     }
 
     /// Update the edge with a new corner point and its confidence for the given coord
@@ -1294,13 +1317,13 @@ fn intersect_regressions(
     clippy::cast_sign_loss,
     clippy::cast_possible_wrap
 )]
-fn find_best_corner_match(
+fn find_best_corner_match_flat(
     cross_correlation: &Image,
     approx: Point,
     search_region: usize,
-    distance_penalty: f64, // This parameter isn't used in the Python version
+    weights_flat: &[f32], // row-major flattened weights of length search_region*search_region
 ) -> Option<(Point, f64)> {
-    // Check if image is empty
+    // Fast path: empty image
     if cross_correlation.is_empty() {
         return None;
     }
@@ -1309,94 +1332,55 @@ fn find_best_corner_match(
     let x = approx.x();
     let y = approx.y();
 
-    // Calculate crop boundaries
+    // Calculate crop boundaries (same as before)
     let crop_x = std::cmp::max(0, x - (search_region as i32) / 2) as usize;
     let crop_y = std::cmp::max(0, y - (search_region as i32) / 2) as usize;
     let crop_width = std::cmp::min(search_region, width.saturating_sub(crop_x));
     let crop_height = std::cmp::min(search_region, height.saturating_sub(crop_y));
 
-    // Handle edge cases
     if crop_width == 0 || crop_height == 0 {
-        return Some((approx, 0.0)); // Return original point with 0 confidence
-    }
-
-    // Extract cropped region
-    let mut cropped = vec![vec![0u8; crop_width]; crop_height];
-    for i in 0..crop_height {
-        for j in 0..crop_width {
-            cropped[i][j] = cross_correlation[[crop_y + i, crop_x + j]];
-        }
-    }
-
-    if cropped.is_empty() || cropped[0].is_empty() {
         return Some((approx, 0.0));
     }
 
-    // Apply Gaussian weighting
-    let weighted = if crop_height == search_region && crop_width == search_region {
-        // Perfect size - apply weights directly
-        let weights = create_gaussian_weights(search_region, distance_penalty);
-        let mut result = vec![vec![0.0f32; crop_width]; crop_height];
-        for i in 0..crop_height {
-            for j in 0..crop_width {
-                result[i][j] = f32::from(cropped[i][j]) * weights[i][j];
-            }
-        }
-        result
+    // Compute offset to center the cropped region within the search_region grid.
+    let offset_y = if search_region > crop_height {
+        (search_region - crop_height) / 2
     } else {
-        // Extend crop to match search_region, apply weights, then restore
-        let mut extended = vec![vec![0u8; search_region]; search_region];
-
-        // Calculate offset to center the cropped region in extended array
-        let offset_y = (search_region - crop_height) / 2;
-        let offset_x = (search_region - crop_width) / 2;
-
-        // Place cropped region in center of extended array
-        for i in 0..crop_height {
-            for j in 0..crop_width {
-                extended[offset_y + i][offset_x + j] = cropped[i][j];
-            }
-        }
-
-        // Apply Gaussian weights to extended array
-        let weights = create_gaussian_weights(search_region, distance_penalty);
-        let mut weighted_extended = vec![vec![0.0f32; search_region]; search_region];
-        for i in 0..search_region {
-            for j in 0..search_region {
-                weighted_extended[i][j] = f32::from(extended[i][j]) * weights[i][j];
-            }
-        }
-
-        // Extract the original region back out
-        let mut result = vec![vec![0.0f32; crop_width]; crop_height];
-        for i in 0..crop_height {
-            for j in 0..crop_width {
-                result[i][j] = weighted_extended[offset_y + i][offset_x + j];
-            }
-        }
-        result
+        0
+    };
+    let offset_x = if search_region > crop_width {
+        (search_region - crop_width) / 2
+    } else {
+        0
     };
 
-    // Find the maximum value and its position
+    // Iterate the crop directly over the backing image and compute weighted values on the fly.
     let mut best_value = 0.0f32;
-    let mut best_x = 0;
-    let mut best_y = 0;
+    let mut best_x = 0usize;
+    let mut best_y = 0usize;
 
-    for (i, row) in weighted.iter().enumerate() {
-        for (j, &value) in row.iter().enumerate() {
-            if value > best_value {
-                best_value = value;
+    for i in 0..crop_height {
+        let global_y = crop_y + i;
+        let wi = offset_y + i;
+        for j in 0..crop_width {
+            let global_x = crop_x + j;
+            let wj = offset_x + j;
+            // Index into flattened weights
+            let weight = weights_flat[wi * search_region + wj];
+            let val = cross_correlation[[global_y, global_x]] as f32 * weight;
+            if val > best_value {
+                best_value = val;
                 best_x = j;
                 best_y = i;
             }
         }
     }
 
-    // Convert back to global coordinates
+    // Map local best back to global coordinates
     let result_x = crop_x + best_x;
     let result_y = crop_y + best_y;
 
-    let best_value_normalized = best_value / 255.0;
+    let best_value_normalized = best_value / 255.0_f32;
 
     Some((
         Point(result_x as i32, result_y as i32),
@@ -1426,6 +1410,10 @@ mod tests {
             edge: HashMap::new(),
             search_region: 10,
             distance_penalty: 0.5,
+            // Cached flattened weights: 10x10 region with uniform weight for tests.
+            cached_weights: Some(vec![1.0f32; 100]),
+            cached_weights_region: 10,
+            cached_weights_distance_penalty: 0.5,
             column_widths: vec![4; 3],
             row_heights: vec![4; 2],
             look_distance: 3,
@@ -1445,6 +1433,10 @@ mod tests {
             edge: HashMap::new(),
             search_region: 10,
             distance_penalty: 0.5,
+            // Cached flattened weights: 10x10 region with uniform weight for tests.
+            cached_weights: Some(vec![1.0f32; 100]),
+            cached_weights_region: 10,
+            cached_weights_distance_penalty: 0.5,
             column_widths: vec![4; 3],
             row_heights: vec![4; 2],
             look_distance: 3,
