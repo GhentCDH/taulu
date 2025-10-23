@@ -41,6 +41,6 @@ numpy = "0.26.0"
 rayon = "1.11.0"
 approx = "0.5.1"
 ndarray = { version = "0.16.1", default-features = false }
-rerun = { version = "0.25.1", optional = true, default-features = false, features = [
+rerun = { version = "0.26.1", optional = true, default-features = false, features = [
     "sdk",
 ] }
