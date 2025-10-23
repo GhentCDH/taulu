@@ -1,6 +1,6 @@
 from typing import Optional
 import numpy as np
-from .types import Point, PointFloat
+from .types import Point
 
 def astar(
     img: np.ndarray,
@@ -8,9 +8,6 @@ def astar(
     goals: list[tuple[int, int]],
     direction: str,
 ) -> list[tuple[int, int]] | None: ...
-def median_slope(
-    lines: list[tuple[PointFloat, PointFloat]],
-) -> float: ...
 
 class TableGrower:
     """
