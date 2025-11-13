@@ -122,8 +122,6 @@ def apply_kernel_to_image_tiled(
                 heatmap[out_y_start:out_y_end, out_x_start:out_x_end] += tile_heatmap
                 count_map[out_y_start:out_y_end, out_x_start:out_x_end] += 1
 
-                logger.debug(f"Processed tile ({x}, {y}) -> ({x_end}, {y_end})")
-
     # Average overlapping regions
     heatmap = np.divide(heatmap, count_map, where=count_map > 0)
 
