@@ -46,7 +46,7 @@ class DeepConvNet(nn.Module):
                         in_channels,
                         out_channels,
                         kernel_size=kernel_size,
-                        padding=0,
+                        padding=kernel_size//2,
                         bias=True,
                     ),
                     nn.BatchNorm2d(out_channels),
