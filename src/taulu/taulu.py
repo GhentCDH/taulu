@@ -172,6 +172,7 @@ class Taulu:
         min_rows: int | Split[int] = 5,
         look_distance: int | Split[int] = 3,
         grow_threshold: float | Split[float] = 0.3,
+        smooth_grid: bool = False,
     ):
         """
         Args:
@@ -292,9 +293,17 @@ class Taulu:
 
                 Default: 0.3
 
+            smooth_grid (bool | Split[bool]):
+                Whether or not to apply local smoothing logic to the grid after point detection.
+                This may clean up rugged parts of the grid but could also lead to small inaccuracies
+                if the grid is actually locally _not smooth_.
+
+                Default: False
+
         """
         self._processing_scale = processing_scale
         self._cell_height_factor = cell_height_factor
+        self._smooth = smooth_grid
 
         if isinstance(header_image_path, Split) or isinstance(header_anno_path, Split):
             header = Split(Path(header_image_path.left), Path(header_image_path.right))
@@ -703,6 +712,7 @@ class Taulu:
             self._cell_heights,
             visual=debug_view,
             filtered=filtered,
+            smooth=self._smooth
         )
         grid_time = perf_counter() - now
         logger.info(f"Grid detection took {grid_time:.2f} seconds")

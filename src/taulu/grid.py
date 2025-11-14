@@ -420,6 +420,7 @@ class GridDetector:
         window: str = WINDOW,
         goals_width: Optional[int] = None,
         filtered: Optional[MatLike | PathLike[str]] = None,
+        smooth: bool = False
     ) -> "TableGrid":
         """
         Parse the image to a `TableGrid` structure that holds all of the
@@ -437,6 +438,7 @@ class GridDetector:
                 If None, defaults to 1.5 * search_region
             filtered (MatLike | PathLike[str] | None): if provided, this image is used instead of
                 calculating the filtered image from scratch
+            smooth (bool): if True, smooth the grid after detection, using local heuristics
 
         Returns:
             a TableGrid object
@@ -571,7 +573,8 @@ class GridDetector:
         else:
             table_grower.grow_table(img_gray, filtered_gray)
 
-        table_grower.smooth_grid()
+        if smooth:
+            table_grower.smooth_grid()
         corners = table_grower.get_all_corners()
         logger.info(
             f"Table growth complete, found {len(corners)} rows and {len(corners[0])} columns"
