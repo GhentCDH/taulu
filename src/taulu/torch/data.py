@@ -101,41 +101,37 @@ class IntersectionDataset(Dataset):
         self, img_idx: int, coords: List[Tuple[int, int]], h: int, w: int
     ) -> List[Tuple[int, int, int, float]]:
         """Generate negative samples on lines between neighboring intersections in the table grid."""
+        import random
         samples = []
-
         # Need to reconstruct the row structure from the flattened coords
         # Load the original JSON structure for this image
         image_path = self.image_paths[img_idx]
         # points_path = Path(f"./points_{img_idx}.json")
         points_path = Path("./primitief2.json")
-
         if not points_path.exists():
             return samples
-
         import json
-
         with open(points_path, "r") as f:
             rows = json.load(f)["points"]  # [[[x, y], ...], ...] - list of rows
-
+        
+        amount = 5  # Number of random samples per line segment
+        
         # Horizontal lines: sample between neighbors in the same row
         for row in rows:
             for i in range(len(row) - 1):
                 x1, y1 = row[i][0], row[i][1]
                 x2, y2 = row[i + 1][0], row[i + 1][1]  # Right neighbor in same row
-
-                # Sample 2-3 points between horizontal neighbors
-                amount = 6
-                for frac in range(1, amount):
-                    frac = frac / amount
+                # Sample random points between horizontal neighbors
+                for _ in range(amount):
+                    frac = random.uniform(0.1, 0.9)  # Avoid endpoints
                     x = int(x1 + (x2 - x1) * frac)
                     y = int(y1 + (y2 - y1) * frac)
-
                     if (
                         self.half_patch <= x < w - self.half_patch
                         and self.half_patch <= y < h - self.half_patch
                     ):
                         samples.append((img_idx, x, y, 0.0))
-
+        
         # Vertical lines: sample between neighbors in the same column
         if rows and len(rows) > 0:
             n_cols = len(rows[0])
@@ -145,27 +141,22 @@ class IntersectionDataset(Dataset):
                 for row in rows:
                     if col_idx < len(row):
                         column.append(row[col_idx])
-
                 for i in range(len(column) - 1):
                     x1, y1 = column[i][0], column[i][1]
                     x2, y2 = (
                         column[i + 1][0],
                         column[i + 1][1],
                     )  # Bottom neighbor in same column
-
-                    # Sample 2-3 points between vertical neighbors
-                    amount = 6
-                    for frac in range(1, amount):
-                        frac = frac / amount
+                    # Sample random points between vertical neighbors
+                    for _ in range(amount):
+                        frac = random.uniform(0.1, 0.9)  # Avoid endpoints
                         x = int(x1 + (x2 - x1) * frac)
                         y = int(y1 + (y2 - y1) * frac)
-
                         if (
                             self.half_patch <= x < w - self.half_patch
                             and self.half_patch <= y < h - self.half_patch
                         ):
                             samples.append((img_idx, x, y, 0.0))
-
         return samples
 
     def __len__(self):
