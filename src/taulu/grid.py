@@ -486,7 +486,7 @@ class GridDetector:
         cell_widths = [int(w * self._scale) for w in cell_widths]
         cell_heights = [int(h * self._scale) for h in cell_heights]
         left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
-        self._search_region = int(self._search_region * self._scale)
+        search_region = int(self._search_region * self._scale)
 
         img_gray = ensure_gray(img)
         filtered_gray = ensure_gray(filtered)
@@ -497,7 +497,7 @@ class GridDetector:
             cell_widths,  # pyright: ignore
             cell_heights,  # pyright: ignore
             left_top,
-            self._search_region,
+            search_region,
             self._distance_penalty,
             self._look_distance,
             self._grow_threshold,
@@ -590,159 +590,6 @@ class GridDetector:
                         )
 
         return TableGrid(corners)  # pyright: ignore
-
-    @log_calls(level=logging.DEBUG, include_return=True)
-    def _build_table_row(
-        self,
-        gray: MatLike,
-        filtered: MatLike,
-        start_point: Point,
-        cell_widths: List[int],
-        row_idx: int,
-        goals_width: int,
-        previous_row_points: Optional[List[Point]] = None,
-        visual: bool = False,
-    ) -> List[Point]:
-        """Build a single row of table points."""
-        row = [start_point]
-        current = start_point
-
-        for col_idx, width in enumerate(cell_widths):
-            next_point = self._find_next_column_point(
-                gray,
-                filtered,
-                current,
-                width,
-                goals_width,
-                visual,
-                previous_row_points,
-                col_idx,
-            )
-            if next_point is None:
-                logger.warning(
-                    f"Could not find point for row {row_idx}, col {col_idx + 1}"
-                )
-                return []  # Return empty list to signal failure
-            row.append(next_point)
-            current = next_point
-
-        return row
-
-    def _clamp_point_to_img(self, point: Point, img: MatLike) -> Point:
-        """Clamp a point to be within the image bounds."""
-        x = max(0, min(point[0], img.shape[1] - 1))
-        y = max(0, min(point[1], img.shape[0] - 1))
-        return (x, y)
-
-    @log_calls(level=logging.DEBUG, include_return=True)
-    def _find_next_column_point(
-        self,
-        gray: MatLike,
-        filtered: MatLike,
-        current: Point,
-        width: int,
-        goals_width: int,
-        visual: bool = False,
-        previous_row_points: Optional[List[Point]] = None,
-        current_col_idx: int = 0,
-    ) -> Optional[Point]:
-        """Find the next point in the current row."""
-
-        if previous_row_points is not None and current_col_idx + 1 < len(
-            previous_row_points
-        ):
-            # grow an astar path downwards from the previous row point that is
-            # above and to the right of current
-            # and ensure all points are within image bounds
-            bottom_right = [
-                self._clamp_point_to_img(
-                    (
-                        current[0] + width - goals_width // 2 + x,
-                        current[1] + goals_width,
-                    ),
-                    gray,
-                )
-                for x in range(goals_width)
-            ]
-            goals = self._astar(
-                gray, previous_row_points[current_col_idx + 1], bottom_right, "down"
-            )
-
-            if goals is None:
-                logger.warning(
-                    f"A* failed to find path going downwards from previous row's point at idx {current_col_idx + 1}"
-                )
-                return None
-        else:
-            goals = [
-                self._clamp_point_to_img(
-                    (current[0] + width, current[1] - goals_width // 2 + y), gray
-                )
-                for y in range(goals_width)
-            ]
-
-        path = self._astar(gray, current, goals, "right")
-
-        if path is None:
-            logger.warning(
-                f"A* failed to find path going rightward from {current} to goals"
-            )
-            return None
-
-        next_point, _ = self.find_nearest(filtered, path[-1], self._search_region)
-
-        # show the point and the search region on the image for debugging
-        if visual:
-            self._visualize_path_finding(
-                goals + path,
-                current,
-                next_point,
-                current,
-                path[-1],
-                self._search_region,
-            )
-
-        return next_point
-
-    @log_calls(level=logging.DEBUG, include_return=True)
-    def _find_next_row_start(
-        self,
-        gray: MatLike,
-        filtered: MatLike,
-        top_point: Point,
-        row_idx: int,
-        cell_heights: List[int],
-        goals_width: int,
-        visual: bool = False,
-    ) -> Optional[Point]:
-        """Find the starting point of the next row."""
-        if row_idx < len(cell_heights):
-            row_height = cell_heights[row_idx]
-        else:
-            row_height = cell_heights[-1]
-
-        if top_point[1] + row_height >= filtered.shape[0] - 10:  # Near bottom
-            return None
-
-        goals = [
-            (top_point[0] - goals_width // 2 + x, top_point[1] + row_height)
-            for x in range(goals_width)
-        ]
-
-        path = self._astar(gray, top_point, goals, "down")
-        if path is None:
-            return None
-
-        next_point, _ = self.find_nearest(
-            filtered, path[-1], region=self._search_region * 3 // 2
-        )
-
-        if visual:
-            self._visualize_path_finding(
-                path, top_point, next_point, top_point, path[-1], self._search_region
-            )
-
-        return next_point
 
     def _visualize_grid(self, img: MatLike, points: List[List[Point]]) -> None:
         """Visualize the detected grid points."""
