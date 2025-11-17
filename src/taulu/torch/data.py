@@ -102,6 +102,7 @@ class IntersectionDataset(Dataset):
     ) -> List[Tuple[int, int, int, float]]:
         """Generate negative samples on lines between neighboring intersections in the table grid."""
         import random
+        import math
         samples = []
         # Need to reconstruct the row structure from the flattened coords
         # Load the original JSON structure for this image
@@ -114,15 +115,22 @@ class IntersectionDataset(Dataset):
         with open(points_path, "r") as f:
             rows = json.load(f)["points"]  # [[[x, y], ...], ...] - list of rows
         
-        amount = 5  # Number of random samples per line segment
+        density = 0.08  # Average number of negative samples per pixel of line length
         
         # Horizontal lines: sample between neighbors in the same row
         for row in rows:
             for i in range(len(row) - 1):
                 x1, y1 = row[i][0], row[i][1]
                 x2, y2 = row[i + 1][0], row[i + 1][1]  # Right neighbor in same row
+                # Calculate line length
+                line_length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                # Expected number of samples for this line segment
+                expected_samples = line_length * density
+                # Use Poisson distribution for actual number (more realistic)
+                num_samples = max(1, int(random.gauss(expected_samples, math.sqrt(expected_samples))))
+                
                 # Sample random points between horizontal neighbors
-                for _ in range(amount):
+                for _ in range(num_samples):
                     frac = random.uniform(0.1, 0.9)  # Avoid endpoints
                     x = int(x1 + (x2 - x1) * frac)
                     y = int(y1 + (y2 - y1) * frac)
@@ -147,8 +155,15 @@ class IntersectionDataset(Dataset):
                         column[i + 1][0],
                         column[i + 1][1],
                     )  # Bottom neighbor in same column
+                    # Calculate line length
+                    line_length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                    # Expected number of samples for this line segment
+                    expected_samples = line_length * density
+                    # Use Poisson distribution for actual number (more realistic)
+                    num_samples = max(1, int(random.gauss(expected_samples, math.sqrt(expected_samples))))
+                    
                     # Sample random points between vertical neighbors
-                    for _ in range(amount):
+                    for _ in range(num_samples):
                         frac = random.uniform(0.1, 0.9)  # Avoid endpoints
                         x = int(x1 + (x2 - x1) * frac)
                         y = int(y1 + (y2 - y1) * frac)
