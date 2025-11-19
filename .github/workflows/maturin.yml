@@ -36,14 +36,14 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
           manylinux: auto
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python3.13t
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
           manylinux: auto
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -74,14 +74,14 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
           manylinux: musllinux_1_2
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python3.13t
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
           manylinux: musllinux_1_2
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -109,13 +109,13 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python3.13t
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -141,13 +141,13 @@ jobs:
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
       - name: Build free-threaded wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.platform.target }}
           args: --release --out dist -i python3.13t
-          sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
+          sccache: true
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
