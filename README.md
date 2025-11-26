@@ -149,3 +149,9 @@ These methods are the most useful:
 - `highlight_all_cells`: highlight all cell edges on an image
 - `show_cells`: interactively highlight cells you click on in the image (in an OpenCV window)
 - `crop_cell` and `crop_region`: crop the image to the supplied cell or region
+
+## Credits
+
+Development by [Ghent Centre for Digital Humanities - Ghent University](https://www.ghentcdh.ugent.be/). Funded by the [GhentCDH research projects](https://www.ghentcdh.ugent.be/projects).
+
+<img src="https://www.ghentcdh.ugent.be/ghentcdh_logo_blue_text_transparent_bg_landscape.svg" alt="Landscape" width="500">
