@@ -1,16 +1,16 @@
 [project]
 name = "taulu"
-version = "2.0.6"
+version = "2.0.7"
 description = "Segment a table from an image"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "matplotlib>=3.10.6",
-    "numpy>=2.2.4",
-    "opencv-python>=4.11.0.86",
-    "pandas>=2.2.3",
-    "scikit-image>=0.25.2",
-    "scipy>=1.15.2",
+  "matplotlib>=3.10.6",
+  "numpy>=2.2.4",
+  "opencv-python>=4.11.0.86",
+  "pandas>=2.2.3",
+  "scikit-image>=0.25.2",
+  "scipy>=1.15.2",
 ]
 
 [project.optional-dependencies]

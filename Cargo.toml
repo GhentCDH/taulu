@@ -1,6 +1,6 @@
 [package]
 name = "taulu"
-version = "2.0.6"
+version = "2.0.7"
 edition = "2024"
 
 [lib]
@@ -32,9 +32,9 @@ panic = "abort"
 # "abi3-py39" tells pyo3 (and maturin) to build using the stable ABI with minimum Python version 3.9
 # used to be version = "0.22.4"
 pyo3 = { version = "0.26.0", features = [
-    "extension-module",
-    "abi3-py39",
-    "generate-import-lib",
+  "extension-module",
+  "abi3-py39",
+  "generate-import-lib",
 ] }
 pathfinding = "4.14.0"
 numpy = "0.26.0"
@@ -42,5 +42,5 @@ rayon = "1.11.0"
 approx = "0.5.1"
 ndarray = { version = "0.16.1", default-features = false }
 rerun = { version = "0.26.1", optional = true, default-features = false, features = [
-    "sdk",
+  "sdk",
 ] }
