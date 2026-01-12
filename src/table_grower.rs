@@ -64,7 +64,7 @@ pub struct TableGrower {
     pub distance_penalty: f64,
     /// Cached flattened gaussian weights for the current `search_region` / `distance_penalty`.
     /// Stored row-major as a single `Vec<f32>` of length `search_region * search_region`.
-    pub cached_weights: Option<Vec<f32>>,
+    pub cached_weights: Vec<f32>,
     /// Region size corresponding to `cached_weights`
     pub cached_weights_region: usize,
     /// Distance penalty corresponding to `cached_weights`
@@ -90,11 +90,10 @@ impl TableGrower {
     #[new]
     #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
-        table_image,
         cross_correlation,
         column_widths,
         row_heights,
-        start_point,
+        top_row,
         search_region,
         distance_penalty = 0.5,
         look_distance = 3,
@@ -103,11 +102,10 @@ impl TableGrower {
     ))]
     /// Notice that the `start_point` is given as (x, y), both being integers
     fn new(
-        table_image: PyReadonlyArray2<'_, u8>,
         cross_correlation: PyReadonlyArray2<'_, u8>,
         column_widths: Vec<i32>,
         row_heights: Vec<i32>,
-        start_point: Point,
+        top_row: Vec<Option<Point>>,
         search_region: usize,
         distance_penalty: f64,
         look_distance: usize,
@@ -124,7 +122,7 @@ impl TableGrower {
             for row in weights_2d {
                 flat.extend(row);
             }
-            Some(flat)
+            flat
         };
 
         let mut table_grower = Self {
@@ -145,12 +143,22 @@ impl TableGrower {
             rec: start_rerun(),
         };
 
-        table_grower.add_corner(
-            &table_image.as_array(),
-            &cross_correlation.as_array(),
-            start_point,
-            Coord::new(0, 0),
-        );
+        for (x, point) in top_row
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, p)| p.map(|p| (i, p)))
+        {
+            let Some((point, confidence)) = find_best_corner_match_flat(
+                &cross_correlation.as_array(),
+                point,
+                table_grower.search_region,
+                &table_grower.cached_weights,
+            ) else {
+                continue;
+            };
+
+            table_grower.update_edge(Coord::new(x, 0), point, confidence);
+        }
 
         table_grower
     }
@@ -649,12 +657,12 @@ impl TableGrower {
         };
 
         // Use the cached flattened weights precomputed in the TableGrower instance.
-        let weights = self
-            .cached_weights
-            .as_ref()
-            .expect("cached weights missing on TableGrower");
-
-        find_best_corner_match_flat(cross_correlation, approx, self.search_region, weights)
+        find_best_corner_match_flat(
+            cross_correlation,
+            approx,
+            self.search_region,
+            &self.cached_weights,
+        )
     }
 
     /// Update the edge with a new corner point and its confidence for the given coord
@@ -1192,6 +1200,7 @@ fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec
     };
 
     (0..region_size).for_each(|i| {
+        #[allow(clippy::needless_range_loop)]
         for j in 0..region_size {
             // Map indices to [-1, 1] range
             let y = -1.0 + 2.0 * (i as f64) / (region_size - 1) as f64;
@@ -1367,7 +1376,7 @@ fn find_best_corner_match_flat(
             let wj = offset_x + j;
             // Index into flattened weights
             let weight = weights_flat[wi * search_region + wj];
-            let val = cross_correlation[[global_y, global_x]] as f32 * weight;
+            let val = f32::from(cross_correlation[[global_y, global_x]]) * weight;
             if val > best_value {
                 best_value = val;
                 best_x = j;
@@ -1411,7 +1420,7 @@ mod tests {
             search_region: 10,
             distance_penalty: 0.5,
             // Cached flattened weights: 10x10 region with uniform weight for tests.
-            cached_weights: Some(vec![1.0f32; 100]),
+            cached_weights: vec![1.0f32; 100],
             cached_weights_region: 10,
             cached_weights_distance_penalty: 0.5,
             column_widths: vec![4; 3],
@@ -1434,7 +1443,7 @@ mod tests {
             search_region: 10,
             distance_penalty: 0.5,
             // Cached flattened weights: 10x10 region with uniform weight for tests.
-            cached_weights: Some(vec![1.0f32; 100]),
+            cached_weights: vec![1.0f32; 100],
             cached_weights_region: 10,
             cached_weights_distance_penalty: 0.5,
             column_widths: vec![4; 3],

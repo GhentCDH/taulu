@@ -414,7 +414,7 @@ class GridDetector:
     def find_table_points(
         self,
         img: MatLike | PathLike[str],
-        left_top: Point,
+        top_row: list[Point | None],
         cell_widths: list[int],
         cell_heights: list[int] | int,
         visual: bool = False,
@@ -429,7 +429,7 @@ class GridDetector:
 
         Args:
             img (MatLike): the input image of a table
-            left_top (tuple[int, int]): the starting point of the algorithm
+            top_row (list[tuple[int, int]]): initial guess at topmost row of corner points (from template matching)
             cell_widths (list[int]): the expected widths of the cells (based on a header template)
             cell_heights (list[int]): the expected height of the rows of data.
                 The last value from this list is used until the image has no more vertical space.
@@ -468,14 +468,21 @@ class GridDetector:
         if isinstance(cell_heights, int):
             cell_heights = [cell_heights]
 
-        left_top, confidence = self.find_nearest(
-            filtered, left_top, int(self._search_region * 3)
-        )
+        for i in range(len(top_row)):
+            if top_row[i] is None:
+                continue
 
-        if confidence < 0.1:
-            logger.warning(
-                f"Low confidence for the starting point: {confidence} at {left_top}"
+            adjusted, confidence = self.find_nearest(
+                filtered, top_row[i], int(self._search_region * 2)
             )
+
+            if confidence < 0.15:
+                top_row[i] = None
+            else:
+                top_row[i] = adjusted
+
+        if not any(top_row):
+            logger.error("No good starting candidates given")
 
         # resize all parameters according to scale
         img = cv.resize(img, None, fx=self._scale, fy=self._scale)
@@ -486,18 +493,22 @@ class GridDetector:
         filtered = cv.resize(filtered, None, fx=self._scale, fy=self._scale)
         cell_widths = [int(w * self._scale) for w in cell_widths]
         cell_heights = [int(h * self._scale) for h in cell_heights]
-        left_top = (int(left_top[0] * self._scale), int(left_top[1] * self._scale))
+        top_row = [
+            (int(p[0] * self._scale), int(p[1] * self._scale))
+            if p is not None
+            else None
+            for p in top_row
+        ]
         search_region = int(self._search_region * self._scale)
 
         img_gray = ensure_gray(img)
         filtered_gray = ensure_gray(filtered)
 
         table_grower = TableGrower(
-            img_gray,
             filtered_gray,
             cell_widths,  # pyright: ignore
             cell_heights,  # pyright: ignore
-            left_top,
+            top_row,
             search_region,
             self._distance_penalty,
             self._look_distance,

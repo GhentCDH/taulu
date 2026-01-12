@@ -3,22 +3,24 @@ The Taulu class is a convenience class that hides the inner workings
 of taulu as much as possible.
 """
 
-from time import perf_counter
+import logging
 import os
 from os import PathLike
 from os.path import exists
+from pathlib import Path
+from time import perf_counter
+from typing import Optional
+
 import cv2
 from cv2.typing import MatLike
-from pathlib import Path
-import logging
-from typing import Optional
+from numpy.typing import NDArray
 
 from taulu.header_template import HeaderTemplate
 
-from .split import Split
-from .header_aligner import HeaderAligner
-from .grid import GridDetector, TableGrid
 from .error import TauluException
+from .grid import GridDetector, TableGrid
+from .header_aligner import HeaderAligner
+from .split import Split
 
 # needed: header images, header templates, parameters
 
@@ -693,26 +695,38 @@ class Taulu:
         logger.info(f"Header alignment took {align_time:.2f} seconds")
 
         # find the starting point for the table grid algorithm
-        left_top_template = self._template.intersection((1, 0))
-        if isinstance(left_top_template, Split):
-            left_top_template = Split(
-                (int(left_top_template.left[0]), int(left_top_template.left[1])),
-                (int(left_top_template.right[0]), int(left_top_template.right[1])),
+
+        def make_top_row(template: HeaderTemplate, aligner: HeaderAligner, h: NDArray):
+            top_row = []
+            for x in range(template.cols + 1):
+                on_template = template.intersection((1, x))
+                on_template = (int(on_template[0]), int(on_template[1]))
+
+                on_img = aligner.template_to_img(h, on_template)
+
+                top_row.append(on_img)
+
+            return top_row
+
+        if isinstance(self._aligner, Split):
+            top_row = Split(
+                make_top_row(self._template.left, self._aligner.left, h.left),  # ty:ignore
+                make_top_row(self._template.right, self._aligner.right, h.right),  # ty:ignore
             )
         else:
-            left_top_template = (int(left_top_template[0]), int(left_top_template[1]))
+            top_row = make_top_row(self._template, self._aligner, h)  # ty:ignore
 
-        left_top_table = self._aligner.template_to_img(h, left_top_template)
+        logger.info(top_row)
 
         now = perf_counter()
         table = self._grid_detector.find_table_points(
-            image,
-            left_top_table,
+            image,  # ty:ignore
+            top_row,  # ty:ignore
             self._template.cell_widths(0),
-            self._cell_heights,
+            self._cell_heights,  # ty:ignore
             visual=debug_view,
-            filtered=filtered,
-            smooth=self._smooth
+            filtered=filtered,  # ty:ignore
+            smooth=self._smooth,
         )
         grid_time = perf_counter() - now
         logger.info(f"Grid detection took {grid_time:.2f} seconds")

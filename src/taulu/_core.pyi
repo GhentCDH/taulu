@@ -1,5 +1,7 @@
 from typing import Optional
+
 import numpy as np
+
 from .types import Point
 
 def astar(
@@ -16,11 +18,10 @@ class TableGrower:
 
     def __init__(
         self,
-        table_image: np.ndarray,
         cross_correlation: np.ndarray,
         column_widths: list[int],
         row_heights: list[int],
-        start_point: tuple[int, int],
+        top_row: list[tuple[int, int] | None],
         search_region: int,
         distance_penalty: float = 0.5,
         look_distance: int = 3,
