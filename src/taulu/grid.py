@@ -2,29 +2,30 @@
 Implements the grid finding algorithm, that is able to find the intersections of horizontal and vertical rules.
 """
 
+import json
+import logging
 import math
-from typing import cast
 import os
+from os import PathLike
+from pathlib import Path
+from typing import List, Optional, Tuple, cast
+
 import cv2 as cv
 import numpy as np
 from cv2.typing import MatLike
 from numpy.typing import NDArray
-from pathlib import Path
-import json
-from typing import Optional, List, Tuple
-import logging
-from os import PathLike
 
 from taulu._core import astar as rust_astar
-from taulu.types import PointFloat, Point
+from taulu.types import Point, PointFloat
+
 from . import img_util as imu
-from .img_util import ensure_gray
+from ._core import TableGrower
 from .constants import WINDOW
 from .decorators import log_calls
-from .table_indexer import TableIndexer
 from .header_template import _Rule
+from .img_util import ensure_gray
 from .split import Split
-from ._core import TableGrower
+from .table_indexer import TableIndexer
 
 show_time = 0
 
@@ -420,7 +421,7 @@ class GridDetector:
         window: str = WINDOW,
         goals_width: Optional[int] = None,
         filtered: Optional[MatLike | PathLike[str]] = None,
-        smooth: bool = False
+        smooth: bool = False,
     ) -> "TableGrid":
         """
         Parse the image to a `TableGrid` structure that holds all of the
@@ -761,7 +762,6 @@ class TableGrid(TableIndexer):
     ) -> "TableGrid":
         """
         Convert two ``TableGrid`` objects into one, that is able to segment the original (non-cropped) image
-
         Args:
             split_grids (Split[TableGrid]): a Split of TableGrid objects of the left and right part of the table
             offsets (Split[tuple[int, int]]): a Split of the offsets in the image where the crop happened
@@ -769,27 +769,38 @@ class TableGrid(TableIndexer):
 
         def offset_points(points, offset):
             return [
-                [(p[0] + offset[0], p[1] + offset[1]) for p in row] for row in points
+                [
+                    (p[0] + offset[0], p[1] + offset[1]) if p is not None else None
+                    for p in row
+                ]
+                for row in points
             ]
 
         split_points = split_grids.apply(
             lambda grid, offset: offset_points(grid.points, offset), offsets
         )
-
         points = []
-
         rows = min(split_grids.left.rows, split_grids.right.rows)
-
         for row in range(rows + 1):
+            left_row = split_points.left[row]
+            right_row = split_points.right[row]
+
+            # Skip rows that contain None values
+            if any(p is None for p in left_row) or any(p is None for p in right_row):
+                logger.warning(
+                    f"Skipping row {row} in from_split due to incomplete grid data"
+                )
+                continue
+
             row_points = []
-
-            row_points.extend(split_points.left[row])
-            row_points.extend(split_points.right[row])
-
+            row_points.extend(left_row)
+            row_points.extend(right_row)
             points.append(row_points)
-
+        if not points:
+            raise ValueError(
+                "Cannot create TableGrid from split: no complete rows found in both grids"
+            )
         table_grid = TableGrid(points, split_grids.left.cols)
-
         return table_grid
 
     def save(self, path: str | Path):

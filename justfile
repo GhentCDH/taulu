@@ -19,7 +19,10 @@ build:
     uv build
 
 profile-astar:
-    timeout 10 uv run py-spy record --native -r 50 -o profile.svg -- python tests/bench_rust.py
+    timeout 40 uv run py-spy record --native -r 200 -o profile.svg --subprocesses -f speedscope -- python tests/bench_rust.py
 
 document:
     uv run pdoc --logo './logo.svg' --favicon './favicon.svg' -o ./docs --docformat google taulu
+
+setup-rerun:
+    uv run maturin develop --features debug-tools --no-default-features --release
