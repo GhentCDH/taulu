@@ -1,6 +1,6 @@
 [project]
 name = "taulu"
-version = "2.0.7"
+version = "2.1.0"
 description = "Segment a table from an image"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
