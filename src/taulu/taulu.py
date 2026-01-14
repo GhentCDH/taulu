@@ -158,7 +158,7 @@ class Taulu:
 
     def __init__(
         self,
-        header_image_path: PathLike[str] | str | Split[PathLike[str] | str],
+        header_image_path: PathLike[str] | str | Split[PathLike[str]] | Split[str],
         cell_height_factor: float | list[float] | Split[float | list[float]] = [1.0],
         header_anno_path: PathLike[str]
         | str
