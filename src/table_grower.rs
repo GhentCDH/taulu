@@ -438,14 +438,8 @@ impl TableGrower {
         cross_correlation: &Image,
         threshold: f64,
     ) -> Option<(Point, f64)> {
-        // Check if the highest confidence edge meets the threshold
-        let max_confidence = self.edge.peek_max_confidence()?;
-        if max_confidence < threshold {
-            return None;
-        }
-
-        // Pop the highest confidence edge
-        let (coord, corner, confidence) = self.edge.pop_max()?;
+        // Pop the highest confidence edge if it meets the threshold
+        let (coord, corner, confidence) = self.edge.pop_max_if(threshold)?;
 
         let _ = self.add_corner(table_image, cross_correlation, corner, coord);
 

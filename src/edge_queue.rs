@@ -107,16 +107,30 @@ impl EdgeQueue {
         None
     }
 
-    /// Peeks at the highest-confidence candidate without removing it.
-    #[must_use]
-    pub fn peek_max_confidence(&self) -> Option<f64> {
-        // Find the first non-stale entry
-        for candidate in &self.heap {
-            if let Some(&(_, current_confidence)) = self.index.get(&candidate.coord)
+    /// Pops the highest-confidence candidate only if it meets the threshold.
+    ///
+    /// This is more efficient than calling `peek_max_confidence` followed by `pop_max`
+    /// because it only traverses the heap once.
+    ///
+    /// Returns `None` if the queue is empty or the max confidence is below the threshold.
+    pub fn pop_max_if(&mut self, min_confidence: f64) -> Option<(Coord, Point, f64)> {
+        // Lazy deletion: skip stale entries, but stop if we find one below threshold
+        while let Some(candidate) = self.heap.pop() {
+            // Check if this entry is still current
+            if let Some(&(point, current_confidence)) = self.index.get(&candidate.coord)
                 && (current_confidence - candidate.confidence).abs() < f64::EPSILON
             {
-                return Some(candidate.confidence);
+                // This is the current best entry for this coord
+                if candidate.confidence >= min_confidence {
+                    self.index.remove(&candidate.coord);
+                    return Some((candidate.coord, point, candidate.confidence));
+                }
+                // Below threshold - push it back and return None
+                // (since it's a max-heap, nothing else can be higher)
+                self.heap.push(candidate);
+                return None;
             }
+            // Entry is stale (superseded or already removed), skip it
         }
         None
     }
@@ -228,5 +242,56 @@ mod tests {
 
         queue.pop_max();
         assert!(queue.is_empty());
+    }
+
+    #[test]
+    fn test_pop_max_if_above_threshold() {
+        let mut queue = EdgeQueue::new();
+        queue.insert(Coord::new(0, 0), Point(10, 20), 0.8);
+        queue.insert(Coord::new(1, 0), Point(30, 40), 0.5);
+
+        // Should pop the 0.8 entry since it's above 0.7 threshold
+        let result = queue.pop_max_if(0.7);
+        assert!(result.is_some());
+        let (coord, point, conf) = result.unwrap();
+        assert_eq!(coord, Coord::new(0, 0));
+        assert_eq!(point, Point(10, 20));
+        assert!((conf - 0.8).abs() < f64::EPSILON);
+
+        assert_eq!(queue.len(), 1);
+    }
+
+    #[test]
+    fn test_pop_max_if_below_threshold() {
+        let mut queue = EdgeQueue::new();
+        queue.insert(Coord::new(0, 0), Point(10, 20), 0.5);
+        queue.insert(Coord::new(1, 0), Point(30, 40), 0.3);
+
+        // Should return None since max (0.5) is below 0.7 threshold
+        let result = queue.pop_max_if(0.7);
+        assert!(result.is_none());
+
+        // Queue should be unchanged - entry pushed back
+        assert_eq!(queue.len(), 2);
+
+        // Should still be able to pop normally
+        let (_, _, conf) = queue.pop_max().unwrap();
+        assert!((conf - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_pop_max_if_skips_stale_entries() {
+        let mut queue = EdgeQueue::new();
+        queue.insert(Coord::new(0, 0), Point(10, 20), 0.5);
+        queue.insert(Coord::new(0, 0), Point(15, 25), 0.9); // Update same coord
+        queue.insert(Coord::new(1, 0), Point(30, 40), 0.7);
+
+        // Should skip the stale 0.5 entry and return the 0.9 entry
+        let result = queue.pop_max_if(0.8);
+        assert!(result.is_some());
+        let (coord, point, conf) = result.unwrap();
+        assert_eq!(coord, Coord::new(0, 0));
+        assert_eq!(point, Point(15, 25));
+        assert!((conf - 0.9).abs() < f64::EPSILON);
     }
 }
