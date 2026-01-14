@@ -44,3 +44,10 @@ ndarray = { version = "0.16.1", default-features = false }
 rerun = { version = "0.26.1", optional = true, default-features = false, features = [
   "sdk",
 ] }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "edge_selection"
+harness = false
