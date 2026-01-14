@@ -8,8 +8,11 @@ use pyo3::prelude::*;
 use rayon::prelude::*;
 
 use crate::edge_queue::EdgeQueue;
+#[allow(unused_imports)]
+use crate::geom_util::evaluate_polynomial;
 use crate::geom_util::{
-    evaluate_polynomial, gaussian_1d, linear_polynomial_least_squares, normalize, region_aware_fit,
+    find_polynomial_intersection, gaussian_1d, linear_polynomial_least_squares, normalize,
+    region_aware_fit,
 };
 use crate::traits::Xy;
 use crate::{Coord, Image, Point, Step};
@@ -1040,69 +1043,11 @@ impl TableGrower {
         )
         .ok()?;
 
-        // iteratively solve for the intersection of both
-        let (mut x, mut y) = {
-            let point = horizontal_points.first()?;
-            #[allow(clippy::cast_precision_loss)]
-            (point.x() as f32, point.y() as f32)
-        };
+        #[allow(clippy::cast_precision_loss)]
+        let initial_y = horizontal_points.first()?.y() as f32;
 
-        let ho = &horizontal_coeffs;
-        let ve = &vertical_coeffs;
-
-        // Newton's method
-        let (h, h_derivative) = match degree {
-            1 => {
-                let h = vec![ho[0] + ho[1] * ve[0], ho[1] * ve[1] - 1.0];
-                let h_derivative = vec![ho[1] * ve[1] - 1.0];
-                (h, h_derivative)
-            }
-            2 => {
-                let h = vec![
-                    ho[0] + ho[1] * ve[0] + ho[2] * ve[0] * ve[0],
-                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
-                    ho[1] * ve[2] + 2.0 * ho[2] * ve[0] * ve[2] + ho[2] * ve[1] * ve[1],
-                    2.0 * ho[2] * ve[1] * ve[2],
-                    ho[2] * ve[2] * ve[2],
-                ];
-                let h_derivative = vec![
-                    ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
-                    2.0 * ho[1] * ve[2] + 4.0 * ho[2] * ve[0] * ve[2] + 2.0 * ho[2] * ve[1] * ve[1],
-                    6.0 * ho[2] * ve[1] * ve[2],
-                    4.0 * ho[2] * ve[2] * ve[2],
-                ];
-                (h, h_derivative)
-            }
-            _ => {
-                return None;
-            }
-        };
-
-        let mut done = false;
-        for _ in 0..20 {
-            let h_y = evaluate_polynomial(&h, y);
-            let h_der_y = evaluate_polynomial(&h_derivative, y);
-            let new_y = y - h_y / h_der_y;
-
-            let dist = (y - new_y).abs();
-
-            if dist < 1e-6 {
-                x = evaluate_polynomial(&vertical_coeffs, new_y);
-                y = new_y;
-                done = true;
-                break;
-            }
-
-            if dist.is_nan() {
-                return None;
-            }
-
-            y = new_y;
-        }
-
-        if !done {
-            return None;
-        }
+        let (x, y) =
+            find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, degree, initial_y)?;
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         let result = Point(x.round() as i32, y.round() as i32);
@@ -1244,71 +1189,13 @@ fn intersect_regressions(
     let vertical_coeffs =
         linear_polynomial_least_squares(degree, &vertical_ys, &vertical_xs).ok()?;
 
-    // iteratively solve for the intersection of both
-    let (mut x, mut y) = {
-        let point = horizontal_points.first()?;
-        #[allow(clippy::cast_precision_loss)]
-        (point.x() as f32, point.y() as f32)
-    };
+    #[allow(clippy::cast_precision_loss)]
+    let initial_y = horizontal_points.first()?.y() as f32;
 
-    let ho = &horizontal_coeffs;
-    let ve = &vertical_coeffs;
+    let (x, y) =
+        find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, degree, initial_y)?;
 
-    // Newton's method
-    let (h, h_derivative) = match degree {
-        1 => {
-            let h = vec![ho[0] + ho[1] * ve[0], ho[1] * ve[1] - 1.0];
-            let h_derivative = vec![ho[1] * ve[1] - 1.0];
-            (h, h_derivative)
-        }
-        2 => {
-            let h = vec![
-                ho[0] + ho[1] * ve[0] + ho[2] * ve[0] * ve[0],
-                ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
-                ho[1] * ve[2] + 2.0 * ho[2] * ve[0] * ve[2] + ho[2] * ve[1] * ve[1],
-                2.0 * ho[2] * ve[1] * ve[2],
-                ho[2] * ve[2] * ve[2],
-            ];
-            let h_derivative = vec![
-                ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
-                2.0 * ho[1] * ve[2] + 4.0 * ho[2] * ve[0] * ve[2] + 2.0 * ho[2] * ve[1] * ve[1],
-                6.0 * ho[2] * ve[1] * ve[2],
-                4.0 * ho[2] * ve[2] * ve[2],
-            ];
-            (h, h_derivative)
-        }
-        _ => {
-            return None;
-        }
-    };
-
-    let mut done = false;
-    for _ in 0..20 {
-        let h_y = evaluate_polynomial(&h, y);
-        let h_der_y = evaluate_polynomial(&h_derivative, y);
-        let new_y = y - h_y / h_der_y;
-
-        let dist = (y - new_y).abs();
-
-        if dist < 1e-6 {
-            x = evaluate_polynomial(&vertical_coeffs, new_y);
-            y = new_y;
-            done = true;
-            break;
-        }
-
-        if dist.is_nan() {
-            return None;
-        }
-
-        y = new_y;
-    }
-
-    if !done {
-        return None;
-    }
-
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[allow(clippy::cast_possible_truncation)]
     Some(Point(x.round() as i32, y.round() as i32))
 }
 

@@ -203,6 +203,93 @@ pub fn max_eigenvalue_2d(matrix: &Array2<f32>) -> Option<f32> {
     Some(f32::midpoint(trace, discriminant.sqrt()))
 }
 
+/// Finds the intersection of two polynomial curves using Newton's method.
+///
+/// Given coefficients for a horizontal curve `y = h(x)` and a vertical curve `x = v(y)`,
+/// finds the point `(x, y)` where both equations are satisfied.
+///
+/// # Arguments
+///
+/// * `horizontal_coeffs` - Polynomial coefficients for `y = h(x)` (constant term first)
+/// * `vertical_coeffs` - Polynomial coefficients for `x = v(y)` (constant term first)
+/// * `degree` - Polynomial degree (1 for linear, 2 for quadratic)
+/// * `initial_y` - Starting y value for Newton iteration
+///
+/// # Returns
+///
+/// `Some((x, y))` if convergence is achieved, `None` otherwise.
+///
+/// # Algorithm
+///
+/// Substitutes `x = v(y)` into `y = h(x)` to get `y = h(v(y))`, then solves
+/// `y - h(v(y)) = 0` using Newton's method.
+pub fn find_polynomial_intersection(
+    horizontal_coeffs: &[f32],
+    vertical_coeffs: &[f32],
+    degree: usize,
+    initial_y: f32,
+) -> Option<(f32, f32)> {
+    let ho = horizontal_coeffs;
+    let ve = vertical_coeffs;
+
+    // Build the composed polynomial h(v(y)) - y and its derivative
+    // For degree 1: h(x) = ho[0] + ho[1]*x, v(y) = ve[0] + ve[1]*y
+    //   h(v(y)) = ho[0] + ho[1]*(ve[0] + ve[1]*y) = (ho[0] + ho[1]*ve[0]) + ho[1]*ve[1]*y
+    //   h(v(y)) - y = (ho[0] + ho[1]*ve[0]) + (ho[1]*ve[1] - 1)*y
+    // For degree 2: more complex composition
+    let (h, h_derivative) = match degree {
+        1 => {
+            let h = vec![ho[0] + ho[1] * ve[0], ho[1] * ve[1] - 1.0];
+            let h_derivative = vec![ho[1] * ve[1] - 1.0];
+            (h, h_derivative)
+        }
+        2 => {
+            let h = vec![
+                ho[0] + ho[1] * ve[0] + ho[2] * ve[0] * ve[0],
+                ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                ho[1] * ve[2] + 2.0 * ho[2] * ve[0] * ve[2] + ho[2] * ve[1] * ve[1],
+                2.0 * ho[2] * ve[1] * ve[2],
+                ho[2] * ve[2] * ve[2],
+            ];
+            let h_derivative = vec![
+                ho[1] * ve[1] + 2.0 * ho[2] * ve[0] * ve[1] - 1.0,
+                2.0 * ho[1] * ve[2] + 4.0 * ho[2] * ve[0] * ve[2] + 2.0 * ho[2] * ve[1] * ve[1],
+                6.0 * ho[2] * ve[1] * ve[2],
+                4.0 * ho[2] * ve[2] * ve[2],
+            ];
+            (h, h_derivative)
+        }
+        _ => {
+            return None;
+        }
+    };
+
+    let mut y = initial_y;
+
+    // Newton's method iteration
+    for _ in 0..20 {
+        let h_y = evaluate_polynomial(&h, y);
+        let h_der_y = evaluate_polynomial(&h_derivative, y);
+        let new_y = y - h_y / h_der_y;
+
+        let dist = (y - new_y).abs();
+
+        if dist < 1e-6 {
+            let x = evaluate_polynomial(vertical_coeffs, new_y);
+            return Some((x, new_y));
+        }
+
+        if dist.is_nan() {
+            return None;
+        }
+
+        y = new_y;
+    }
+
+    // Did not converge
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -273,5 +360,53 @@ mod tests {
 
         let result = linear_polynomial_least_squares(1, &x_values, &y_values);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_find_polynomial_intersection_linear() {
+        // Two perpendicular lines:
+        // Horizontal: y = 10 (constant, so y = 10 for all x)
+        // Vertical: x = 20 (constant, so x = 20 for all y)
+        // Intersection should be at (20, 10)
+
+        // y = h(x) = 10 -> coeffs [10, 0]
+        let horizontal_coeffs = vec![10.0, 0.0];
+        // x = v(y) = 20 -> coeffs [20, 0]
+        let vertical_coeffs = vec![20.0, 0.0];
+
+        let result = find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, 1, 0.0);
+        assert!(result.is_some());
+
+        let (x, y) = result.unwrap();
+        assert_abs_diff_eq!(x, 20.0, epsilon = 1e-4);
+        assert_abs_diff_eq!(y, 10.0, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_find_polynomial_intersection_sloped_lines() {
+        // Horizontal line: y = 0.5 * x + 5 (slope 0.5, intercept 5)
+        // At x = 10, y = 10
+        let horizontal_coeffs = vec![5.0, 0.5];
+
+        // Vertical line: x = -0.5 * y + 15 (slope -0.5, intercept 15)
+        // At y = 10, x = 10
+        let vertical_coeffs = vec![15.0, -0.5];
+
+        // They should intersect at (10, 10)
+        let result = find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, 1, 5.0);
+        assert!(result.is_some());
+
+        let (x, y) = result.unwrap();
+        assert_abs_diff_eq!(x, 10.0, epsilon = 1e-4);
+        assert_abs_diff_eq!(y, 10.0, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn test_find_polynomial_intersection_unsupported_degree() {
+        let horizontal_coeffs = vec![1.0, 2.0, 3.0, 4.0]; // degree 3
+        let vertical_coeffs = vec![1.0, 2.0, 3.0, 4.0];
+
+        let result = find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, 3, 0.0);
+        assert!(result.is_none());
     }
 }
