@@ -1,16 +1,17 @@
+import cv2
 import pytest
-from taulu import img_util
 from util import (
+    files_exist,
+    header_image_path,
     header_left_anno_path,
     header_left_image_path,
     header_right_anno_path,
     header_right_image_path,
-    table_image_path,
     table_filtered_path,
-    header_image_path,
-    files_exist,
+    table_image_path,
 )
-import cv2
+
+from taulu import img_util
 
 
 @pytest.mark.visual
@@ -111,6 +112,7 @@ def test_already_filtered():
         min_rows=10,
         grow_threshold=0.5,
         look_distance=2,
+        skip_astar_threshold=0.1,
     )
 
     im = cv2.imread(table_image_path(1))
@@ -120,3 +122,5 @@ def test_already_filtered():
 
     cells = table.highlight_all_cells(im)
     img_util.show(cells)
+
+    table.show_cells(im)

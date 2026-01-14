@@ -156,6 +156,7 @@ class GridDetector:
         scale: float = 1.0,
         search_region: int = 40,
         distance_penalty: float = 0.4,
+        skip_astar_threshold: float = 0.7,
         min_rows: int = 5,
         grow_threshold: float = 0.3,
         look_distance: int = 4,
@@ -176,6 +177,7 @@ class GridDetector:
             scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
             search_region (int): area in which to search for a new max value in `find_nearest` etc.
             distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
+            skip_astar_threshold (float): minimum confidence score during table growing based on heuristic jump on which to skipastar pathfinding
             min_rows (int): minimum number of rows to find before stopping the table finding algorithm
             grow_threshold (float): the threshold for accepting a new point when growing the table
             look_distance (int): how many points away to look when calculating the median slope
@@ -189,6 +191,7 @@ class GridDetector:
             sauvola_k,
             sauvola_window,
             distance_penalty,
+            skip_astar_threshold,
         )
 
         self._kernel_size = kernel_size
@@ -200,6 +203,7 @@ class GridDetector:
         self._sauvola_window = sauvola_window
         self._distance_penalty = distance_penalty
         self._scale = scale
+        self._skip_astar_threshold = skip_astar_threshold
         self._min_rows = min_rows
         self._grow_threshold = grow_threshold
         self._look_distance = look_distance
@@ -216,6 +220,7 @@ class GridDetector:
         sauvola_k: float,
         sauvola_window: int,
         distance_penalty: float,
+        skip_astar_threshold: float,
     ) -> None:
         """Validate initialization parameters."""
         if kernel_size % 2 == 0:
@@ -235,6 +240,8 @@ class GridDetector:
             raise ValueError("distance_penalty must be in [0, 1]")
         if sauvola_k <= 0:
             raise ValueError("sauvola_k must be positive")
+        if skip_astar_threshold < 0 or skip_astar_threshold > 1:
+            raise ValueError("skip_astar_threshold must be in [0, 1]")
 
     def _create_gaussian_weights(self, region_size: int) -> NDArray:
         """
@@ -513,6 +520,7 @@ class GridDetector:
             self._distance_penalty,
             self._look_distance,
             self._grow_threshold,
+            self._skip_astar_threshold,
             self._min_rows,
         )
 

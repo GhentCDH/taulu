@@ -76,6 +76,10 @@ pub struct TableGrower {
     pub row_heights: Vec<i32>,
     pub look_distance: usize,
     pub grow_threshold: f64,
+    /// Minimum confidence [0, 1] to skip A* pathfinding and use direct corner matching.
+    /// When the cross-correlation at the estimated position exceeds this threshold,
+    /// A* is skipped for performance. Set to 1.0 to always use A*.
+    pub skip_astar_threshold: f64,
     pub min_row_count: usize,
     #[cfg(feature = "debug-tools")]
     rec: rerun::RecordingStream,
@@ -101,6 +105,7 @@ impl TableGrower {
         distance_penalty = 0.5,
         look_distance = 3,
         grow_threshold = 0.5,
+        skip_astar_threshold = 0.7,
         min_row_count = 5,
     ))]
     /// Notice that the `start_point` is given as (x, y), both being integers
@@ -113,6 +118,7 @@ impl TableGrower {
         distance_penalty: f64,
         look_distance: usize,
         grow_threshold: f64,
+        skip_astar_threshold: f64,
         min_row_count: usize,
     ) -> Self {
         let corners = Vec::new();
@@ -141,6 +147,7 @@ impl TableGrower {
             cached_weights_distance_penalty: distance_penalty,
             look_distance,
             grow_threshold,
+            skip_astar_threshold,
             min_row_count,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
@@ -582,6 +589,18 @@ impl TableGrower {
 
         // let estimated_new_point = self.header_based_step_from_coord(coord, step)?;
         let estimated_new_point = self.approximate_best_step(coord, step)? + current_point;
+
+        // Try direct corner match first - skip A* if confidence is high enough
+        if let Some((point, confidence)) = find_best_corner_match_flat(
+            cross_correlation,
+            estimated_new_point,
+            self.search_region,
+            &self.cached_weights,
+        )
+        .filter(|(_, conf)| *conf >= self.skip_astar_threshold)
+        {
+            return Some((point, confidence));
+        }
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let goals = match step {
@@ -1306,6 +1325,7 @@ mod tests {
             row_heights: vec![4; 2],
             look_distance: 3,
             grow_threshold: 1.0,
+            skip_astar_threshold: 0.7,
             min_row_count: 2,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
@@ -1329,6 +1349,7 @@ mod tests {
             row_heights: vec![4; 2],
             look_distance: 3,
             grow_threshold: 1.0,
+            skip_astar_threshold: 0.7,
             min_row_count: 2,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),

@@ -26,6 +26,7 @@ class TableGrower:
         distance_penalty: float = 0.5,
         look_distance: int = 3,
         grow_threshold: float = 0.5,
+        skip_astar_threshold: float = 0.7,
         min_row_count: int = 5,
     ): ...
     def get_corner(self, coord: tuple[int, int]) -> Optional[Point]: ...
