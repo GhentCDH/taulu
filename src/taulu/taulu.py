@@ -159,10 +159,13 @@ class Taulu:
     def __init__(
         self,
         header_image_path: PathLike[str] | str | Split[PathLike[str]] | Split[str],
-        cell_height_factor: float | list[float] | Split[float | list[float]] = [1.0],
+        cell_height_factor: float | list[float] | Split[float] | Split[list[float]] = [
+            1.0
+        ],
         header_anno_path: PathLike[str]
         | str
-        | Split[PathLike[str] | str]
+        | Split[PathLike[str]]
+        | Split[str]
         | None = None,
         sauvola_k: float | Split[float] = 0.25,
         search_region: int | Split[int] = 60,
@@ -715,8 +718,6 @@ class Taulu:
             )
         else:
             top_row = make_top_row(self._template, self._aligner, h)  # ty:ignore
-
-        logger.info(top_row)
 
         now = perf_counter()
         table = self._grid_detector.find_table_points(
