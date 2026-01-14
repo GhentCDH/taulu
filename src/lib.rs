@@ -16,6 +16,7 @@ use pyo3::prelude::*;
 
 mod coord;
 mod direction;
+mod edge_queue;
 mod geom_util;
 mod invert;
 mod point;

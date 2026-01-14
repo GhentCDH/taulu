@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::convert::Into;
 use std::ops::{Index, Neg};
 
@@ -8,6 +7,7 @@ use pyo3::PyResult;
 use pyo3::prelude::*;
 use rayon::prelude::*;
 
+use crate::edge_queue::EdgeQueue;
 use crate::geom_util::{
     evaluate_polynomial, gaussian_1d, linear_polynomial_least_squares, normalize, region_aware_fit,
 };
@@ -57,7 +57,7 @@ pub struct TableGrower {
     #[pyo3(get)]
     pub columns: usize,
     /// Edge of the table grid, where new points can be grown from
-    pub edge: HashMap<Coord, (Point, f64)>,
+    pub edge: EdgeQueue,
     /// The size of the search region to use when finding the best corner match
     pub search_region: usize,
     /// The distance penalty to use when finding the best corner match
@@ -126,7 +126,7 @@ impl TableGrower {
         };
 
         let mut table_grower = Self {
-            edge: HashMap::new(),
+            edge: EdgeQueue::new(),
             corners,
             columns: column_widths.len() + 1,
             column_widths,
@@ -182,7 +182,10 @@ impl TableGrower {
     }
 
     fn get_edge_points(&self) -> Vec<(Point, f64)> {
-        self.edge.values().copied().collect()
+        self.edge
+            .iter()
+            .map(|(_, point, conf)| (point, conf))
+            .collect()
     }
 
     /// Grow a grid of points starting from start and growing according to the given
@@ -425,17 +428,14 @@ impl TableGrower {
         cross_correlation: &Image,
         threshold: f64,
     ) -> Option<(Point, f64)> {
-        // find the edge point with the highest confidence
-        // without emptying the edge
-        let (&coord, &(corner, confidence)) = self.edge.iter().max_by(|a, b| {
-            a.1.1
-                .partial_cmp(&b.1.1)
-                .expect("should be able to compare f64s")
-        })?;
-
-        if confidence < threshold {
+        // Check if the highest confidence edge meets the threshold
+        let max_confidence = self.edge.peek_max_confidence()?;
+        if max_confidence < threshold {
             return None;
         }
+
+        // Pop the highest confidence edge
+        let (coord, corner, confidence) = self.edge.pop_max()?;
 
         let _ = self.add_corner(table_image, cross_correlation, corner, coord);
 
@@ -667,15 +667,7 @@ impl TableGrower {
 
     /// Update the edge with a new corner point and its confidence for the given coord
     fn update_edge(&mut self, coord: Coord, corner: Point, confidence: f64) {
-        self.edge
-            .entry(coord)
-            .and_modify(|entry| {
-                if confidence > entry.1 {
-                    entry.1 = confidence;
-                    entry.0 = corner;
-                }
-            })
-            .or_insert((corner, confidence));
+        self.edge.insert(coord, corner, confidence);
     }
 
     #[must_use]
@@ -1416,7 +1408,7 @@ mod tests {
         TableGrower {
             corners,
             columns: 4,
-            edge: HashMap::new(),
+            edge: EdgeQueue::new(),
             search_region: 10,
             distance_penalty: 0.5,
             // Cached flattened weights: 10x10 region with uniform weight for tests.
@@ -1439,7 +1431,7 @@ mod tests {
         TableGrower {
             corners,
             columns: 4,
-            edge: HashMap::new(),
+            edge: EdgeQueue::new(),
             search_region: 10,
             distance_penalty: 0.5,
             // Cached flattened weights: 10x10 region with uniform weight for tests.
