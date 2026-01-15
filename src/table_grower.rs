@@ -81,6 +81,10 @@ pub struct TableGrower {
     /// A* is skipped for performance. Set to 1.0 to always use A*.
     pub skip_astar_threshold: f64,
     pub min_row_count: usize,
+    /// Amount of cuts to perform
+    pub cuts: usize,
+    /// Fraction of the corners to remove during a cut
+    pub cut_fraction: f64,
     #[cfg(feature = "debug-tools")]
     rec: rerun::RecordingStream,
 }
@@ -302,6 +306,8 @@ impl TableGrower {
         grow_threshold = 0.5,
         skip_astar_threshold = 0.7,
         min_row_count = 5,
+        cuts = 5,
+        cut_fraction = 0.6
     ))]
     /// Notice that the `start_point` is given as (x, y), both being integers
     fn new(
@@ -315,6 +321,8 @@ impl TableGrower {
         grow_threshold: f64,
         skip_astar_threshold: f64,
         min_row_count: usize,
+        cuts: usize,
+        cut_fraction: f64,
     ) -> Self {
         let corners = Vec::new();
 
@@ -344,6 +352,8 @@ impl TableGrower {
             grow_threshold,
             skip_astar_threshold,
             min_row_count,
+            cuts,
+            cut_fraction,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         };
@@ -498,18 +508,16 @@ impl TableGrower {
         let mut cuts = 0;
 
         // if the table hasn't been completed this way, extrapolate corners
-        while !self.is_table_complete() {
+        while !self.is_table_complete() || cuts < self.cuts {
             loops_without_change += 1;
 
             if loops_without_change > 50 {
                 break;
             }
 
-            if cuts < 5
+            if cuts < self.cuts
                 && !self.is_empty()
-                && self
-                    .len()
-                    .is_multiple_of(self.min_row_count * self.columns / 2)
+                && self.len() >= self.min_row_count * self.columns
             {
                 self.cut();
                 cuts += 1;
@@ -633,10 +641,15 @@ impl TableGrower {
             .collect()
     }
 
-    /// Cut half of the corners randomly
+    /// Cut a fraction of the corners randomly
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss,
+        clippy::cast_precision_loss
+    )]
     fn cut(&mut self) {
         let some_coords = self.some_coords();
-        let amount_to_cut = some_coords.len() / 2;
+        let amount_to_cut = (some_coords.len() as f64 * self.cut_fraction) as usize;
         let idxs = rand::seq::index::sample(&mut rand::rng(), some_coords.len(), amount_to_cut);
         for i in idxs {
             let coord = some_coords[i];
@@ -1404,6 +1417,8 @@ mod tests {
             grow_threshold: 1.0,
             skip_astar_threshold: 0.7,
             min_row_count: 2,
+            cuts: 0,
+            cut_fraction: 0.1,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         }
@@ -1428,6 +1443,8 @@ mod tests {
             grow_threshold: 1.0,
             skip_astar_threshold: 0.7,
             min_row_count: 2,
+            cuts: 0,
+            cut_fraction: 0.1,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         }
