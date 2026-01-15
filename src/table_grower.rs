@@ -198,9 +198,9 @@ impl TableGrower {
             .collect()
     }
 
-    /// Grow a grid of points starting from start and growing according to the given
-    /// column widths and row heights. The `table_image` is used to guide the growth
-    /// using the `cross_correlation` image to find the best positions for the grid points.
+    /// Grow a single point by selecting the best candidate on the edge
+    ///
+    /// Update the edge according to which points this new point can reach
     fn grow_point(
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
@@ -216,6 +216,8 @@ impl TableGrower {
         )
     }
 
+    /// Grow points using estimated step and cross correlation optimization
+    /// until no more points can be grown that exceed the ``grow_threshold`` parameter
     fn grow_points(
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
@@ -235,6 +237,7 @@ impl TableGrower {
         }
     }
 
+    /// Extrapolate the next best corner point based on their close neigbbours
     /// Returns None when no corner was added
     pub fn extrapolate_one(
         &mut self,
@@ -252,14 +255,21 @@ impl TableGrower {
         Some(point)
     }
 
+    /// Returns true when no rows in the table contains a None value
+    /// and the table has at least ``min_row_count`` rows.
     fn is_table_complete(&self) -> bool {
         self.all_rows_complete() && self.corners.len() >= self.min_row_count
     }
 
+    /// Update the ``grow_threshold`` parameter
+    ///
+    /// # Notes
+    /// should be in [0, 1]
     fn set_threshold(&mut self, value: f64) {
         self.grow_threshold = value;
     }
 
+    /// Grow a full table given the current state of the ``TableGrower``
     #[allow(clippy::too_many_lines)]
     fn grow_table(
         &mut self,

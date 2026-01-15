@@ -47,12 +47,12 @@ impl Ord for EdgeCandidate {
 ///
 /// # Complexity
 ///
-/// | Operation | Time |
-/// |-----------|------|
-/// | `insert` | O(log n) |
+/// | Operation | Time               |
+/// |-----------|--------------------|
+/// | `insert`  | O(log n)           |
 /// | `pop_max` | O(log n) amortized |
-/// | `remove` | O(1) (lazy) |
-/// | `len` | O(1) |
+/// | `remove`  | O(1) (lazy)        |
+/// | `len`     | O(1)               |
 #[derive(Debug)]
 pub struct EdgeQueue {
     /// Max-heap of candidates (may contain stale entries)
