@@ -92,6 +92,201 @@ fn start_rerun() -> rerun::RecordingStream {
         .expect("rerun recorder should spawn")
 }
 
+// Debug visualization methods
+#[cfg(feature = "debug-tools")]
+impl TableGrower {
+    fn log_images(&self, table_image: &Image, cross_correlation: &Image) {
+        self.rec
+            .log(
+                "table_image",
+                &rerun::Image::from_color_model_and_tensor(
+                    rerun::ColorModel::L,
+                    table_image.to_owned(),
+                )
+                .expect("should be able to create rerun image"),
+            )
+            .expect(RERUN_EXPECT);
+        self.rec
+            .log(
+                "cross_correlation",
+                &rerun::Image::from_color_model_and_tensor(
+                    rerun::ColorModel::L,
+                    cross_correlation.to_owned(),
+                )
+                .expect("should be able to create rerun image"),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    fn log_corners(&self) {
+        #[allow(clippy::cast_precision_loss)]
+        let points: Vec<(f32, f32)> = self
+            .corners
+            .iter()
+            .flatten()
+            .filter_map(|c| c.as_ref())
+            .map(|p| (p.x() as f32, p.y() as f32))
+            .collect();
+
+        if points.is_empty() {
+            return;
+        }
+
+        self.rec
+            .log(
+                "state/corners",
+                &rerun::Points2D::new(points)
+                    .with_colors([rerun::Color::from_rgb(0, 255, 0)])
+                    .with_radii([4.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    fn log_edge(&self) {
+        #[allow(clippy::cast_precision_loss)]
+        let points: Vec<(f32, f32)> = self
+            .edge
+            .iter()
+            .map(|(_, p, _)| (p.x() as f32, p.y() as f32))
+            .collect();
+
+        if points.is_empty() {
+            return;
+        }
+
+        #[allow(clippy::cast_precision_loss)]
+        let colors: Vec<rerun::Color> = self
+            .edge
+            .iter()
+            .map(|(_, _, conf)| {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let intensity = (conf * 255.0) as u8;
+                rerun::Color::from_rgb(255, intensity, 0)
+            })
+            .collect();
+
+        self.rec
+            .log(
+                "state/edge",
+                &rerun::Points2D::new(points)
+                    .with_colors(colors)
+                    .with_radii([3.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    fn log_state(&self) {
+        self.log_corners();
+        self.log_edge();
+    }
+
+    fn log_astar_goals(&self, goals: &[Point], label: &str) {
+        #[allow(clippy::cast_precision_loss)]
+        let points: Vec<(f32, f32)> = goals.iter().map(|p| (p.x() as f32, p.y() as f32)).collect();
+
+        self.rec
+            .log(
+                format!("astar/goals/{label}"),
+                &rerun::LineStrips2D::new([points])
+                    .with_colors([rerun::Color::from_rgb(255, 255, 255)])
+                    .with_radii([1.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    fn log_astar_path(&self, path: &[(i32, i32)], label: &str) {
+        #[allow(clippy::cast_precision_loss)]
+        let points: Vec<(f32, f32)> = path.iter().map(|(x, y)| (*x as f32, *y as f32)).collect();
+
+        self.rec
+            .log(
+                format!("astar/paths/{label}"),
+                &rerun::LineStrips2D::new([points])
+                    .with_colors([rerun::Color::from_rgb(0, 255, 0)])
+                    .with_radii([1.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    fn log_regression_region_horizontal(&self, y: usize, xs: &[f32], ys: &[f32]) {
+        #[allow(clippy::cast_precision_loss)]
+        let points: Vec<(f32, f32)> = xs.iter().zip(ys.iter()).map(|(x, y)| (*x, *y)).collect();
+
+        self.rec
+            .log(
+                format!("regression/region_horizontal/{y}"),
+                &rerun::Points2D::new(points)
+                    .with_colors([rerun::Color::from_rgb(255, 255, 0)])
+                    .with_radii([2.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    fn log_regression_region_vertical(&self, x: usize, xs: &[f32], ys: &[f32]) {
+        #[allow(clippy::cast_precision_loss)]
+        let points: Vec<(f32, f32)> = xs.iter().zip(ys.iter()).map(|(x, y)| (*x, *y)).collect();
+
+        self.rec
+            .log(
+                format!("regression/region_vertical/{x}"),
+                &rerun::Points2D::new(points)
+                    .with_colors([rerun::Color::from_rgb(0, 255, 255)])
+                    .with_radii([2.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    fn log_regression_lines(
+        &self,
+        h_coeffs: &[f32],
+        v_coeffs: &[f32],
+        h_points: &[Point],
+        v_points: &[Point],
+    ) {
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        if let (Some(h_first), Some(h_last)) = (h_points.first(), h_points.last()) {
+            let h_start = (
+                h_first.x() as f32,
+                evaluate_polynomial(h_coeffs, h_first.x() as f32),
+            );
+            let h_end = (
+                h_last.x() as f32,
+                evaluate_polynomial(h_coeffs, h_last.x() as f32),
+            );
+
+            self.rec
+                .log(
+                    "regression/horizontal",
+                    &rerun::LineStrips2D::new([[h_start, h_end]])
+                        .with_colors([rerun::Color::from_rgb(255, 0, 255)])
+                        .with_radii([2.0]),
+                )
+                .expect(RERUN_EXPECT);
+        }
+
+        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
+        if let (Some(v_first), Some(v_last)) = (v_points.first(), v_points.last()) {
+            let v_start = (
+                evaluate_polynomial(v_coeffs, v_first.y() as f32),
+                v_first.y() as f32,
+            );
+            let v_end = (
+                evaluate_polynomial(v_coeffs, v_last.y() as f32),
+                v_last.y() as f32,
+            );
+
+            self.rec
+                .log(
+                    "regression/vertical",
+                    &rerun::LineStrips2D::new([[v_start, v_end]])
+                        .with_colors([rerun::Color::from_rgb(255, 0, 255)])
+                        .with_radii([2.0]),
+                )
+                .expect(RERUN_EXPECT);
+        }
+    }
+}
+
 #[pymethods]
 impl TableGrower {
     #[new]
@@ -277,30 +472,6 @@ impl TableGrower {
         cross_correlation: PyReadonlyArray2<'_, u8>,
         py: Python,
     ) -> PyResult<()> {
-        #[cfg(feature = "debug-tools")]
-        {
-            self.rec
-                .log(
-                    "table_image",
-                    &rerun::Image::from_color_model_and_tensor(
-                        rerun::ColorModel::L,
-                        table_image.as_array().to_owned(),
-                    )
-                    .expect("should be able to create rerun image"),
-                )
-                .expect(RERUN_EXPECT);
-            self.rec
-                .log(
-                    "cross_correlation",
-                    &rerun::Image::from_color_model_and_tensor(
-                        rerun::ColorModel::L,
-                        cross_correlation.as_array().to_owned(),
-                    )
-                    .expect("should be able to create rerun image"),
-                )
-                .expect(RERUN_EXPECT);
-        }
-
         let mut threshold = self.grow_threshold;
 
         assert!(threshold <= 1.0, "threshold should be <= 1.0");
@@ -310,28 +481,16 @@ impl TableGrower {
         let table = table_image.as_array();
         let cross = cross_correlation.as_array();
 
-        // first grow all points with the initial threshold until
-        // there are no good candidates left
         #[cfg(feature = "debug-tools")]
-        while let Some((point, _)) = self.grow_point_internal(&table, &cross, threshold) {
-            #[allow(clippy::cast_precision_loss)]
-            self.rec
-                .log(
-                    format!("points/grown/{:04}", self.len()),
-                    &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
-                        .with_colors([rerun::Color::from_rgb(255, 0, 0)])
-                        .with_radii([3.0]),
-                )
-                .expect(RERUN_EXPECT);
+        self.log_images(&table, &cross);
 
-            py.check_signals()?;
-        }
-
-        #[cfg(not(feature = "debug-tools"))]
+        // First grow all points with the initial threshold
         while self
             .grow_point_internal(&table, &cross, threshold)
             .is_some()
         {
+            #[cfg(feature = "debug-tools")]
+            self.log_state();
             py.check_signals()?;
         }
 
@@ -362,31 +521,17 @@ impl TableGrower {
                 self.add_corner(&table, &cross, point, coord);
 
                 #[cfg(feature = "debug-tools")]
-                #[allow(clippy::cast_precision_loss)]
-                self.rec
-                    .log(
-                        format!("points/extrapolated/{:04}", self.len()),
-                        &rerun::Points2D::new([(point.x() as f32, point.y() as f32)])
-                            .with_radii([3.0])
-                            .with_colors([rerun::Color::from_rgb(0, 0, 255)]),
-                    )
-                    .expect(RERUN_EXPECT);
+                self.log_state();
 
                 loops_without_change = 0;
                 let mut grown = false;
 
-                #[allow(unused_variables)]
-                while let Some((p, _)) = self.grow_point_internal(&table, &cross, threshold) {
+                while self
+                    .grow_point_internal(&table, &cross, threshold)
+                    .is_some()
+                {
                     #[cfg(feature = "debug-tools")]
-                    #[allow(clippy::cast_precision_loss)]
-                    self.rec
-                        .log(
-                            format!("points/grown/{:04}", self.len()),
-                            &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
-                                .with_radii([3.0])
-                                .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
-                        )
-                        .expect(RERUN_EXPECT);
+                    self.log_state();
 
                     grown = true;
                     // increase the threshold
@@ -400,18 +545,12 @@ impl TableGrower {
                 // couldn't extrapolate a corner, grow a new corner with a lowered threshold
                 threshold *= 0.9;
 
-                #[allow(unused_variables)]
-                if let Some((p, _)) = self.grow_point_internal(&table, &cross, threshold) {
+                if self
+                    .grow_point_internal(&table, &cross, threshold)
+                    .is_some()
+                {
                     #[cfg(feature = "debug-tools")]
-                    #[allow(clippy::cast_precision_loss)]
-                    self.rec
-                        .log(
-                            format!("points/grown/{:04}", self.len()),
-                            &rerun::Points2D::new([(p.x() as f32, p.y() as f32)])
-                                .with_radii([3.0])
-                                .with_colors([rerun::Color::from_rgb(255, 0, 0)]),
-                        )
-                        .expect(RERUN_EXPECT);
+                    self.log_state();
 
                     loops_without_change = 0;
                 }
@@ -627,7 +766,6 @@ impl TableGrower {
         let height = image_size[0];
         let width = image_size[1];
 
-        // let estimated_new_point = self.header_based_step_from_coord(coord, step)?;
         let estimated_new_point = self.approximate_best_step(coord, step)? + current_point;
 
         // Try direct corner match first - skip A* if confidence is high enough
@@ -669,26 +807,7 @@ impl TableGrower {
         }
 
         #[cfg(feature = "debug-tools")]
-        #[allow(
-            clippy::cast_possible_truncation,
-            clippy::cast_possible_wrap,
-            clippy::cast_precision_loss
-        )]
-        self.rec
-            .log(
-                format!(
-                    "astar/goals/{1}_{0}",
-                    estimated_new_point.x()
-                        + estimated_new_point.y()
-                        + coord.x() as i32
-                        + coord.y() as i32,
-                    self.len()
-                ),
-                &rerun::LineStrips2D::new([goals.iter().map(|p| (p.x() as f32, p.y() as f32))])
-                    .with_colors([rerun::Color::from_rgb(255, 255, 255)])
-                    .with_radii([3.0]),
-            )
-            .expect("Should be able to send to rerun");
+        self.log_astar_goals(&goals, &format!("{}_{}", coord.x(), coord.y()));
 
         let path: Vec<(i32, i32)> = astar::<crate::Point, u32, _, _, _, _>(
             &current_point,
@@ -699,19 +818,7 @@ impl TableGrower {
         .map(|r| r.0.into_iter().map(Into::into).collect())?;
 
         #[cfg(feature = "debug-tools")]
-        #[allow(
-            clippy::cast_possible_truncation,
-            clippy::cast_possible_wrap,
-            clippy::cast_precision_loss
-        )]
-        self.rec
-            .log(
-                format!("astar/paths/{1}_{0}", path.len(), self.len()),
-                &rerun::LineStrips2D::new([path.iter().map(|(x, y)| (*x as f32, *y as f32))])
-                    .with_colors([rerun::Color::from_rgb(0, 255, 0)])
-                    .with_radii([3.0]),
-            )
-            .expect("Should be able to send to rerun");
+        self.log_astar_path(&path, &format!("{}_{}", coord.x(), coord.y()));
 
         let approx = {
             let last = path.last().expect("path should have at least one entry");
@@ -1023,18 +1130,7 @@ impl TableGrower {
             }
             if row_xs.len() >= 2 && row_ys.len() >= 2 {
                 #[cfg(feature = "debug-tools")]
-                {
-                    self.rec
-                        .log(
-                            format!("regression/region_horizontal/{}", y),
-                            &rerun::Points2D::new(
-                                row_xs.iter().zip(row_ys.iter()).map(|(x, y)| (*x, *y)),
-                            )
-                            .with_colors([rerun::Color::from_rgb(255, 255, 0)])
-                            .with_radii([2.0]),
-                        )
-                        .expect(RERUN_EXPECT);
-                }
+                self.log_regression_region_horizontal(y, &row_xs, &row_ys);
 
                 region_horizontal_xs.push(row_xs);
                 region_horizontal_ys.push(row_ys);
@@ -1062,21 +1158,7 @@ impl TableGrower {
 
             if column_xs.len() >= 2 && column_ys.len() >= 2 {
                 #[cfg(feature = "debug-tools")]
-                {
-                    self.rec
-                        .log(
-                            format!("regression/region_vertical/{}", x),
-                            &rerun::Points2D::new(
-                                column_xs
-                                    .iter()
-                                    .zip(column_ys.iter())
-                                    .map(|(x, y)| (*x, *y)),
-                            )
-                            .with_colors([rerun::Color::from_rgb(0, 255, 255)])
-                            .with_radii([2.0]),
-                        )
-                        .expect(RERUN_EXPECT);
-                }
+                self.log_regression_region_vertical(x, &column_xs, &column_ys);
 
                 region_vertical_xs.push(column_xs);
                 region_vertical_ys.push(column_ys);
@@ -1102,6 +1184,14 @@ impl TableGrower {
         )
         .ok()?;
 
+        #[cfg(feature = "debug-tools")]
+        self.log_regression_lines(
+            &horizontal_coeffs,
+            &vertical_coeffs,
+            horizontal_points,
+            vertical_points,
+        );
+
         #[allow(clippy::cast_precision_loss)]
         let initial_y = horizontal_points.first()?.y() as f32;
 
@@ -1109,60 +1199,7 @@ impl TableGrower {
             find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, degree, initial_y)?;
 
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let result = Point(x.round() as i32, y.round() as i32);
-
-        #[cfg(feature = "debug-tools")]
-        {
-            // get two points on the horizontal regression line
-            let h_start = Point(
-                horizontal_points.first()?.x(),
-                evaluate_polynomial(&horizontal_coeffs, horizontal_points.first()?.x() as f32)
-                    .round() as i32,
-            );
-            let h_end = Point(
-                horizontal_points.last()?.x(),
-                evaluate_polynomial(&horizontal_coeffs, horizontal_points.last()?.x() as f32)
-                    .round() as i32,
-            );
-
-            self.rec
-                .log(
-                    "regression/horizontal",
-                    &rerun::LineStrips2D::new([[
-                        (h_start.x() as f32, h_start.y() as f32),
-                        (h_end.x() as f32, h_end.y() as f32),
-                    ]])
-                    .with_colors([rerun::Color::from_rgb(255, 0, 255)])
-                    .with_radii([2.0]),
-                )
-                .expect(RERUN_EXPECT);
-
-            // get two points on the vertical regression line
-            let v_start = Point(
-                evaluate_polynomial(&vertical_coeffs, vertical_points.first()?.y() as f32).round()
-                    as i32,
-                vertical_points.first()?.y(),
-            );
-            let v_end = Point(
-                evaluate_polynomial(&vertical_coeffs, vertical_points.last()?.y() as f32).round()
-                    as i32,
-                vertical_points.last()?.y(),
-            );
-
-            self.rec
-                .log(
-                    "regression/vertical",
-                    &rerun::LineStrips2D::new([[
-                        (v_start.x() as f32, v_start.y() as f32),
-                        (v_end.x() as f32, v_end.y() as f32),
-                    ]])
-                    .with_colors([rerun::Color::from_rgb(255, 0, 255)])
-                    .with_radii([2.0]),
-                )
-                .expect(RERUN_EXPECT);
-        }
-
-        Some(result)
+        Some(Point(x.round() as i32, y.round() as i32))
     }
 }
 
