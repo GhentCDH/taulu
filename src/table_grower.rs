@@ -336,6 +336,7 @@ impl TableGrower {
         }
 
         let mut loops_without_change = 0;
+        let mut cuts = 0;
 
         // if the table hasn't been completed this way, extrapolate corners
         while !self.is_table_complete() {
@@ -343,6 +344,16 @@ impl TableGrower {
 
             if loops_without_change > 50 {
                 break;
+            }
+
+            if cuts < 5
+                && !self.is_empty()
+                && self
+                    .len()
+                    .is_multiple_of(self.min_row_count * self.columns / 2)
+            {
+                self.cut();
+                cuts += 1;
             }
 
             py.check_signals()?;
@@ -467,6 +478,31 @@ impl TableGrower {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    #[must_use]
+    pub fn some_coords(&self) -> Vec<Coord> {
+        self.corners
+            .iter()
+            .enumerate()
+            .flat_map(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .filter(|&(_, c)| c.is_some())
+                    .map(move |(x, _)| Coord::new(x, y))
+            })
+            .collect()
+    }
+
+    /// Cut half of the corners randomly
+    fn cut(&mut self) {
+        let some_coords = self.some_coords();
+        let amount_to_cut = some_coords.len() / 2;
+        let idxs = rand::seq::index::sample(&mut rand::rng(), some_coords.len(), amount_to_cut);
+        for i in idxs {
+            let coord = some_coords[i];
+            self.corners[coord.y()][coord.x()] = None;
+        }
     }
 
     fn add_corner(
