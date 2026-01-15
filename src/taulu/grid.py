@@ -156,10 +156,12 @@ class GridDetector:
         scale: float = 1.0,
         search_region: int = 40,
         distance_penalty: float = 0.4,
-        skip_astar_threshold: float = 0.7,
+        skip_astar_threshold: float = 0.2,
         min_rows: int = 5,
         grow_threshold: float = 0.3,
         look_distance: int = 4,
+        cuts: int = 3,
+        cut_fraction: float = 0.5,
     ):
         """
         Args:
@@ -181,6 +183,8 @@ class GridDetector:
             min_rows (int): minimum number of rows to find before stopping the table finding algorithm
             grow_threshold (float): the threshold for accepting a new point when growing the table
             look_distance (int): how many points away to look when calculating the median slope
+            cuts (int): The amount of cuts (large deletions) to do in the grid during table growing
+            cut_fraction (float): The portion of the already-chosen corner points to delete during cutting
         """
         self._validate_parameters(
             kernel_size,
@@ -192,6 +196,8 @@ class GridDetector:
             sauvola_window,
             distance_penalty,
             skip_astar_threshold,
+            cuts,
+            cut_fraction,
         )
 
         self._kernel_size = kernel_size
@@ -207,6 +213,8 @@ class GridDetector:
         self._min_rows = min_rows
         self._grow_threshold = grow_threshold
         self._look_distance = look_distance
+        self._cuts = cuts
+        self._cut_fraction = cut_fraction
 
         self._cross_kernel = self._create_cross_kernel()
 
@@ -221,6 +229,8 @@ class GridDetector:
         sauvola_window: int,
         distance_penalty: float,
         skip_astar_threshold: float,
+        cuts: int,
+        cut_fraction: float,
     ) -> None:
         """Validate initialization parameters."""
         if kernel_size % 2 == 0:
@@ -242,6 +252,10 @@ class GridDetector:
             raise ValueError("sauvola_k must be positive")
         if skip_astar_threshold < 0 or skip_astar_threshold > 1:
             raise ValueError("skip_astar_threshold must be in [0, 1]")
+        if cut_fraction < 0 or cut_fraction > 1:
+            raise ValueError("cut_fraction must be in [0, 1]")
+        if cuts < 0:
+            raise ValueError("cuts must be zero or positive")
 
     def _create_gaussian_weights(self, region_size: int) -> NDArray:
         """
@@ -522,6 +536,8 @@ class GridDetector:
             self._grow_threshold,
             self._skip_astar_threshold,
             self._min_rows,
+            self._cuts,
+            self._cut_fraction,
         )
 
         def show_grower_progress(wait: bool = False):

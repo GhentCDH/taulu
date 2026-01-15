@@ -9,7 +9,7 @@ from os import PathLike
 from os.path import exists
 from pathlib import Path
 from time import perf_counter
-from typing import Optional
+from typing import Optional, cast
 
 import cv2
 from cv2.typing import MatLike
@@ -32,6 +32,9 @@ def get_param(param, side: str):
     if isinstance(param, Split):
         return getattr(param, side)
     return param
+
+
+type Splittable[T] = Split[T] | T
 
 
 class Taulu:
@@ -158,27 +161,23 @@ class Taulu:
 
     def __init__(
         self,
-        header_image_path: PathLike[str] | str | Split[PathLike[str]] | Split[str],
-        cell_height_factor: float | list[float] | Split[float] | Split[list[float]] = [
-            1.0
-        ],
-        header_anno_path: PathLike[str]
-        | str
-        | Split[PathLike[str]]
-        | Split[str]
-        | None = None,
-        sauvola_k: float | Split[float] = 0.25,
-        search_region: int | Split[int] = 60,
-        distance_penalty: float | Split[float] = 0.4,
-        cross_width: int | Split[int] = 10,
-        morph_size: int | Split[int] = 4,
-        kernel_size: int | Split[int] = 41,
-        processing_scale: float | Split[float] = 1.0,
-        skip_astar_threshold: float | Split[float] = 0.7,
-        min_rows: int | Split[int] = 5,
-        look_distance: int | Split[int] = 3,
-        grow_threshold: float | Split[float] = 0.3,
+        header_image_path: Splittable[PathLike[str]] | Splittable[str],
+        cell_height_factor: Splittable[float] | Splittable[list[float]] = [1.0],
+        header_anno_path: Splittable[PathLike[str]] | Splittable[str] | None = None,
+        sauvola_k: Splittable[float] = 0.25,
+        search_region: Splittable[int] = 60,
+        distance_penalty: Splittable[float] = 0.4,
+        cross_width: Splittable[int] = 10,
+        morph_size: Splittable[int] = 4,
+        kernel_size: Splittable[int] = 41,
+        processing_scale: Splittable[float] = 1.0,
+        skip_astar_threshold: Splittable[float] = 0.2,
+        min_rows: Splittable[int] = 5,
+        look_distance: Splittable[int] = 3,
+        grow_threshold: Splittable[float] = 0.3,
         smooth_grid: bool = False,
+        cuts: Splittable[int] = 3,
+        cut_fraction: Splittable[float] = 0.5,
     ):
         """
         Args:
@@ -306,6 +305,17 @@ class Taulu:
 
                 Default: False
 
+            cuts (int):
+                The amount of cuts (large deletions) to do in the grid during table growing
+
+            cut_fraction (float):
+                The portion of the already-chosen corner points to delete during cutting
+
+
+            skip_astar_threshold (float):
+                Minimum confidence score during table growing based on heuristic jump on which
+                to skip A-star pathfinding
+
         """
         self._processing_scale = processing_scale
         self._cell_height_factor = cell_height_factor
@@ -383,6 +393,8 @@ class Taulu:
                     min_rows=get_param(min_rows, "left"),
                     look_distance=get_param(look_distance, "left"),
                     grow_threshold=get_param(grow_threshold, "left"),
+                    cuts=get_param(cuts, "left"),
+                    cut_fraction=get_param(cut_fraction, "left"),
                 ),
                 GridDetector(
                     kernel_size=get_param(kernel_size, "right"),
@@ -396,6 +408,8 @@ class Taulu:
                     min_rows=get_param(min_rows, "right"),
                     look_distance=get_param(look_distance, "right"),
                     grow_threshold=get_param(grow_threshold, "right"),
+                    cuts=get_param(cuts, "right"),
+                    cut_fraction=get_param(cut_fraction, "right"),
                 ),
             )
 
@@ -422,6 +436,8 @@ class Taulu:
                     look_distance,
                     grow_threshold,
                     cell_height_factor,
+                    cuts,
+                    cut_fraction,
                 ]
             ):
                 raise TauluException(
@@ -431,17 +447,19 @@ class Taulu:
             self._cell_heights = self._template.cell_heights(self._cell_height_factor)
 
             self._grid_detector = GridDetector(
-                kernel_size=kernel_size,
-                cross_width=cross_width,
-                morph_size=morph_size,
-                search_region=search_region,
-                sauvola_k=sauvola_k,
-                distance_penalty=distance_penalty,
-                scale=self._processing_scale,
-                skip_astar_threshold=skip_astar_threshold,
-                min_rows=min_rows,
-                look_distance=look_distance,
-                grow_threshold=grow_threshold,
+                kernel_size=kernel_size,  # ty: ignore
+                cross_width=cross_width,  # ty: ignore
+                morph_size=morph_size,  # ty: ignore
+                search_region=search_region,  # ty: ignore
+                sauvola_k=sauvola_k,  # ty: ignore
+                distance_penalty=distance_penalty,  # ty: ignore
+                scale=self._processing_scale,  # ty: ignore
+                skip_astar_threshold=skip_astar_threshold,  # ty: ignore
+                min_rows=min_rows,  # ty: ignore
+                look_distance=look_distance,  # ty: ignore
+                grow_threshold=grow_threshold,  # ty: ignore
+                cuts=cuts,
+                cut_fraction=cut_fraction,
             )
 
     @staticmethod
@@ -694,6 +712,7 @@ class Taulu:
         """
 
         if not isinstance(image, MatLike):
+            image = cast(str | PathLike[str], image)
             image = cv2.imread(os.fspath(image))
 
         now = perf_counter()
@@ -737,6 +756,6 @@ class Taulu:
         logger.info(f"Grid detection took {grid_time:.2f} seconds")
 
         if isinstance(table, Split):
-            table = TableGrid.from_split(table, (0, 0))
+            table = TableGrid.from_split(table, (0, 0))  # ty: ignore
 
         return table
