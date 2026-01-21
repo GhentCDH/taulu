@@ -41,122 +41,23 @@ class Taulu:
     """
     High-level API for table segmentation from images.
 
-    Taulu provides a simplified interface that orchestrates header alignment,
-    grid detection, and table segmentation into a single workflow. It's designed
-    to hide complexity while still allowing fine-tuned control through parameters.
+    Taulu orchestrates header alignment, grid detection, and table segmentation
+    into a single workflow.
 
-    ## Workflow Overview
+    Workflow:
+        1. Create annotated header images via `Taulu.annotate()`
+        2. Initialize Taulu with header(s) and parameters
+        3. Call `segment_table()` to get a `TableGrid` with cell boundaries
 
-    1. **Header Template Creation**: Use `Taulu.annotate()` to create annotated
-       header images that define your table structure
-    2. **Initialization**: Create a Taulu instance with your header(s) and parameters
-    3. **Segmentation**: Call `segment_table()` on your table images to get a
-       `TableGrid` object containing all detected cell boundaries
+    For two-page tables, use `Split[T]` to provide different parameters for
+    left and right sides.
 
-    ## Single vs Split Tables
-
-    Taulu supports two modes:
-
-    - **Single header**: For tables that fit on one page or have consistent structure
-    - **Split header**: For tables that span two pages (left/right) with potentially
-      different parameters for each side
-
-    Use `Split[T]` objects to provide different parameters for left and right sides.
-
-    ## Parameter Tuning Strategy
-
-    If segmentation fails or is inaccurate:
-
-    1. **Visual debugging**: Set `debug_view=True` in `segment_table()` to see
-       intermediate results
-    2. **Adjust thresholding**: Modify `sauvola_k` to change binarization sensitivity
-       - Increase to remove more noise (more aggressive)
-       - Decrease to preserve faint lines
-    3. **Tune cross-kernel**: Adjust `cross_width`, `cross_height`, `kernel_size`
-       to match your rule thickness after morphology
-    4. **Morphology**: Increase `morph_size` to connect broken lines, but be aware
-       this also thickens lines (requiring larger cross_width)
-    5. **Search parameters**: Increase `search_region` for warped documents,
-       adjust `distance_penalty` to control how strictly positions are enforced
-    6. **Growth parameters**: Lower `grow_threshold` if the algorithm stops too early,
-       increase `look_distance` for better extrapolation
-
-    Examples:
-        Basic usage with a single header:
-
+    Example:
         >>> from taulu import Taulu
-        >>>
-        >>> # First, create annotated header (one-time setup)
         >>> Taulu.annotate("table_image.png", "header.png")
-        >>> # This creates header.png and header.json
-        >>>
-        >>> # Initialize Taulu with the header
-        >>> taulu = Taulu(
-        ...     header_image_path="header.png",
-        ...     cell_height_factor=0.8,  # Rows are 80% of header height
-        ...     sauvola_k=0.25,
-        ...     search_region=60,
-        ...     cross_width=10
-        ... )
-        >>>
-        >>> # Segment a table image
+        >>> taulu = Taulu("header.png")
         >>> grid = taulu.segment_table("table_page_01.png")
-        >>>
-        >>> # Use the grid to extract cells
-        >>> import cv2
-        >>> img = cv2.imread("table_page_01.png")
-        >>> cell_image = grid.crop_cell(img, (0, 0))  # First cell
-
-        Using split headers for two-page tables:
-
-        >>> from taulu import Taulu, Split
-        >>>
-        >>> # Annotate both headers
-        >>> Taulu.annotate("scan_01.png", "header_left.png")
-        >>> Taulu.annotate("scan_01.png", "header_right.png")
-        >>>
-        >>> # Use different parameters for each side
-        >>> taulu = Taulu(
-        ...     header_image_path=Split("header_left.png", "header_right.png"),
-        ...     cell_height_factor=Split([0.8, 0.9], [0.75]),  # Different row heights
-        ...     sauvola_k=Split(0.25, 0.30),  # Different thresholds
-        ...     cross_width=10  # Same for both sides
-        ... )
-        >>>
-        >>> # Segment returns a unified grid
-        >>> grid = taulu.segment_table("scan_01.png")
-
-        Debug visualization to tune parameters:
-
-        >>> taulu = Taulu("header.png", sauvola_k=0.15)
-        >>>
-        >>> # Opens windows showing each processing step
-        >>> # Press 'n' to advance, 'q' to quit
-        >>> grid = taulu.segment_table("table.png", debug_view=True)
-        >>>
-        >>> # Adjust parameters based on what you see:
-        >>> # - If binarization is too noisy: increase sauvola_k
-        >>> # - If lines are broken after morphology: increase morph_size
-        >>> # - If filtered image has "undefined" corners: adjust cross_width to match line thickness (after morphology)
-        >>> # - If corners are missed during search: decrease grow_threshold or increase search_region
-
-
-    Attributes:
-        _header (MatLike | Split[MatLike]): Loaded header image(s)
-        _aligner (HeaderAligner | Split[HeaderAligner]): Header alignment engine(s)
-        _template (HeaderTemplate | Split[HeaderTemplate]): Parsed header structure(s)
-        _grid_detector (GridDetector | Split[GridDetector]): Grid detection engine(s)
-        _cell_heights (list[int] | Split[list[int]]): Computed cell heights in pixels
-
-    Raises:
-        TauluException: If header files don't exist, annotation is missing, or
-            Split parameters are used incorrectly with single headers
-
-    See Also:
-        - `TableGrid`: The result object with methods for accessing cells
-        - `Split`: Container for paired left/right parameters
-        - `GridDetector`: Lower-level grid detection (for advanced usage)
-        - `HeaderAligner`: Lower-level header alignment (for advanced usage)
+        >>> cell_image = grid.crop_cell(cv2.imread("table_page_01.png"), (0, 0))
     """
 
     def __init__(
@@ -181,141 +82,23 @@ class Taulu:
     ):
         """
         Args:
-            header_image_path:
-                Path to the header template image(s). The header should be a cropped
-                image showing a clear view of the table's first row. An annotation
-                file (.json) must exist alongside the image, created via `Taulu.annotate()`.
-                For split tables, provide a `Split` containing left and right header paths.
-
-            cell_height_factor:
-                Height of data rows relative to header height. For example, if your
-                header is 100px tall and data rows are 80px tall, use 0.8.
-
-                - **float**: All rows have the same height
-                - **list[float]**: Different heights for different rows. The last value
-                  is repeated for any additional rows beyond the list length. Useful when
-                  the first data row is taller than subsequent rows.
-                - **Split**: Different height factors for left and right sides
-
-                Default: [1.0]
-
-            header_anno_path (PathLike[str] | str | Split[PathLike[str] | str] | None):
-                Optional explicit path to header annotation JSON file(s). If None,
-                looks for a .json file with the same name as `header_image_path`.
-                Default: None
-
-            sauvola_k (float | Split[float]):
-                Threshold sensitivity for Sauvola adaptive binarization (0.0-1.0).
-                Controls how aggressively the algorithm converts the image to binary.
-
-                - **Lower values** (0.04-0.15): Preserve faint lines, more noise
-                - **Higher values** (0.20-0.35): Remove noise, may lose faint lines
-
-                Start with 0.25 and adjust based on your image quality.
-                Default: 0.25
-
-            search_region (int | Split[int]):
-                Size in pixels of the square region to search for the next corner point.
-                The algorithm estimates where a corner should be, then searches within
-                this region for the best match.
-
-                - **Smaller values** (20-40): Faster, requires well-aligned tables
-                - **Larger values** (60-100): More robust to warping and distortion
-
-                Default: 60
-
-            distance_penalty (float | Split[float]):
-                Weight factor [0, 1] for penalizing corners far from expected position.
-                Uses Gaussian weighting within the search region.
-
-                - **0.0**: No penalty, any position in search region is equally valid
-                - **0.5**: Moderate preference for positions near the expected location
-                - **1.0**: Strong preference, only accepts positions very close to expected
-
-                Default: 0.4
-
-            cross_width (int | Split[int]):
-                Width in pixels of the cross-shaped kernel used to detect intersections.
-                Should approximately match the thickness of your table rules AFTER
-                morphological dilation.
-
-                **Tuning**: Look at the dilated image in debug_view. The cross_width
-                should match the thickness of the black lines you see.
-                Default: 10
-
-            morph_size (int | Split[int]):
-                Size of morphological structuring element for dilation. Controls how
-                much gap-bridging occurs to connect broken line segments.
-
-                - **Smaller values** (2-4): Minimal connection, preserves thin lines
-                - **Larger values** (6-10): Connects larger gaps, but thickens lines
-
-                Note: Increasing this requires increasing `cross_width` proportionally.
-                Default: 4
-
-            kernel_size (int | Split[int]):
-                Size of the cross-shaped kernel (must be odd). Larger kernels are more
-                selective, reducing false positives but potentially missing valid corners.
-
-                - **Smaller values** (21-31): More sensitive, finds more candidates
-                - **Larger values** (41-61): More selective, fewer false positives
-
-                Default: 41
-
-            processing_scale (float | Split[float]):
-                Image downscaling factor (0, 1] for processing speed. Processing is done
-                on scaled images, then results are scaled back to original size.
-
-                - **1.0**: Full resolution (slowest, most accurate)
-                - **0.5-0.75**: Good balance for high-res scans (2x-4x speedup)
-                - **0.25-0.5**: Fast processing for very large images
-
-                Default: 1.0
-
-            min_rows (int | Split[int]):
-                Minimum number of rows required before the algorithm considers the
-                table complete. Prevents stopping too early on tables with initial
-                low-confidence detections.
-                Default: 5
-
-            look_distance (int | Split[int]):
-                Number of adjacent rows/columns to examine when extrapolating missing
-                corners using polynomial regression. Higher values provide more context
-                but may smooth over legitimate variations.
-
-                - **2-3**: Good for consistent grids
-                - **4-6**: Better for grids with some irregularity
-
-                Default: 3
-
-            grow_threshold (float | Split[float]):
-                Initial minimum confidence [0, 1] required to accept a detected corner
-                during the growing phase. The algorithm may adaptively lower this
-                threshold if growth stalls.
-
-                - **Higher values** (0.5-0.8): Stricter, fewer errors but may miss valid corners
-                - **Lower values** (0.2-0.4): More permissive, finds more corners but more errors
-
-                Default: 0.3
-
-            smooth_grid (bool | Split[bool]):
-                Whether or not to apply local smoothing logic to the grid after point detection.
-                This may clean up rugged parts of the grid but could also lead to small inaccuracies
-                if the grid is actually locally _not smooth_.
-
-                Default: False
-
-            cuts (int):
-                The amount of cuts (large deletions) to do in the grid during table growing
-
-            cut_fraction (float):
-                The portion of the already-chosen corner points to delete during cutting
-
-
-            skip_astar_threshold (float):
-                Minimum confidence score during table growing based on heuristic jump on which
-                to skip A-star pathfinding
-
+            header_image_path: Path to header template image(s). Use `Split` for two-page tables.
+            cell_height_factor: Row height relative to header (e.g., 0.8 for 80%). Default: [1.0]
+            header_anno_path: Explicit annotation JSON path. Default: inferred from image path.
+            sauvola_k: Binarization threshold (0.0-1.0). Higher = less noise. Default: 0.25
+            search_region: Corner search area in pixels. Default: 60
+            distance_penalty: Position penalty weight [0, 1]. Default: 0.4
+            cross_width: Cross-kernel width matching line thickness. Default: 10
+            morph_size: Morphological dilation size. Default: 4
+            kernel_size: Cross-kernel size (odd). Default: 41
+            processing_scale: Image downscale factor (0, 1]. Default: 1.0
+            skip_astar_threshold: Confidence to skip A* pathfinding. Default: 0.2
+            min_rows: Minimum rows before completion. Default: 5
+            look_distance: Rows to examine for extrapolation. Default: 3
+            grow_threshold: Corner acceptance confidence [0, 1]. Default: 0.3
+            smooth_grid: Apply grid smoothing after detection. Default: False
+            cuts: Number of grid cuts during growing. Default: 3
+            cut_fraction: Fraction of points to delete per cut. Default: 0.5
         """
         self._processing_scale = processing_scale
         self._cell_height_factor = cell_height_factor
@@ -553,162 +336,23 @@ class Taulu:
         """
         Segment a table image into a grid of cells.
 
-        This is the main entry point for the taulu package. It orchestrates:
-
-        1. **Header alignment**: Locates the table by matching the header template
-           to the image using feature-based registration (ORB features + homography)
-        2. **Grid detection**: Applies morphological filtering and cross-correlation
-           to find corner intersections
-        3. **Grid growing**: Iteratively detects corners row-by-row and column-by-column,
-           starting from the aligned header position
-        4. **Extrapolation**: Fills in any missing corners using polynomial regression
-           based on neighboring detected points
-        5. **Smoothing**: Refines corner positions for consistency
-
-        ## Performance Notes
-
-        Processing time depends on:
-        - Image resolution (use `processing_scale < 1.0` for large images)
-        - Table complexity (more rows/columns = longer processing)
-        - Parameter settings
-
-        ## Troubleshooting
-
-        **If segmentation fails (returns incomplete grid):**
-        1. Enable `debug_view=True` to see where it stops
-        2. Check if header alignment is correct (first debug image)
-        3. Verify cross-correlation shows bright spots at corners
-        4. Adjust `grow_threshold` (lower if stopping too early)
-        5. Increase `search_region` if corners are far from expected positions
-
-        **If segmentation is inaccurate (corners in wrong positions):**
-        1. Check binarization quality (adjust `sauvola_k`)
-        2. Verify cross-kernel size matches line thickness (adjust `cross_width`)
-        3. Ensure morphology isn't over-connecting (reduce `morph_size`)
-        4. Increase `distance_penalty` to enforce expected positions more strictly
+        Orchestrates header alignment, grid detection, corner growing, and
+        extrapolation to produce a complete grid structure.
 
         Args:
-            image (MatLike | PathLike[str] | str): Table image to segment.
-                Can be a file path or a numpy array (BGR or grayscale).
-
-            filtered (MatLike | PathLike[str] | str | None): Optional pre-filtered
-                binary image to use instead of computing it internally.
-                Must be the same size as `image`. If provided, parameters related
-                to filtering (e.g. `sauvola_k`, `morph_size`) are ignored.
-
-                **GPU acceleration**: Use trained CNN model for corner detection:
-
-                >>> from taulu.gpu import DeepConvNet, apply_kernel_to_image_tiled
-                >>> model = DeepConvNet.load("model.pth")
-                >>> filtered = apply_kernel_to_image_tiled(model, image)
-                >>> grid = taulu.segment_table(image, filtered=filtered)
-
-                Default: None
-
-            debug_view (bool): If True, opens OpenCV windows showing intermediate
-                processing steps:
-                - Header alignment overlay
-                - Binarized image
-                - After morphological operations
-                - Cross-correlation result
-                - Growing progress (corner-by-corner)
-
-                **Controls:**
-                - Press 'n' to advance to next step
-                - Press 'q' to quit immediately
-
-                Useful for parameter tuning and understanding failures.
-                Default: False
+            image: Table image to segment (file path or numpy array).
+            filtered: Optional pre-filtered binary image for corner detection.
+                If provided, binarization parameters are ignored.
+            debug_view: Show intermediate processing steps. Press 'n' to advance,
+                'q' to quit. Default: False
 
         Returns:
-            TableGrid: A grid structure containing detected corner positions with
-                methods for:
-
-                **Position queries:**
-                - `cell(point)`: Get (row, col) at pixel coordinates (x, y)
-                - `cell_polygon(cell)`: Get 4 corners of a cell as (lt, rt, rb, lb)
-                - `region(start, end)`: Get bounding box for a cell range
-
-                **Image extraction:**
-                - `crop_cell(img, cell, margin=0)`: Extract single cell with optional margin
-                - `crop_region(img, start, end, margin=0)`: Extract rectangular region
-
-                **Visualization:**
-                - `show_cells(img)`: Interactive cell viewer (click to highlight)
-                - `highlight_all_cells(img)`: Draw all cell boundaries
-                - `visualize_points(img)`: Show detected corner points
-
-                **Analysis:**
-                - `text_regions(img, row)`: Find continuous text regions in a row
-                - `cells()`: Generator yielding all (row, col) indices
-
-                **Persistence:**
-                - `save(path)`: Save grid to JSON file
-                - `TableGrid.from_saved(path)`: Load grid from JSON
-
-                **Properties:**
-                - `rows`: Number of data rows (header not included)
-                - `cols`: Number of columns
-                - `points`: Raw list of detected corner coordinates
+            TableGrid: Grid structure with methods for cell access (`crop_cell`,
+                `cell_polygon`), visualization (`show_cells`), and persistence
+                (`save`, `from_saved`).
 
         Raises:
-            TauluException: If image cannot be loaded, header alignment fails,
-                or grid detection produces no results
-
-        Examples:
-            Basic segmentation:
-
-            >>> from taulu import Taulu
-            >>> import cv2
-            >>>
-            >>> taulu = Taulu("header.png")
-            >>> grid = taulu.segment_table("table_page_01.png")
-            >>>
-            >>> print(f"Detected {grid.rows} rows and {grid.cols} columns")
-            >>>
-            >>> # Extract first cell
-            >>> img = cv2.imread("table_page_01.png")
-            >>> cell_img = grid.crop_cell(img, (0, 0))
-            >>> cv2.imwrite("cell_0_0.png", cell_img)
-
-            Debug mode for parameter tuning:
-
-            >>> grid = taulu.segment_table("table_page_01.png", debug_view=True)
-            # Windows open showing each step
-            # Adjust parameters based on what you see
-
-            Process multiple images with the same header:
-
-            >>> taulu = Taulu("header.png", sauvola_k=0.25)
-            >>>
-            >>> for i in range(1, 11):
-            ...     img_path = f"table_page_{i:02d}.png"
-            ...     grid = taulu.segment_table(img_path)
-            ...     grid.save(f"grid_{i:02d}.json")
-            ...     print(f"Page {i}: {grid.rows} rows detected")
-
-            Extract all cells from a table:
-
-            >>> img = cv2.imread("table.png")
-            >>> grid = taulu.segment_table("table.png")
-            >>>
-            >>> for row, col in grid.cells():
-            ...     cell_img = grid.crop_cell(img, (row, col), margin=5)
-            ...     cv2.imwrite(f"cell_{row}_{col}.png", cell_img)
-
-            Find text regions for OCR:
-
-            >>> for row in range(grid.rows):
-            ...     text_regions = grid.text_regions(img, row)
-            ...     for start_cell, end_cell in text_regions:
-            ...         # Extract region spanning multiple cells
-            ...         region_img = grid.crop_region(img, start_cell, end_cell)
-            ...         # Run OCR on region_img...
-
-        See Also:
-            - `TableGrid`: Complete documentation of the returned object
-            - `GridDetector.find_table_points()`: Lower-level grid detection
-            - `HeaderAligner.align()`: Lower-level header alignment
+            TauluException: If image cannot be loaded or grid detection fails.
         """
 
         if not isinstance(image, MatLike):

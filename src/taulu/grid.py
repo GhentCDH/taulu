@@ -793,7 +793,7 @@ class TableGrid(TableIndexer):
 
     @property
     def right_offset(self) -> int | None:
-        return self.right_offset
+        return self._right_offset
 
     @staticmethod
     def from_split(
