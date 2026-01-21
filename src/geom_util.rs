@@ -223,6 +223,21 @@ pub fn max_eigenvalue_2d(matrix: &Array2<f32>) -> Option<f32> {
 ///
 /// Substitutes `x = v(y)` into `y = h(x)` to get `y = h(v(y))`, then solves
 /// `y - h(v(y)) = 0` using Newton's method.
+///
+/// # Examples
+///
+/// ```ignore
+/// // Two linear polynomials: y = 2 (horizontal line) and x = 3 (vertical line)
+/// // h(x) = 2, so coefficients are [2.0, 0.0]
+/// // v(y) = 3, so coefficients are [3.0, 0.0]
+/// let h_coeffs = [2.0, 0.0];
+/// let v_coeffs = [3.0, 0.0];
+/// let result = find_polynomial_intersection(&h_coeffs, &v_coeffs, 1, 0.0);
+/// assert!(result.is_some());
+/// let (x, y) = result.unwrap();
+/// assert!((x - 3.0).abs() < 1e-5);
+/// assert!((y - 2.0).abs() < 1e-5);
+/// ```
 pub fn find_polynomial_intersection(
     horizontal_coeffs: &[f32],
     vertical_coeffs: &[f32],

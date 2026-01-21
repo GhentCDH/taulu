@@ -843,11 +843,37 @@ class TableGrid(TableIndexer):
         return table_grid
 
     def save(self, path: str | Path):
+        """
+        Persist the table grid to a JSON file.
+
+        Saves the grid corner points and right_offset (for split tables) to disk,
+        allowing the grid to be reloaded later without re-running detection.
+
+        Args:
+            path: Path to save the JSON file.
+
+        Example:
+            >>> grid = taulu.segment_table("table.png")
+            >>> grid.save("grid.json")
+        """
         with open(path, "w") as f:
             json.dump({"points": self.points, "right_offset": self._right_offset}, f)
 
     @staticmethod
     def from_saved(path: str | Path) -> "TableGrid":
+        """
+        Load a previously saved TableGrid from a JSON file.
+
+        Args:
+            path: Path to the JSON file created by `save()`.
+
+        Returns:
+            A TableGrid instance with the saved corner points.
+
+        Example:
+            >>> grid = TableGrid.from_saved("grid.json")
+            >>> cell = grid.crop_cell(image, (0, 0))
+        """
         with open(path, "r") as f:
             points = json.load(f)
             right_offset = points.get("right_offset", None)
@@ -891,6 +917,25 @@ class TableGrid(TableIndexer):
         return True
 
     def cell(self, point: tuple[float, float]) -> tuple[int, int]:
+        """
+        Get the cell indices (row, col) containing a pixel coordinate.
+
+        Searches through all cells to find which one contains the given point,
+        accounting for the non-rectangular (perspective-warped) cell boundaries.
+
+        Args:
+            point: Pixel coordinates (x, y) in the original image.
+
+        Returns:
+            (row, col) indices of the containing cell, or (-1, -1) if the point
+            is outside all cells.
+
+        Example:
+            >>> grid = taulu.segment_table("table.png")
+            >>> row, col = grid.cell((150, 200))
+            >>> if row >= 0:
+            ...     print(f"Point is in cell ({row}, {col})")
+        """
         for r in range(len(self._points) - 1):
             offset = 0
             for c in range(len(self.row(0)) - 1):
@@ -912,6 +957,27 @@ class TableGrid(TableIndexer):
         return (-1, -1)
 
     def cell_polygon(self, cell: tuple[int, int]) -> tuple[Point, Point, Point, Point]:
+        """
+        Get the four corner coordinates of a cell.
+
+        Returns the corners in clockwise order starting from top-left,
+        suitable for use with OpenCV drawing functions.
+
+        Args:
+            cell: Cell indices as (row, col).
+
+        Returns:
+            Four corner points as ((x,y), (x,y), (x,y), (x,y)) in order:
+            top-left, top-right, bottom-right, bottom-left.
+
+        Raises:
+            TauluException: If row or col indices are out of bounds.
+
+        Example:
+            >>> lt, rt, rb, lb = grid.cell_polygon((0, 0))
+            >>> pts = np.array([lt, rt, rb, lb], dtype=np.int32)
+            >>> cv2.polylines(image, [pts], True, (0, 255, 0), 2)
+        """
         r, c = cell
 
         self._check_row_idx(r)
@@ -930,6 +996,27 @@ class TableGrid(TableIndexer):
     def region(
         self, start: tuple[int, int], end: tuple[int, int]
     ) -> tuple[Point, Point, Point, Point]:
+        """
+        Get the bounding polygon for a rectangular region of cells.
+
+        Returns the four corner coordinates that enclose all cells from
+        start to end (inclusive).
+
+        Args:
+            start: Top-left cell as (row, col).
+            end: Bottom-right cell as (row, col).
+
+        Returns:
+            Four corner points (lt, rt, rb, lb) enclosing the region,
+            each as (x, y) pixel coordinates.
+
+        Raises:
+            TauluException: If any row or col indices are out of bounds.
+
+        Example:
+            >>> # Get bounding box for cells (0,0) through (2,3)
+            >>> lt, rt, rb, lb = grid.region((0, 0), (2, 3))
+        """
         r0, c0 = start
         r1, c1 = end
 

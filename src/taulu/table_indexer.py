@@ -97,6 +97,20 @@ class TableIndexer(ABC):
         pass
 
     def cells(self) -> Generator[tuple[int, int], None, None]:
+        """
+        Generate all cell indices in row-major order.
+
+        Yields (row, col) tuples for every cell in the table, iterating
+        through each row from left to right, top to bottom.
+
+        Yields:
+            tuple[int, int]: Cell indices as (row, col).
+
+        Example:
+            >>> for row, col in grid.cells():
+            ...     cell_img = grid.crop_cell(image, (row, col))
+            ...     process(cell_img)
+        """
         for row in range(self.rows):
             for col in range(self.cols):
                 yield (row, col)
@@ -252,7 +266,31 @@ class TableIndexer(ABC):
         margin_y: int | None = None,
         margin_x: int | None = None,
     ) -> MatLike:
-        """Crop the input image to a rectangular region with the start and end cells as extremes"""
+        """
+        Extract a multi-cell region from the image with perspective correction.
+
+        Crops the image to include all cells from start to end (inclusive),
+        applying a perspective transform to produce a rectangular output.
+
+        Args:
+            image: Source image (BGR or grayscale).
+            start: Top-left cell as (row, col).
+            end: Bottom-right cell as (row, col).
+            margin: Uniform margin in pixels (default 0).
+            margin_top: Override top margin.
+            margin_bottom: Override bottom margin.
+            margin_left: Override left margin.
+            margin_right: Override right margin.
+            margin_y: Override vertical margins (top and bottom).
+            margin_x: Override horizontal margins (left and right).
+
+        Returns:
+            Cropped and perspective-corrected image.
+
+        Example:
+            >>> # Extract a 3x2 region starting at cell (1, 0)
+            >>> region_img = grid.crop_region(image, (1, 0), (3, 1))
+        """
 
         region = self.region(start, end)
 
@@ -295,4 +333,21 @@ class TableIndexer(ABC):
         pass
 
     def crop_cell(self, image, cell: tuple[int, int], margin: int = 0) -> MatLike:
+        """
+        Extract a single cell from the image with perspective correction.
+
+        Convenience method equivalent to `crop_region(image, cell, cell, margin)`.
+
+        Args:
+            image: Source image (BGR or grayscale).
+            cell: Cell indices as (row, col).
+            margin: Padding in pixels around the cell (default 0).
+
+        Returns:
+            Cropped and perspective-corrected cell image.
+
+        Example:
+            >>> cell_img = grid.crop_cell(image, (0, 0))
+            >>> cv2.imwrite("cell_0_0.png", cell_img)
+        """
         return self.crop_region(image, cell, cell, margin)

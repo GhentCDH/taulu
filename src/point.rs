@@ -35,7 +35,27 @@ impl Point {
         u32::try_from((self.0 - other.0).abs() + (self.1 - other.1).abs()).expect("conversion")
     }
 
-    // Rect given in (x1, y1, x2, y2) format
+    /// Check if this point is within a rectangular region.
+    ///
+    /// The rectangle is specified as (x1, y1, x2, y2) where (x1, y1) is inclusive
+    /// and (x2, y2) is exclusive.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use taulu::Point;
+    ///
+    /// let p = Point(5, 10);
+    ///
+    /// // Point is inside the rectangle
+    /// assert!(p.within((0, 0, 10, 20)));
+    ///
+    /// // Point is outside (x too small)
+    /// assert!(!p.within((6, 0, 10, 20)));
+    ///
+    /// // Point is on the exclusive boundary
+    /// assert!(!Point(10, 10).within((0, 0, 10, 20)));
+    /// ```
     #[must_use]
     pub fn within(self, rect: (i32, i32, i32, i32)) -> bool {
         let (x1, y1, x2, y2) = rect;
@@ -51,6 +71,21 @@ impl Point {
             .expect("minimum distance")
     }
 
+    /// Generate successor points for A* pathfinding.
+    ///
+    /// Returns neighboring points with their movement costs based on the
+    /// direction of travel and image pixel values. Used internally by the
+    /// A* algorithm to find paths along table rules.
+    ///
+    /// # Arguments
+    ///
+    /// * `dir` - The primary direction of travel (affects cost weighting)
+    /// * `img` - Binary image where white pixels (255) indicate table lines
+    ///
+    /// # Returns
+    ///
+    /// `Some(Vec<(Point, cost)>)` for valid neighbors, `None` if any neighbor
+    /// is out of bounds.
     #[must_use]
     pub fn successors(self, dir: &Direction, img: &Image) -> Option<Vec<(Self, u32)>> {
         let Self(x, y) = self;
