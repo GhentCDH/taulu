@@ -791,6 +791,10 @@ class TableGrid(TableIndexer):
     def rows(self) -> int:
         return len(self._points) - 1
 
+    @property
+    def right_offset(self) -> int | None:
+        return self.right_offset
+
     @staticmethod
     def from_split(
         split_grids: Split["TableGrid"], offsets: Split[Point]
