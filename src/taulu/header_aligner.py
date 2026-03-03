@@ -209,9 +209,9 @@ class HeaderAligner:
                 patchSize=self._patch_size,
             )
         elif self._method == "sift":
-            return cv.SIFT_create(
+            return cv.SIFT_create(  # type:ignore
                 nfeatures=self._max_features, sigma=2.5, edgeThreshold=10
-            )  # type:ignore
+            )
         elif self._method == "surf":
             # SURF is in xfeatures2d (requires opencv-contrib-python)
             return cv.xfeatures2d.SURF_create(hessianThreshold=400)  # type:ignore

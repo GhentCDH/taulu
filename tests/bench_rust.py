@@ -25,6 +25,7 @@ def simple_bench_astar():
 
     strt = perf_counter()
     path = c.astar(img, start, goals, "any")
+    assert path is not None, "A* result was none"
     print(f"Astar took {(perf_counter() - strt) * 1000} ms")
 
     drawn = draw_points(img, path)
@@ -48,6 +49,7 @@ def taulu_bench():
     )
 
     im = cv2.imread(table_image_path(1))
+    assert im is not None, f"Unable to read image {table_image_path(1)}"
     filtered = table_filtered_path(1)
     print(tl.segment_table(im, filtered=filtered, debug_view=False))
 

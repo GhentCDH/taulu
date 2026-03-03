@@ -103,7 +103,7 @@ def _train_model(
             model.save(save_path)
 
     # Save final model regardless
-    final_path = save_path.replace(".pth", "_final.pth")
+    final_path = str(save_path).replace(".pth", "_final.pth")
     model.save(final_path)
     _logger.info(f"Final model saved to {final_path}")
     _logger.info(f""""Use model like this:

@@ -119,6 +119,7 @@ def test_already_filtered():
     )
 
     im = cv2.imread(table_image_path(1))
+    assert im is not None, f"Image {table_image_path(1)} couldn't be read"
     filtered = table_filtered_path(1)
     table = tl.segment_table(im, filtered=filtered, debug_view=False)
     table.save("points.json")

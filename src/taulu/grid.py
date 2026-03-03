@@ -473,7 +473,7 @@ class GridDetector:
             raise ValueError("cell_widths must contain at least one value")
 
         if not isinstance(img, np.ndarray):
-            img = cv.imread(os.fspath(img))
+            img = cv.imread(os.fspath(cast(PathLike[str], img)))
 
         if filtered is None:
             filtered = self.apply(img, visual)
@@ -527,8 +527,8 @@ class GridDetector:
 
         table_grower = TableGrower(
             filtered_gray,
-            cell_widths,  # pyright: ignore
-            cell_heights,  # pyright: ignore
+            cell_widths,
+            cell_heights,
             top_row,
             search_region,
             self._distance_penalty,
@@ -548,7 +548,7 @@ class GridDetector:
                     if corners[y][x] is not None:
                         img_orig = imu.draw_points(
                             img_orig,
-                            [corners[y][x]],
+                            [corners[y][x]],  # type:ignore
                             color=(0, 0, 255),
                             thickness=30,
                         )
@@ -621,11 +621,11 @@ class GridDetector:
                 for x in range(len(corners[y])):
                     if corners[y][x] is not None:
                         corners[y][x] = (
-                            int(corners[y][x][0] / self._scale),  # pyright:ignore
-                            int(corners[y][x][1] / self._scale),  # pyright:ignore
+                            int(corners[y][x][0] / self._scale),  # type:ignore
+                            int(corners[y][x][1] / self._scale),  # type:ignore
                         )
 
-        return TableGrid(corners)  # pyright: ignore
+        return TableGrid(corners)  # type: ignore
 
     def _visualize_grid(self, img: MatLike, points: list[list[Point]]) -> None:
         """Visualize the detected grid points."""
