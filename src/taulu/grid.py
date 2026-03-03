@@ -8,7 +8,7 @@ import math
 import os
 from os import PathLike
 from pathlib import Path
-from typing import List, Optional, Tuple, cast
+from typing import cast
 
 import cv2 as cv
 import numpy as np
@@ -38,7 +38,7 @@ def clamp(
     return max(min(num, max_bound), min_bound)
 
 
-def vector_average_slope(lines: List[Tuple[PointFloat, PointFloat]]) -> float:
+def vector_average_slope(lines: list[tuple[PointFloat, PointFloat]]) -> float:
     sin_sum = 0
     cos_sum = 0
     for left, right in lines:
@@ -98,7 +98,7 @@ def circular_median_angle(angles):
     return best_median
 
 
-def median_slope(lines: List[Tuple[PointFloat, PointFloat]]) -> float:
+def median_slope(lines: list[tuple[PointFloat, PointFloat]]) -> float:
     angles = []
 
     for (x1, y1), (x2, y2) in lines:
@@ -149,8 +149,8 @@ class GridDetector:
         self,
         kernel_size: int = 21,
         cross_width: int = 6,
-        cross_height: Optional[int] = None,
-        morph_size: Optional[int] = None,
+        cross_height: int | None = None,
+        morph_size: int | None = None,
         sauvola_k: float = 0.04,
         sauvola_window: int = 15,
         scale: float = 1.0,
@@ -222,8 +222,8 @@ class GridDetector:
         self,
         kernel_size: int,
         cross_width: int,
-        cross_height: Optional[int],
-        morph_size: Optional[int],
+        cross_height: int | None,
+        morph_size: int | None,
         search_region: int,
         sauvola_k: float,
         sauvola_window: int,
@@ -358,8 +358,8 @@ class GridDetector:
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def find_nearest(
-        self, filtered: MatLike, point: Point, region: Optional[int] = None
-    ) -> Tuple[Point, float]:
+        self, filtered: MatLike, point: Point, region: int | None = None
+    ) -> tuple[Point, float]:
         """
         Find the nearest 'corner match' in the image, along with its score [0,1]
 
@@ -440,8 +440,8 @@ class GridDetector:
         cell_heights: list[int] | int,
         visual: bool = False,
         window: str = WINDOW,
-        goals_width: Optional[int] = None,
-        filtered: Optional[MatLike | PathLike[str]] = None,
+        goals_width: int | None = None,
+        filtered: MatLike | PathLike[str] | None = None,
         smooth: bool = False,
     ) -> "TableGrid":
         """
@@ -627,7 +627,7 @@ class GridDetector:
 
         return TableGrid(corners)  # pyright: ignore
 
-    def _visualize_grid(self, img: MatLike, points: List[List[Point]]) -> None:
+    def _visualize_grid(self, img: MatLike, points: list[list[Point]]) -> None:
         """Visualize the detected grid points."""
         all_points = [point for row in points for point in row]
         drawn = imu.draw_points(img, all_points)
@@ -635,12 +635,12 @@ class GridDetector:
 
     def _visualize_path_finding(
         self,
-        path: List[Point],
+        path: list[Point],
         current: Point,
         next_point: Point,
-        previous_row_target: Optional[Point] = None,
-        region_center: Optional[Point] = None,
-        region_size: Optional[int] = None,
+        previous_row_target: Point | None = None,
+        region_center: Point | None = None,
+        region_size: int | None = None,
     ) -> None:
         """Visualize the path finding process for debugging."""
         global show_time
@@ -702,7 +702,7 @@ class GridDetector:
         start: tuple[int, int],
         goals: list[tuple[int, int]],
         direction: str,
-    ) -> Optional[List[Point]]:
+    ) -> list[Point] | None:
         """
         Find the best path between the start point and one of the goal points on the image
         """
@@ -764,7 +764,7 @@ class TableGrid(TableIndexer):
 
     _right_offset: int | None = None
 
-    def __init__(self, points: list[list[Point]], right_offset: Optional[int] = None):
+    def __init__(self, points: list[list[Point]], right_offset: int | None = None):
         """
         Args:
             points: a 2D list of intersections between hor. and vert. rules
@@ -874,7 +874,7 @@ class TableGrid(TableIndexer):
             >>> grid = TableGrid.from_saved("grid.json")
             >>> cell = grid.crop_cell(image, (0, 0))
         """
-        with open(path, "r") as f:
+        with open(path) as f:
             points = json.load(f)
             right_offset = points.get("right_offset", None)
             points = [[(p[0], p[1]) for p in pointes] for pointes in points["points"]]

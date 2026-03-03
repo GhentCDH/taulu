@@ -109,10 +109,13 @@ def test_already_filtered():
         kernel_size=31,
         cross_width=8,
         morph_size=4,
-        min_rows=10,
+        min_rows=20,
         grow_threshold=0.5,
-        look_distance=2,
+        look_distance=5,
         skip_astar_threshold=0.1,
+        match_method="sift",
+        cuts=10,
+        cut_fraction=0.8,
     )
 
     im = cv2.imread(table_image_path(1))

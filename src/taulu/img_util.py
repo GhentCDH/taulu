@@ -1,10 +1,10 @@
-from typing import Tuple
 import cv2 as cv
-from skimage.filters import threshold_sauvola
 import numpy as np
 from cv2.typing import MatLike
-from .table_indexer import Point
+from skimage.filters import threshold_sauvola
+
 from .constants import WINDOW
+from .table_indexer import Point
 
 stored = []
 
@@ -198,7 +198,7 @@ def safe_crop(img: MatLike, x: int, y: int, w: int, h: int):
 def draw_points(
     img: MatLike,
     points: list[Point],
-    color: Tuple[int, int, int] = (0, 0, 255),
+    color: tuple[int, int, int] = (0, 0, 255),
     thickness: int = 1,
 ):
     if not (len(img.shape) == 3 and img.shape[2] == 3):

@@ -24,8 +24,8 @@ GPU_AVAILABLE = False
 
 try:
     import torch
-    from . import model, data, train, run
 
+    from . import data, model, run, train
     from .model import DeepConvNet
     from .run import apply_kernel_to_image_tiled
     from .train import train_model
@@ -35,13 +35,13 @@ try:
 
     __all__ = [
         "GPU_AVAILABLE",
-        "model",
         "DeepConvNet",
         "apply_kernel_to_image_tiled",
-        "train_model",
         "data",
-        "train",
+        "model",
         "run",
+        "train",
+        "train_model",
     ]
 
 except ImportError:

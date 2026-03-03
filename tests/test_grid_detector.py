@@ -1,15 +1,16 @@
-import pytest
-from taulu.img_util import show
-from taulu import HeaderTemplate, GridDetector
-from util import (
-    table_left_image_path,
-    header_anno_path,
-    table_image_path,
-    header_right_anno_path,
-    header_left_anno_path,
-    files_exist,
-)
 import cv2
+import pytest
+from util import (
+    files_exist,
+    header_anno_path,
+    header_left_anno_path,
+    header_right_anno_path,
+    table_image_path,
+    table_left_image_path,
+)
+
+from taulu import GridDetector, HeaderTemplate
+from taulu.img_util import show
 
 
 @pytest.mark.visual

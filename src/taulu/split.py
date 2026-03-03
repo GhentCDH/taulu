@@ -4,14 +4,13 @@ A module that provides a Split class to handle data with left and right variants
 The Split class allows for easy management and manipulation of paired data, such as images or templates, by providing properties and methods to access and modify the left and right components. It also supports applying functions to both components simultaneously and accessing attributes of the contained objects.
 """
 
-from typing import Generic, TypeVar, Callable, Any
+from collections.abc import Callable
+from typing import TypeVar
 
-T = TypeVar("T")
-U = TypeVar("U")
 V = TypeVar("V")
 
 
-class Split(Generic[T]):
+class Split[T]:
     """
     Container for paired left/right data with convenient manipulation methods.
 
@@ -90,7 +89,7 @@ class Split(Generic[T]):
         assert self._right is not None
         return iter((self._left, self._right))
 
-    def __getitem__(self, index: bool) -> T:
+    def __getitem__(self, index: bool | int) -> T:
         assert self._left is not None
         assert self._right is not None
         if int(index) == 0:
@@ -100,7 +99,7 @@ class Split(Generic[T]):
 
     def apply(
         self,
-        funcs: "Split[Callable[[T, *Any], V]] | Callable[[T, *Any], V]",
+        funcs: "Split[Callable[..., V]] | Callable[..., V]",
         *args,
         **kwargs,
     ) -> "Split[V]":

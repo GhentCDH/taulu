@@ -3,13 +3,13 @@ Defines an abstract class TableIndexer, which provides methods for mapping pixel
 in an image to table cell indices and for cropping images to specific table cells or regions.
 """
 
-from abc import ABC, abstractmethod
-from typing import Generator, Tuple
 import os
+from abc import ABC, abstractmethod
+from collections.abc import Generator
 
 import cv2 as cv
-from cv2.typing import MatLike
 import numpy as np
+from cv2.typing import MatLike
 
 from . import img_util as imu
 from .constants import WINDOW
@@ -96,7 +96,7 @@ class TableIndexer(ABC):
     def rows(self) -> int:
         pass
 
-    def cells(self) -> Generator[tuple[int, int], None, None]:
+    def cells(self) -> Generator[tuple[int, int]]:
         """
         Generate all cell indices in row-major order.
 
@@ -212,7 +212,7 @@ class TableIndexer(ABC):
         self, image: MatLike | os.PathLike[str] | str, window: str = WINDOW
     ) -> list[tuple[int, int]]:
         if not isinstance(image, np.ndarray):
-            image = cv.imread(os.fspath(image))
+            image = cv.imread(os.fspath(image))  # ty:ignore
 
         img = np.copy(image)
 
@@ -314,8 +314,8 @@ class TableIndexer(ABC):
         # crop by doing a perspective transform to the desired quad
         src_pts = np.array([lt, rt, rb, lb], dtype="float32")
         dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype="float32")
-        M = cv.getPerspectiveTransform(src_pts, dst_pts)
-        warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
+        m = cv.getPerspectiveTransform(src_pts, dst_pts)
+        warped = cv.warpPerspective(image, m, (int(w), int(h)))  # type:ignore
 
         return warped
 

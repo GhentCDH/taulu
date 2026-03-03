@@ -1,6 +1,6 @@
-import pytest
-from util import table_image_path, files_exist
 import cv2 as cv
+import pytest
+from util import files_exist, table_image_path
 
 
 @pytest.mark.visual

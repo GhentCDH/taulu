@@ -2,40 +2,53 @@
 Header alignment functionality
 """
 
-from os import PathLike, fspath
-import cv2 as cv
-import pandas as pd
-import numpy as np
-from numpy.typing import NDArray
-from typing import Iterable, cast
-from cv2.typing import MatLike
 import logging
+from collections.abc import Iterable
+from os import PathLike, fspath
+from typing import Literal, cast
 
-from .decorators import log_calls
-from .constants import WINDOW
-from .error import TauluException
+import cv2 as cv
+import numpy as np
+import pandas as pd
+from cv2.typing import MatLike
+from numpy.typing import NDArray
+
 from . import img_util as imu
+from .constants import WINDOW
+from .decorators import log_calls
+from .error import TauluException
 
 logger = logging.getLogger(__name__)
+
+MatchMethod = Literal["orb", "sift", "surf"]
 
 
 class HeaderAligner:
     """
     Aligns table header templates to subject images using feature-based registration.
 
-    This class uses ORB (Oriented FAST and Rotated BRIEF) feature detection and
-    matching to compute a homography transformation that maps points from a header
-    template image to their corresponding locations in full table images.
+    This class supports multiple feature detection and matching methods to compute
+    a homography transformation that maps points from a header template image to
+    their corresponding locations in full table images.
 
     ## How it Works
 
-    1. **Feature Detection**: Extracts ORB keypoints from both template and subject
-    2. **Feature Matching**: Finds correspondences using Hamming distance
+    1. **Feature Detection**: Extracts keypoints from both template and subject
+    2. **Feature Matching**: Finds correspondences using the selected matcher
     3. **Filtering**: Keeps top matches and prunes based on spatial consistency
     4. **Homography Estimation**: Computes perspective transform using RANSAC
 
     The computed homography can then transform any point from template space to
     image space, allowing you to locate table structures based on your annotation.
+
+    ## Available Methods
+
+    - **orb** (default): ORB features with BFMatcher (Hamming distance). Fast and
+      patent-free. Good for most use cases.
+    - **sift**: SIFT features with FLANN-based matcher. More robust to scale and
+      rotation changes. Slower but often more accurate.
+    - **surf**: SURF features with BFMatcher (L2 norm). Requires opencv-contrib-python
+      with non-free modules enabled. Fast and robust.
 
     ## Preprocessing Options
 
@@ -53,9 +66,11 @@ class HeaderAligner:
     Args:
         template (MatLike | PathLike[str] | str | None): Header template image or path.
             This should contain a clear, representative view of the table header.
-        max_features (int): Maximum ORB features to detect. More features = slower
+        method (MatchMethod): Feature detection/matching method. One of "orb", "sift",
+            or "surf". Default is "orb".
+        max_features (int): Maximum features to detect. More features = slower
             but potentially more robust matching.
-        patch_size (int): ORB patch size for feature extraction.
+        patch_size (int): ORB patch size for feature extraction (only used with "orb").
         match_fraction (float): Fraction [0, 1] of matches to keep after sorting by
             quality. Higher = more matches but potentially more outliers.
         scale (float): Image downscaling factor (0, 1] for processing speed.
@@ -68,18 +83,20 @@ class HeaderAligner:
     def __init__(
         self,
         template: None | MatLike | PathLike[str] | str = None,
-        max_features: int = 25_000,
+        method: MatchMethod = "orb",
+        max_features: int = 100_000,
         patch_size: int = 31,
-        match_fraction: float = 0.6,
+        match_fraction: float = 0.3,
         scale: float = 1.0,
         max_dist: float = 1.00,
-        k: float | None = 0.05,
+        k: float | None = None,
     ):
         """
         Args:
             template (MatLike | str): (path of) template image, with the table template clearly visible
-            max_features (int): maximal number of features that will be extracted by ORB
-            patch_size (int): for ORB feature extractor
+            method (MatchMethod): feature detection/matching method ("orb", "sift", or "surf")
+            max_features (int): maximal number of features that will be extracted
+            patch_size (int): for ORB feature extractor (only used with method="orb")
             match_fraction (float): best fraction of matches that are kept
             scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
             max_dist (float): maximum distance (relative to image size) of matched features.
@@ -91,6 +108,7 @@ class HeaderAligner:
             value = cv.imread(fspath(template))
             template = value
 
+        self._method = method
         self._k = k
         if scale > 1.0:
             raise TauluException(
@@ -107,6 +125,7 @@ class HeaderAligner:
         self._patch_size = patch_size
         self._match_fraction = match_fraction
         self._max_dist = max_dist
+        self._validate_method()
 
     def _scale_img(self, img: MatLike) -> MatLike:
         if self._scale == 1.0:
@@ -129,6 +148,11 @@ class HeaderAligner:
         inv_scale_matrix = np.diag([1.0 / self._scale, 1.0 / self._scale, 1.0])
         # return inv_scale_matrix @ h @ scale_matrix
         return inv_scale_matrix @ h @ scale_matrix
+
+    @property
+    def method(self) -> MatchMethod:
+        """The feature detection/matching method being used."""
+        return self._method
 
     @property
     def template(self):
@@ -168,41 +192,78 @@ class HeaderAligner:
 
         return img
 
+    def _validate_method(self):
+        """Validate that the selected method is available."""
+        if self._method == "surf":
+            if not hasattr(cv, "xfeatures2d"):
+                raise TauluException(
+                    "SURF requires opencv-contrib-python with non-free modules. "
+                    "Install with: pip install opencv-contrib-python"
+                )
+
+    def _create_detector(self):
+        """Create the feature detector based on the selected method."""
+        if self._method == "orb":
+            return cv.ORB_create(  # type:ignore
+                self._max_features,
+                patchSize=self._patch_size,
+            )
+        elif self._method == "sift":
+            return cv.SIFT_create(
+                nfeatures=self._max_features, sigma=2.5, edgeThreshold=10
+            )  # type:ignore
+        elif self._method == "surf":
+            # SURF is in xfeatures2d (requires opencv-contrib-python)
+            return cv.xfeatures2d.SURF_create(hessianThreshold=400)  # type:ignore
+        else:
+            raise TauluException(f"Unknown method: {self._method}")
+
+    def _create_matcher(self):
+        """Create the feature matcher based on the selected method."""
+        if self._method == "orb":
+            # ORB uses binary descriptors -> Hamming distance
+            return cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
+        elif self._method == "sift":
+            # SIFT uses float descriptors -> L2 norm with crossCheck
+            return cv.BFMatcher(cv.NORM_L2, crossCheck=True)
+        elif self._method == "surf":
+            # SURF uses float descriptors -> L2 norm
+            return cv.BFMatcher(cv.NORM_L2, crossCheck=True)
+        else:
+            raise TauluException(f"Unknown method: {self._method}")
+
+    def _match_features(self, matcher, descriptors_im, descriptors_tg):
+        """Match features using BFMatcher with crossCheck for all methods."""
+        return list(matcher.match(descriptors_im, descriptors_tg))
+
     @log_calls(level=logging.DEBUG, include_return=True)
     def _find_transform_of_template_on(
         self, im: MatLike, visual: bool = False, window: str = WINDOW
     ):
         im = self._scale_img(im)
-        # Detect ORB features and compute descriptors.
-        orb = cv.ORB_create(
-            self._max_features,  # type:ignore
-            patchSize=self._patch_size,
-        )
-        keypoints_im, descriptors_im = orb.detectAndCompute(im, None)
-        keypoints_tg, descriptors_tg = orb.detectAndCompute(self._template, None)
+
+        # Create detector and matcher based on selected method
+        detector = self._create_detector()
+        matcher = self._create_matcher()
+
+        # Detect features and compute descriptors
+        keypoints_im, descriptors_im = detector.detectAndCompute(im, None)
+        keypoints_tg, descriptors_tg = detector.detectAndCompute(self._template, None)
+
+        if descriptors_im is None or descriptors_tg is None:
+            raise TauluException("No features detected in one or both images")
 
         # Match features
-        matcher = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
-        matches = matcher.match(descriptors_im, descriptors_tg)
+        matches = self._match_features(matcher, descriptors_im, descriptors_tg)
 
         # Sort matches by score
         matches = sorted(matches, key=lambda x: x.distance)
 
+        logger.info(f"matches: ({len(matches)}){matches}")
+
         # Remove not so good matches
         numGoodMatches = int(len(matches) * self._match_fraction)
         matches = matches[:numGoodMatches]
-
-        if visual:
-            final_img_filtered = cv.drawMatches(
-                im,
-                keypoints_im,
-                self._template,
-                keypoints_tg,
-                matches[:10],
-                None,  # type:ignore
-                cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
-            )
-            imu.show(final_img_filtered, title="matches", window=window)
 
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -222,8 +283,24 @@ class HeaderAligner:
         mask_x = refdist.loc[:, 0] < (im.shape[0] * self._max_dist)
         mask_y = refdist.loc[:, 1] < (im.shape[1] * self._max_dist)
         mask = mask_x & mask_y
-        points1 = points1[mask.to_numpy()]
-        points2 = points2[mask.to_numpy()]
+        mask_array = mask.to_numpy()
+        points1 = points1[mask_array]
+        points2 = points2[mask_array]
+
+        # Filter matches for visualization
+        filtered_matches = [m for m, keep in zip(matches, mask_array) if keep]
+
+        if visual:
+            final_img_filtered = cv.drawMatches(
+                im,
+                keypoints_im,
+                self._template,
+                keypoints_tg,
+                filtered_matches[:100],
+                None,  # type:ignore
+                cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+            )
+            imu.show(final_img_filtered, title="matches", window=window)
 
         # Find homography
         h, _ = cv.findHomography(points1, points2, cv.RANSAC)

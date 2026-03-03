@@ -1,6 +1,7 @@
-from taulu import HeaderTemplate
 import pytest
-from util import header_image_path, table_image_path, files_exist
+from util import files_exist, header_image_path, table_image_path
+
+from taulu import HeaderTemplate
 
 
 @pytest.mark.skipif(

@@ -46,10 +46,10 @@ If you want a high-level overview of how to use Taulu, see [the Taulu class](./t
 """
 
 from .grid import GridDetector, TableGrid
-from .header_aligner import HeaderAligner
+from .header_aligner import HeaderAligner, MatchMethod
 from .header_template import HeaderTemplate
-from .table_indexer import TableIndexer
 from .split import Split
+from .table_indexer import TableIndexer
 from .taulu import Taulu
 
 __pdoc__ = {}
@@ -62,11 +62,12 @@ __pdoc__["img_util"] = False
 
 __all__ = [
     "GridDetector",
-    "TableGrid",
     "HeaderAligner",
     "HeaderTemplate",
-    "TableIndexer",
+    "MatchMethod",
     "Split",
+    "TableGrid",
+    "TableIndexer",
     "Taulu",
 ]
 
