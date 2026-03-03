@@ -326,6 +326,8 @@ class Taulu:
             try:
                 from IPython import get_ipython
                 ip = get_ipython()
+                print(type(ip).__name__)
+                print(ip.config)
                 return ip is not None and "IPKernelApp" in ip.config
             except Exception:
                 return False
@@ -333,26 +335,16 @@ class Taulu:
         # Decide backend
         if backend not in ("auto", "gui", "notebook"):
             raise TauluException("backend must be one of: 'auto', 'gui', 'notebook'")
-
+        print('hello')
         if backend == "auto":
             use_notebook = running_in_notebook()
         else:
             use_notebook = (backend == "notebook")
 
         if use_notebook:
-            logger.info(
-                "Notebook environment detected/selected. Using notebook annotation backend."
-            )
-            # Notebook widgets are asynchronous, so we can't do the full flow in one call
-            # Users should use HeaderTemplate.annotate_image_notebook() directly
-            raise TauluException(
-                "Notebook annotation requires interactive widgets. Please use:\n\n"
-                "from taulu import HeaderTemplate\n"
-                f"annotator = HeaderTemplate.annotate_image_notebook('{image_path}', crop='{output_path.with_suffix('.png')}')\n"
-                "# ... interact with widget, click Done ...\n"
-                "template = annotator.get_template()\n"
-                f"template.save('{output_path.with_suffix('.json')}')\n"
-            )
+            logger.info("Notebook environment detected/selected. Using notebook annotation backend.")
+            template = HeaderTemplate.annotate_image_notebook(os.fspath(image_path), crop=output_path.with_suffix(".png"))
+
         else:
             # GUI path (existing behavior)
             template = HeaderTemplate.annotate_image(

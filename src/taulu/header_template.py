@@ -16,6 +16,9 @@ from cv2.typing import MatLike
 import numpy as np
 from taulu.decorators import log_calls
 from .table_indexer import Point, TableIndexer
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Button
+
 
 from .error import TauluException
 from . import img_util as imu
@@ -274,6 +277,87 @@ class HeaderTemplate(TableIndexer):
         imu.show(anno_template, get_point, title="annotate the header")
 
         return HeaderTemplate(lines)
+
+    @staticmethod
+    @log_calls(level=logging.DEBUG)
+    def annotate_image_notebook(
+        template: MatLike | str, crop: Optional[PathLike[str]] = None, margin: int = 10
+    ) -> "HeaderTemplate":
+        """
+        Utility method that allows users to create a template from a template image.
+        The user is asked to click to annotate lines (two clicks per line).
+        Runs in a Jupyter notebook environment using ipympl (matplotlib backend).
+
+        Args:
+            template: the image on which to annotate the header lines
+            crop (str | None): if str, crop the template image first, then do the annotation.
+                The cropped image will be stored at the supplied path
+            margin (int): margin to add around the cropping of the header
+
+        Returns:
+            HeaderTemplate: populated once the user clicks Done.
+        """
+        if isinstance(template, str):
+            template = cv.imread(template)
+        template = cast(MatLike, template)
+
+        if crop is not None:
+            cropped = HeaderTemplate._crop(template, margin)
+            cv.imwrite(os.fspath(crop), cropped)
+            template = cropped
+
+        display_img = cv.cvtColor(template, cv.COLOR_BGR2RGB)
+
+        lines: list[list[int]] = []
+        start_point: Optional[tuple[int, int]] = None
+
+        fig, ax = plt.subplots()
+        ax.imshow(display_img)
+        ax.set_title(ANNO_HELP)
+        drawn_lines = []
+
+        def on_click(event):
+            nonlocal start_point
+
+            if event.inaxes != ax or event.xdata is None:
+                return
+
+            x, y = int(event.xdata), int(event.ydata)
+
+            if event.button == 1:  # Left click
+                if start_point is not None:
+                    x0, y0 = start_point
+                    lines.append([y0, x0, x, y])
+                    ln, = ax.plot([x0, x], [y0, y], color="lime", linewidth=2)
+                    drawn_lines.append(ln)
+                    fig.canvas.draw_idle()
+                    start_point = None
+                else:
+                    start_point = (x, y)
+
+            elif event.button == 3:  # Right click — undo
+                start_point = None
+                if lines:
+                    lines.pop()
+                    drawn_lines.pop().remove()
+                    fig.canvas.draw_idle()
+
+        def on_done(_event):
+            fig.canvas.mpl_disconnect(cid)
+            plt.close(fig)
+
+        done_ax = fig.add_axes([0.81, 0.01, 0.1, 0.04])
+        done_button = Button(done_ax, "Done")
+        done_button.on_clicked(on_done)
+
+        cid = fig.canvas.mpl_connect("button_press_event", on_click)
+
+        plt.tight_layout()
+        plt.show()
+
+        return HeaderTemplate(lines)
+        
+
 
     @staticmethod
     @log_calls(level=logging.DEBUG, include_return=True)
