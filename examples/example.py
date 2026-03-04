@@ -1,7 +1,5 @@
 import os
 
-os.environ["DISPLAY"] = ":0"
-
 from taulu import Split, Taulu
 
 

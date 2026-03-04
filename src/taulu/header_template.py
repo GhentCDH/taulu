@@ -428,11 +428,12 @@ class HeaderTemplate(TableIndexer):
             
             # Crop the image
             points_np = np.array(points)
+            img_h, img_w = template.shape[:2]
             x_min = max(int(np.min(points_np[:, 0])) - margin, 0)
             y_min = max(int(np.min(points_np[:, 1])) - margin, 0)
-            x_max = int(np.max(points_np[:, 0])) + margin
-            y_max = int(np.max(points_np[:, 1])) + margin
-            
+            x_max = min(int(np.max(points_np[:, 0])) + margin, img_w)
+            y_max = min(int(np.max(points_np[:, 1])) + margin, img_h)
+
             cropped = template[y_min:y_max, x_min:x_max]
             
             # Save cropped image if path provided
@@ -499,7 +500,7 @@ class HeaderTemplate(TableIndexer):
             if event.button == 1:  # Left click
                 if start_point[0] is not None:
                     x0, y0 = start_point[0]
-                    lines.append([y0, x0, x, y])
+                    lines.append([x0, y0, x, y])
                     ln, = ax.plot([x0, x], [y0, y], color="lime", linewidth=2)
                     drawn_lines.append(ln)
                     ax.set_title(f"Click pairs of points to draw lines. Lines: {len(lines)}")

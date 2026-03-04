@@ -4,7 +4,7 @@ in an image to table cell indices and for cropping images to specific table cell
 """
 
 from abc import ABC, abstractmethod
-from typing import Generator, Tuple
+from typing import Generator, Tuple, Optional
 import os
 
 import cv2 as cv
@@ -15,6 +15,29 @@ from . import img_util as imu
 from .constants import WINDOW
 from .error import TauluException
 from .types import Point
+
+
+class ShowCellsSession:
+    """
+    Session object for notebook-based cell visualization.
+
+    In Jupyter notebooks with %matplotlib widget, this allows interactive
+    cell highlighting without blocking. Access the clicked cells via the
+    .cells property.
+
+    Usage:
+        session = grid.show_cells_notebook(image)
+        # ... click on cells in the plot ...
+        clicked_cells = session.cells  # Access the list of clicked cells
+    """
+
+    def __init__(self):
+        self._cells: list[tuple[int, int]] = []
+
+    @property
+    def cells(self) -> list[tuple[int, int]]:
+        """Returns the list of cells that have been clicked."""
+        return self._cells.copy()
 
 
 def _add(left: Point, right: Point) -> Point:
@@ -210,10 +233,32 @@ class TableIndexer(ABC):
 
     def show_cells(
         self, image: MatLike | os.PathLike[str] | str, window: str = WINDOW
-    ) -> list[tuple[int, int]]:
+    ) -> list[tuple[int, int]] | ShowCellsSession:
+        """
+        Interactively display and highlight table cells.
+
+        In standard environments, shows an OpenCV window where clicking highlights cells.
+        In Jupyter notebooks, returns a ShowCellsSession and displays using matplotlib.
+
+        Args:
+            image: Source image (path or array).
+            window: OpenCV window name (ignored in notebooks).
+
+        Returns:
+            list[tuple[int, int]]: Clicked cell indices (non-notebook).
+            ShowCellsSession: Session object with .cells property (notebook).
+
+        Example:
+            >>> # Standard Python
+            >>> cells = grid.show_cells("table.png")
+            >>>
+            >>> # Jupyter Notebook
+            >>> session = grid.show_cells("table.png")
+            >>> # ... click cells ...
+            >>> cells = session.cells
+        """
         if not isinstance(image, np.ndarray):
             image = cv.imread(os.fspath(image))
-        
 
         def running_in_notebook() -> bool:
             try:
@@ -223,14 +268,14 @@ class TableIndexer(ABC):
             except Exception:
                 return False
 
-        img = np.copy(image)
-        cells = []
-
         use_notebook = running_in_notebook()
 
         if use_notebook:
-            print("Running in a notebook environment, showing cells with matplotlib. Click events are not supported, but cells")
-        else: 
+            return self.show_cells_notebook(image)
+        else:
+            img = np.copy(image)
+            cells = []
+
             def click_event(event, x, y, flags, params):
                 _ = flags
                 _ = params
@@ -251,6 +296,166 @@ class TableIndexer(ABC):
             )
 
             return cells
+
+    def show_cells_notebook(
+        self, image: MatLike | os.PathLike[str] | str
+    ) -> ShowCellsSession:
+        """
+        Notebook-compatible version of show_cells using matplotlib.
+
+        Returns a ShowCellsSession immediately. Click on cells to highlight them.
+        Access clicked cells via session.cells.
+
+        Args:
+            image: Source image (path or array).
+
+        Returns:
+            ShowCellsSession: Access .cells to get list of clicked cell indices.
+
+        Example:
+            >>> session = grid.show_cells_notebook("table.png")
+            >>> # Click cells in the interactive plot
+            >>> print(session.cells)  # [(0, 0), (1, 2), ...]
+        """
+        if not isinstance(image, np.ndarray):
+            image = cv.imread(os.fspath(image))
+
+        import matplotlib.pyplot as plt
+        import ipywidgets as widgets
+        from IPython.display import display
+
+        session = ShowCellsSession()
+
+        # Convert BGR to RGB for matplotlib
+        display_img = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+        img_with_highlights = np.copy(display_img)
+
+        fig, ax = plt.subplots(figsize=(15, 12))
+        fig.canvas.toolbar_visible = False
+        fig.canvas.header_visible = False
+
+        im_display = ax.imshow(img_with_highlights)
+        ax.set_title("Click cells to highlight them. Cells clicked: 0")
+        ax.set_axis_off()
+
+        # Create buttons
+        done_button = widgets.Button(
+            description="Done",
+            button_style='success',
+            layout=widgets.Layout(width='150px', height='50px')
+        )
+        clear_button = widgets.Button(
+            description="Clear All",
+            button_style='warning',
+            layout=widgets.Layout(width='150px', height='50px')
+        )
+        undo_button = widgets.Button(
+            description="Undo Last",
+            button_style='info',
+            layout=widgets.Layout(width='150px', height='50px')
+        )
+
+        done_button.style.font_size = '18px'
+        clear_button.style.font_size = '18px'
+        undo_button.style.font_size = '18px'
+
+        status_label = widgets.Label(
+            value="Click on cells to highlight them",
+            style={'font_size': '18px'}
+        )
+
+        # Highlighted cells for visual tracking
+        highlighted_polygons = []
+
+        def draw_highlight(cell_idx: tuple[int, int]):
+            """Draw a highlighted cell on the image."""
+            polygon = self.cell_polygon(cell_idx)
+            points = np.array(list(polygon), dtype=np.int32)
+
+            # Draw polyline on the RGB image
+            cv.polylines(
+                img_with_highlights,
+                [points],
+                True,
+                (255, 0, 0),  # Red in RGB
+                2,
+                cv.LINE_AA
+            )
+
+            # Draw cell index text
+            cv.putText(
+                img_with_highlights,
+                str(cell_idx),
+                (int(polygon[3][0] + 10), int(polygon[3][1] - 10)),
+                cv.FONT_HERSHEY_PLAIN,
+                2.0,
+                (255, 255, 255),  # White in RGB
+                2,
+            )
+
+        def redraw_all():
+            """Redraw the image with all current highlights."""
+            nonlocal img_with_highlights
+            img_with_highlights = np.copy(display_img)
+
+            for cell_idx in session._cells:
+                draw_highlight(cell_idx)
+
+            im_display.set_data(img_with_highlights)
+            ax.set_title(f"Click cells to highlight them. Cells clicked: {len(session._cells)}")
+            fig.canvas.draw_idle()
+
+        def on_click(event):
+            if event.inaxes != ax or event.xdata is None:
+                return
+
+            x, y = int(event.xdata), int(event.ydata)
+
+            if event.button == 1:  # Left click
+                cell_idx = self.cell((x, y))
+                if cell_idx[0] >= 0:
+                    session._cells.append(cell_idx)
+                    draw_highlight(cell_idx)
+                    im_display.set_data(img_with_highlights)
+                    ax.set_title(f"Click cells to highlight them. Cells clicked: {len(session._cells)}")
+                    status_label.value = f"Cell {cell_idx} highlighted. Total: {len(session._cells)}"
+                    fig.canvas.draw_idle()
+                else:
+                    status_label.value = f"Click at ({x}, {y}) is outside table bounds"
+
+        def on_clear(_):
+            session._cells.clear()
+            redraw_all()
+            status_label.value = "All highlights cleared"
+
+        def on_undo(_):
+            if session._cells:
+                removed = session._cells.pop()
+                redraw_all()
+                status_label.value = f"Removed cell {removed}. Remaining: {len(session._cells)}"
+            else:
+                status_label.value = "No cells to undo"
+
+        def on_done(_):
+            fig.canvas.mpl_disconnect(cid)
+            done_button.disabled = True
+            clear_button.disabled = True
+            undo_button.disabled = True
+            ax.set_title(f"Done! {len(session._cells)} cells highlighted.")
+            status_label.value = f"Complete! Access clicked cells via session.cells"
+            fig.canvas.draw_idle()
+
+        done_button.on_click(on_done)
+        clear_button.on_click(on_clear)
+        undo_button.on_click(on_undo)
+
+        cid = fig.canvas.mpl_connect("button_press_event", on_click)
+
+        plt.tight_layout(pad=0)
+        plt.show()
+        display(widgets.HBox([done_button, clear_button, undo_button, status_label]))
+
+        return session
 
     @abstractmethod
     def region(

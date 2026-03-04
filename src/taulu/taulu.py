@@ -352,7 +352,6 @@ class Taulu:
             )
             template.save(output_path.with_suffix(".json"))
     
-
     def segment_table(
         self,
         image: MatLike | PathLike[str] | str,
