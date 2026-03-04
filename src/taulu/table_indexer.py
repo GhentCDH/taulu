@@ -213,31 +213,44 @@ class TableIndexer(ABC):
     ) -> list[tuple[int, int]]:
         if not isinstance(image, np.ndarray):
             image = cv.imread(os.fspath(image))
+        
+
+        def running_in_notebook() -> bool:
+            try:
+                from IPython import get_ipython
+                ip = get_ipython()
+                return ip is not None and "IPKernelApp" in ip.config
+            except Exception:
+                return False
 
         img = np.copy(image)
-
         cells = []
 
-        def click_event(event, x, y, flags, params):
-            _ = flags
-            _ = params
-            if event == cv.EVENT_LBUTTONDOWN:
-                cell = self.cell((x, y))
-                if cell[0] >= 0:
-                    cells.append(cell)
-                else:
-                    return
-                self._highlight_cell(img, cell)
-                cv.imshow(window, img)
+        use_notebook = running_in_notebook()
 
-        imu.show(
-            img,
-            click_event=click_event,
-            title="click to highlight cells",
-            window=window,
-        )
+        if use_notebook:
+            print("Running in a notebook environment, showing cells with matplotlib. Click events are not supported, but cells")
+        else: 
+            def click_event(event, x, y, flags, params):
+                _ = flags
+                _ = params
+                if event == cv.EVENT_LBUTTONDOWN:
+                    cell = self.cell((x, y))
+                    if cell[0] >= 0:
+                        cells.append(cell)
+                    else:
+                        return
+                    self._highlight_cell(img, cell)
+                    cv.imshow(window, img)
 
-        return cells
+            imu.show(
+                img,
+                click_event=click_event,
+                title="click to highlight cells",
+                window=window,
+            )
+
+            return cells
 
     @abstractmethod
     def region(

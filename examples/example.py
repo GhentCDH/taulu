@@ -1,5 +1,7 @@
 import os
 
+os.environ["DISPLAY"] = ":0"
+
 from taulu import Split, Taulu
 
 
@@ -8,17 +10,17 @@ def setup():
     # (one for the left header, one for the right)
     # and store them in the examples directory
     print("Annotating the LEFT header...")
-    Taulu.annotate("../data/table_00.png", "table_00_header_left.png")
+    Taulu.annotate("/home/bas/Documents/Visual Code Repos/taulu/data/table_00.png", "table_00_header_left.png")
 
     print("Annotating the RIGHT header...")
-    Taulu.annotate("../data/table_00.png", "table_00_header_right.png")
+    Taulu.annotate("/home/bas/Documents/Visual Code Repos/taulu/data/table_00.png", "table_00_header_right.png")
 
 
 def main():
     taulu = Taulu(Split("table_00_header_left.png", "table_00_header_right.png"))
-    table = taulu.segment_table("../data/table_00.png", debug_view=True)
+    table = taulu.segment_table("/home/bas/Documents/Visual Code Repos/taulu/data/table_00.png", debug_view=True)
 
-    table.show_cells("../data/table_00.png")
+    table.show_cells("/home/bas/Documents/Visual Code Repos/taulu/data/table_00.png")
 
 
 if __name__ == "__main__":

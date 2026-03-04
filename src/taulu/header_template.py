@@ -363,13 +363,21 @@ class HeaderTemplate(TableIndexer):
         drawn_points: list = []
         
         # Create output widget to contain everything
-        out = widgets.Output()
+        out = widgets.Output(layout=widgets.Layout(
+            width='800px',
+            height='600px',
+            overflow='hidden'
+        ))
+                
+        fig, ax = plt.subplots(figsize=(15, 15))
         
-        fig, ax = plt.subplots(figsize=(10, 10))
         fig.canvas.toolbar_visible = False
         fig.canvas.header_visible = False
+        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
+
         ax.imshow(display_img)
         ax.set_title("Annotate the header: \nClick 4 corners of the header region such that the entire header is contained within the rectangle.")
+        ax.set_axis_off()
         
         # Create ipywidgets buttons
         done_button = widgets.Button(
@@ -387,7 +395,7 @@ class HeaderTemplate(TableIndexer):
         done_button.style.font_size = '18px'
         undo_button.style.font_size = '18px'
 
-        status_label = widgets.Label(value="Press 'Done' when finished. Press 'Undo Last Point' to remove the last point.")
+        status_label = widgets.Label(value="Press 'Done' when finished. Press 'Undo Last Point' to remove the last point.", style={'font_size':'18px'})
 
         def on_click(event):
             if event.inaxes != ax or event.xdata is None:
@@ -446,6 +454,7 @@ class HeaderTemplate(TableIndexer):
         cid = fig.canvas.mpl_connect("button_press_event", on_click)
         
         # Display figure first, then buttons below
+        plt.tight_layout(pad=0)
         plt.show()
         display(widgets.HBox([done_button, undo_button, status_label]))
 
@@ -454,6 +463,8 @@ class HeaderTemplate(TableIndexer):
         """Show the line annotation UI using matplotlib + ipywidgets."""
         import ipywidgets as widgets
         from IPython.display import display
+
+        print(f"\x1b[32m[Taulu]: Don't forget to save annotations with annotation.save()!")
         
         display_img = cv.cvtColor(template, cv.COLOR_BGR2RGB)
 
@@ -461,16 +472,23 @@ class HeaderTemplate(TableIndexer):
         start_point: list[Optional[tuple[int, int]]] = [None]
         drawn_lines: list = []
 
-        fig, ax = plt.subplots(figsize=(10, 8))
+        fig, ax = plt.subplots(figsize=(15, 12))
         fig.canvas.toolbar_visible = False
         fig.canvas.header_visible = False
         ax.imshow(display_img)
         ax.set_title("Click pairs of points to draw lines. Lines: 0")
+        ax.set_axis_off()
         
         # Create ipywidgets buttons
-        done_button = widgets.Button(description="Done Annotating", button_style='success')
-        undo_button = widgets.Button(description="Undo Last Line", button_style='warning')
-        status_label = widgets.Label(value="Click to start a line, click again to end it")
+        done_button = widgets.Button(description="Done Annotating", button_style='success', layout=widgets.Layout(width='200px', height='50px'))
+        undo_button = widgets.Button(description="Undo Last Line", button_style='warning', layout=widgets.Layout(width='200px', height='50px'))
+        status_label = widgets.Label(
+            value="Click to start a line, click again to end it",
+            style={'font_size': '18px'}
+        )
+
+        done_button.style.font_size = '18px'
+        undo_button.style.font_size = '18px'
 
         def on_click(event):
             if event.inaxes != ax or event.xdata is None:
@@ -510,7 +528,6 @@ class HeaderTemplate(TableIndexer):
             done_button.disabled = True
             undo_button.disabled = True
             ax.set_title(f"Done! {len(lines)} lines annotated. Call session.save() to save.")
-            print(f"\x1b[32m[Taulu]: Don't forget to save annotations with annotation.save()!")
             status_label.value = "Annotation complete! Run session.save('filename.json') to save."
             fig.canvas.draw_idle()
 
@@ -520,6 +537,7 @@ class HeaderTemplate(TableIndexer):
         cid = fig.canvas.mpl_connect("button_press_event", on_click)
 
         # Display figure first, then buttons below
+        plt.tight_layout(pad=0)
         plt.show()
         display(widgets.HBox([done_button, undo_button, status_label]))
 
