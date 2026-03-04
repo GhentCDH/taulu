@@ -1,9 +1,9 @@
-import torch
-from torch.utils.data import Dataset
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import torch  # ty:ignore
 from PIL import Image
-from typing import List, Tuple
+from torch.utils.data import Dataset  # ty:ignore
 
 
 class IntersectionDataset(Dataset):
@@ -11,8 +11,8 @@ class IntersectionDataset(Dataset):
 
     def __init__(
         self,
-        image_paths: List[Path],
-        intersection_coords: List[List[Tuple[int, int]]],
+        image_paths: list[Path],
+        intersection_coords: list[list[tuple[int, int]]],
         patch_size: int = 128,
         negative_samples_per_positive: int = 5,
         augment: bool = False,
@@ -37,7 +37,7 @@ class IntersectionDataset(Dataset):
         samples = []
 
         for img_idx, (img, coords) in enumerate(
-            zip(self.images, self.intersection_coords)
+            zip(self.images, self.intersection_coords, strict=False)
         ):
             h, w = img.shape
 
@@ -54,7 +54,7 @@ class IntersectionDataset(Dataset):
             n_negative = n_positive * self.neg_ratio
             exclusion_radius = self.patch_size // 5
 
-            for i in range(n_negative):
+            for _ in range(n_negative):
                 attempts = 0
                 while attempts < 100:
                     x = np.random.randint(self.half_patch, w - self.half_patch)
@@ -75,7 +75,7 @@ class IntersectionDataset(Dataset):
             samples.extend(line_negatives)
 
             # ADD: Near-miss negatives (just offset from intersections)
-            l = 0
+            coord_count = 0
             for x, y in coords:
                 for dx, dy in [
                     (10, 0),
@@ -93,42 +93,46 @@ class IntersectionDataset(Dataset):
                         and self.half_patch <= ny < h - self.half_patch
                     ):
                         samples.append((img_idx, nx, ny, 0.0))
-                        l += 1
+                        coord_count += 1
 
         return samples
 
     def _generate_line_negatives(
-        self, img_idx: int, coords: List[Tuple[int, int]], h: int, w: int
-    ) -> List[Tuple[int, int, int, float]]:
+        self, img_idx: int, coords: list[tuple[int, int]], h: int, w: int
+    ) -> list[tuple[int, int, int, float]]:
         """Generate negative samples on lines between neighboring intersections in the table grid."""
-        import random
         import math
+        import random
+
         samples = []
         # Need to reconstruct the row structure from the flattened coords
         # Load the original JSON structure for this image
-        image_path = self.image_paths[img_idx]
+        _image_path = self.image_paths[img_idx]
         # points_path = Path(f"./points_{img_idx}.json")
         points_path = Path("./primitief2.json")
         if not points_path.exists():
             return samples
         import json
-        with open(points_path, "r") as f:
+
+        with open(points_path) as f:
             rows = json.load(f)["points"]  # [[[x, y], ...], ...] - list of rows
-        
+
         density = 0.08  # Average number of negative samples per pixel of line length
-        
+
         # Horizontal lines: sample between neighbors in the same row
         for row in rows:
             for i in range(len(row) - 1):
                 x1, y1 = row[i][0], row[i][1]
                 x2, y2 = row[i + 1][0], row[i + 1][1]  # Right neighbor in same row
                 # Calculate line length
-                line_length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                line_length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
                 # Expected number of samples for this line segment
                 expected_samples = line_length * density
                 # Use Poisson distribution for actual number (more realistic)
-                num_samples = max(1, int(random.gauss(expected_samples, math.sqrt(expected_samples))))
-                
+                num_samples = max(
+                    1, int(random.gauss(expected_samples, math.sqrt(expected_samples)))
+                )
+
                 # Sample random points between horizontal neighbors
                 for _ in range(num_samples):
                     frac = random.uniform(0.1, 0.9)  # Avoid endpoints
@@ -139,7 +143,7 @@ class IntersectionDataset(Dataset):
                         and self.half_patch <= y < h - self.half_patch
                     ):
                         samples.append((img_idx, x, y, 0.0))
-        
+
         # Vertical lines: sample between neighbors in the same column
         if rows and len(rows) > 0:
             n_cols = len(rows[0])
@@ -156,12 +160,17 @@ class IntersectionDataset(Dataset):
                         column[i + 1][1],
                     )  # Bottom neighbor in same column
                     # Calculate line length
-                    line_length = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+                    line_length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
                     # Expected number of samples for this line segment
                     expected_samples = line_length * density
                     # Use Poisson distribution for actual number (more realistic)
-                    num_samples = max(1, int(random.gauss(expected_samples, math.sqrt(expected_samples))))
-                    
+                    num_samples = max(
+                        1,
+                        int(
+                            random.gauss(expected_samples, math.sqrt(expected_samples))
+                        ),
+                    )
+
                     # Sample random points between vertical neighbors
                     for _ in range(num_samples):
                         frac = random.uniform(0.1, 0.9)  # Avoid endpoints

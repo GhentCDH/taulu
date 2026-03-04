@@ -1,9 +1,9 @@
 import logging
+from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from pathlib import Path
 from PIL import Image
 
 logger = logging.getLogger(__name__)

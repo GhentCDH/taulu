@@ -2,25 +2,25 @@
 A HeaderTemplate defines the structure of a table header.
 """
 
-from os import PathLike
-from pathlib import Path
-from typing import Iterable, Optional, cast
 import csv
 import json
-import os
 import logging
 import math
+import os
+from collections.abc import Iterable
+from os import PathLike
+from typing import cast
 
 import cv2 as cv
-from cv2.typing import MatLike
 import numpy as np
+from cv2.typing import MatLike
+
 from taulu.decorators import log_calls
-from .table_indexer import Point, TableIndexer
 
-from .error import TauluException
-from . import img_util as imu
 from . import constants
-
+from . import img_util as imu
+from .error import TauluException
+from .table_indexer import Point, TableIndexer
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +130,7 @@ class _Rule:
             return self._p0[0]
         return self._p0[0] + (y - self._p0[1]) / self._slope
 
-    def intersection(self, other: "_Rule") -> Optional[tuple[float, float]]:
+    def intersection(self, other: "_Rule") -> tuple[float, float] | None:
         """Calculates the intersection point of two lines."""
         if self._slope == other._slope:
             logger.warning("trying to intersect parallel lines")
@@ -180,7 +180,7 @@ class HeaderTemplate(TableIndexer):
     @staticmethod
     @log_calls(level=logging.DEBUG)
     def from_saved(path: PathLike[str]) -> "HeaderTemplate":
-        with open(path, "r") as f:
+        with open(path) as f:
             data = json.load(f)
             rules = data["rules"]
             rules = [[r["x0"], r["y0"], r["x1"], r["y1"]] for r in rules]
@@ -198,7 +198,7 @@ class HeaderTemplate(TableIndexer):
     @staticmethod
     @log_calls(level=logging.DEBUG)
     def annotate_image(
-        template: MatLike | str, crop: Optional[PathLike[str]] = None, margin: int = 10
+        template: MatLike | str, crop: PathLike[str] | None = None, margin: int = 10
     ) -> "HeaderTemplate":
         """
         Utility method that allows users to create a template form a template image.
@@ -365,7 +365,7 @@ class HeaderTemplate(TableIndexer):
         """
 
         rules = []
-        with open(annotation, "r") as csvfile:
+        with open(annotation) as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 shape_attributes = json.loads(row["region_shape_attributes"])

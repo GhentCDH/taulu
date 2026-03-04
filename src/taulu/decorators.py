@@ -1,11 +1,12 @@
-import logging
-import functools
 import datetime
-from typing import Any, Callable, Optional
+import functools
+import logging
+from collections.abc import Callable
+from typing import Any
 
 
 def log_calls(
-    logger: Optional[logging.Logger] = None,
+    logger: logging.Logger | None = None,
     level: int = logging.INFO,
     include_return: bool = False,
     max_arg_length: int = 100,
@@ -71,7 +72,7 @@ def log_calls(
                 # Log exceptions
                 func_logger.log(
                     logging.ERROR,
-                    f"EXCEPTION: {func.__name__} raised {type(e).__name__}: {str(e)}",
+                    f"EXCEPTION: {func.__name__} raised {type(e).__name__}: {e!s}",
                 )
                 raise
 

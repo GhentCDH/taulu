@@ -7,6 +7,7 @@ requires-python = ">=3.12,<3.14"
 dependencies = [
   "matplotlib>=3.10.6",
   "numpy>=2.2.4",
+  "opencv-contrib-python>=4.13.0.92",
   "opencv-python>=4.11.0.86",
   "pandas>=2.2.3",
   "scikit-image>=0.25.2",
@@ -30,6 +31,43 @@ log_auto_indent = true
 module-name = "taulu._core"
 python-packages = ["taulu"]
 python-source = "src"
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # Pyflakes
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade
+  "B",   # flake8-bugbear
+  "C4",  # flake8-comprehensions
+  "RUF", # ruff-specific rules
+]
+ignore = [
+  "E501", # line too long (ruff format handles this)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "glashelder",
+  "common",
+  "clipcluster",
+  "classification",
+  "preprocessing",
+  "qwenvlm",
+]
+
+[tool.ty.rules]
+no-matching-overload = "ignore"
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]

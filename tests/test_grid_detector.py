@@ -1,15 +1,18 @@
-import pytest
-from taulu.img_util import show
-from taulu import HeaderTemplate, GridDetector
-from util import (
-    table_left_image_path,
-    header_anno_path,
-    table_image_path,
-    header_right_anno_path,
-    header_left_anno_path,
-    files_exist,
-)
+from typing import cast
+
 import cv2
+import pytest
+from util import (
+    files_exist,
+    header_anno_path,
+    header_left_anno_path,
+    header_right_anno_path,
+    table_image_path,
+    table_left_image_path,
+)
+
+from taulu import GridDetector, HeaderTemplate
+from taulu.img_util import show
 
 
 @pytest.mark.visual
@@ -27,11 +30,12 @@ def test_thumb():
         distance_penalty=0.5,
     )
     im = cv2.imread(table_image_path(3))
+    assert im is not None, f"Image {table_image_path(3)} couldn't be read"
 
     template = HeaderTemplate.from_saved(header_left_anno_path(0))
 
     # known start point (should be retrieved from template alignment)
-    start = (834, 1222)
+    start = [(834, 1222)]
 
     points = filter.find_table_points(
         im, start, template.cell_widths(0), template.cell_height(), visual=True
@@ -56,15 +60,22 @@ def test_filter():
         distance_penalty=0.8,
     )
     im = cv2.imread(table_image_path(1))
+    assert im is not None, f"Image {table_image_path(1)} couldn't be read"
 
-    template = HeaderTemplate.from_saved(header_right_anno_path(1))
+    template = cast(
+        HeaderTemplate, HeaderTemplate.from_saved(header_right_anno_path(1))
+    )
 
     # known start point (should be retrieved from template alignment)
-    start = (2937, 1531)
-    # start = (838, 1585)
+    start = [(3397, 779)]
+    # start = [(37, 1585)]
 
     points = filter.find_table_points(
-        im, start, template.cell_widths(0), template.cell_height(0.44), visual=True
+        im,
+        start,
+        template.cell_widths(0),
+        [template.cell_height(0.385), template.cell_height(0.22)],
+        visual=True,
     )
 
     points.visualize_points(im)
@@ -78,17 +89,18 @@ def test_filter():
 )
 def test_text_regions():
     filter = GridDetector(
-        kernel_size=41, cross_width=6, morph_size=4, search_region=60, sauvola_k=0.05
+        kernel_size=41, cross_width=6, morph_size=4, search_region=50, sauvola_k=0.05
     )
     im = cv2.imread(table_left_image_path(0))
+    assert im is not None, f"Image {table_left_image_path(0)} couldn't be read"
 
     template = HeaderTemplate.from_saved(header_anno_path(0))
 
     # known start point (should be retrieved from template alignment)
-    start = (240, 419)
+    start = [(242, 422)]
 
     points = filter.find_table_points(
-        im, start, template.cell_widths(0), template.cell_height(), visual=True
+        im, start, template.cell_widths(0), template.cell_height(), visual=False
     )
 
     points.show_cells(im)

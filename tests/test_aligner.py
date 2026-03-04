@@ -1,6 +1,6 @@
-import pytest
-from util import header_image_path, table_left_image_path, files_exist
 import cv2
+import pytest
+from util import files_exist, header_image_path, table_left_image_path
 
 
 @pytest.mark.visual
@@ -12,6 +12,7 @@ def test_aligner():
     from taulu.header_aligner import HeaderAligner
 
     im = cv2.imread(table_left_image_path(0))
+    assert im is not None, f"Unable to read image {table_left_image_path(0)}"
     header = cv2.imread(header_image_path(0))
 
     aligner = HeaderAligner(header)
@@ -29,7 +30,9 @@ def test_aligner_thresholded():
     from taulu.header_aligner import HeaderAligner
 
     im = cv2.imread(table_left_image_path(0))
+    assert im is not None, f"Unable to read image {table_left_image_path(0)}"
     header = cv2.imread(header_image_path(0))
+    assert header is not None, f"Unable to read image {header_image_path(0)}"
 
     aligner = HeaderAligner(header, k=0.10)
     h = aligner.align(im, visual=True)
@@ -47,7 +50,9 @@ def test_aligner_transform():
     from taulu.img_util import show
 
     im = cv2.imread(table_left_image_path(0))
+    assert im is not None, f"Unable to read image {table_left_image_path(0)}"
     header = cv2.imread(header_image_path(0))
+    assert header is not None, f"Unable to read image {header_image_path(0)}"
 
     aligner = HeaderAligner(header)
     h = aligner.align(im)

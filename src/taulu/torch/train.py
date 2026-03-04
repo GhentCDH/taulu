@@ -1,11 +1,11 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from typing import Optional, List, Tuple
-from pathlib import Path
-from os import PathLike
 import logging
+from os import PathLike
+from pathlib import Path
+
+import torch  # ty:ignore
+import torch.nn as nn  # ty:ignore
+import torch.optim as optim  # ty:ignore
+from torch.utils.data import DataLoader  # ty:ignore
 
 from .data import IntersectionDataset
 from .model import DeepConvNet
@@ -20,7 +20,7 @@ NUM_LAYERS = 7
 def _train_model(
     model: nn.Module,
     train_loader: DataLoader,
-    val_loader: Optional[DataLoader] = None,
+    val_loader: DataLoader | None = None,
     epochs: int = 5,
     learning_rate: float = 0.001,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
@@ -103,10 +103,10 @@ def _train_model(
             model.save(save_path)
 
     # Save final model regardless
-    final_path = save_path.replace(".pth", "_final.pth")
+    final_path = str(save_path).replace(".pth", "_final.pth")
     model.save(final_path)
     _logger.info(f"Final model saved to {final_path}")
-    _logger.info(f""""Use model like this: 
+    _logger.info(f""""Use model like this:
     model = DeepConvNet.load('{final_path}')
     model.eval()")
     """)
@@ -115,8 +115,8 @@ def _train_model(
 
 
 def train_model(
-    image_paths: List[Path],
-    intersection_coords: List[List[Tuple[int, int]]],
+    image_paths: list[Path],
+    intersection_coords: list[list[tuple[int, int]]],
     save_path: str | PathLike = "intersection_mode.pth",
 ):
     """

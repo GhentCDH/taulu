@@ -1,4 +1,2 @@
-from typing import Tuple
-
-Point = Tuple[int, int]
-PointFloat = Tuple[float, float]
+Point = tuple[int, int]
+PointFloat = tuple[float, float]

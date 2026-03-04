@@ -3,13 +3,13 @@ Defines an abstract class TableIndexer, which provides methods for mapping pixel
 in an image to table cell indices and for cropping images to specific table cells or regions.
 """
 
-from abc import ABC, abstractmethod
-from typing import Generator, Tuple
 import os
+from abc import ABC, abstractmethod
+from collections.abc import Generator
 
 import cv2 as cv
-from cv2.typing import MatLike
 import numpy as np
+from cv2.typing import MatLike
 
 from . import img_util as imu
 from .constants import WINDOW
@@ -96,7 +96,7 @@ class TableIndexer(ABC):
     def rows(self) -> int:
         pass
 
-    def cells(self) -> Generator[tuple[int, int], None, None]:
+    def cells(self) -> Generator[tuple[int, int]]:
         """
         Generate all cell indices in row-major order.
 
@@ -212,7 +212,7 @@ class TableIndexer(ABC):
         self, image: MatLike | os.PathLike[str] | str, window: str = WINDOW
     ) -> list[tuple[int, int]]:
         if not isinstance(image, np.ndarray):
-            image = cv.imread(os.fspath(image))
+            image = cv.imread(os.fspath(image))  # ty:ignore
 
         img = np.copy(image)
 
@@ -314,8 +314,8 @@ class TableIndexer(ABC):
         # crop by doing a perspective transform to the desired quad
         src_pts = np.array([lt, rt, rb, lb], dtype="float32")
         dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype="float32")
-        M = cv.getPerspectiveTransform(src_pts, dst_pts)
-        warped = cv.warpPerspective(image, M, (int(w), int(h)))  # type:ignore
+        m = cv.getPerspectiveTransform(src_pts, dst_pts)
+        warped = cv.warpPerspective(image, m, (int(w), int(h)))  # type:ignore
 
         return warped
 
@@ -332,7 +332,18 @@ class TableIndexer(ABC):
 
         pass
 
-    def crop_cell(self, image, cell: tuple[int, int], margin: int = 0) -> MatLike:
+    def crop_cell(
+        self,
+        image,
+        cell: tuple[int, int],
+        margin: int = 0,
+        margin_top: int | None = None,
+        margin_bottom: int | None = None,
+        margin_left: int | None = None,
+        margin_right: int | None = None,
+        margin_y: int | None = None,
+        margin_x: int | None = None,
+    ) -> MatLike:
         """
         Extract a single cell from the image with perspective correction.
 
@@ -350,4 +361,15 @@ class TableIndexer(ABC):
             >>> cell_img = grid.crop_cell(image, (0, 0))
             >>> cv2.imwrite("cell_0_0.png", cell_img)
         """
-        return self.crop_region(image, cell, cell, margin)
+        return self.crop_region(
+            image,
+            cell,
+            cell,
+            margin,
+            margin_top,
+            margin_bottom,
+            margin_left,
+            margin_right,
+            margin_y,
+            margin_x,
+        )

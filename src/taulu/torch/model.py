@@ -1,7 +1,7 @@
-import torch
-import torch.nn as nn
-
 from os import PathLike
+
+import torch  # ty:ignore
+import torch.nn as nn  # ty:ignore
 
 
 class DeepConvNet(nn.Module):
@@ -39,14 +39,14 @@ class DeepConvNet(nn.Module):
         in_channels = 1
         out_channels = initial_filters
 
-        for i in range(num_layers):
+        for _ in range(num_layers):
             layers.extend(
                 [
                     nn.Conv2d(
                         in_channels,
                         out_channels,
                         kernel_size=kernel_size,
-                        padding=kernel_size//2,
+                        padding=kernel_size // 2,
                         bias=True,
                     ),
                     nn.BatchNorm2d(out_channels),

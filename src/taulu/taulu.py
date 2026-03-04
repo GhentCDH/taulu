@@ -9,7 +9,7 @@ from os import PathLike
 from os.path import exists
 from pathlib import Path
 from time import perf_counter
-from typing import Optional, cast
+from typing import cast
 
 import cv2
 from cv2.typing import MatLike
@@ -19,7 +19,7 @@ from taulu.header_template import HeaderTemplate
 
 from .error import TauluException
 from .grid import GridDetector, TableGrid
-from .header_aligner import HeaderAligner
+from .header_aligner import HeaderAligner, MatchMethod
 from .split import Split
 
 # needed: header images, header templates, parameters
@@ -63,7 +63,7 @@ class Taulu:
     def __init__(
         self,
         header_image_path: Splittable[PathLike[str]] | Splittable[str],
-        cell_height_factor: Splittable[float] | Splittable[list[float]] = [1.0],
+        cell_height_factor: Splittable[float] | Splittable[list[float]] | None = None,
         header_anno_path: Splittable[PathLike[str]] | Splittable[str] | None = None,
         sauvola_k: Splittable[float] = 0.25,
         search_region: Splittable[int] = 60,
@@ -79,6 +79,7 @@ class Taulu:
         smooth_grid: bool = False,
         cuts: Splittable[int] = 3,
         cut_fraction: Splittable[float] = 0.5,
+        match_method: Splittable[MatchMethod] = "orb",
     ):
         """
         Args:
@@ -99,10 +100,16 @@ class Taulu:
             smooth_grid: Apply grid smoothing after detection. Default: False
             cuts: Number of grid cuts during growing. Default: 3
             cut_fraction: Fraction of points to delete per cut. Default: 0.5
+            match_method: Feature matching method for header alignment. One of "orb"
+                (fast, patent-free), "sift" (robust, uses FLANN), or "surf" (requires
+                opencv-contrib-python). Default: "orb"
         """
         self._processing_scale = processing_scale
         self._cell_height_factor = cell_height_factor
         self._smooth = smooth_grid
+
+        if cell_height_factor is None:
+            cell_height_factor = [1.0]
 
         if isinstance(header_image_path, Split) or isinstance(header_anno_path, Split):
             header = Split(Path(header_image_path.left), Path(header_image_path.right))
@@ -146,10 +153,14 @@ class Taulu:
 
             self._aligner = Split(
                 HeaderAligner(
-                    self._header.left, scale=get_param(self._processing_scale, "left")
+                    self._header.left,
+                    method=get_param(match_method, "left"),
+                    scale=get_param(self._processing_scale, "left"),
                 ),
                 HeaderAligner(
-                    self._header.right, scale=get_param(self._processing_scale, "right")
+                    self._header.right,
+                    method=get_param(match_method, "right"),
+                    scale=get_param(self._processing_scale, "right"),
                 ),
             )
 
@@ -199,7 +210,7 @@ class Taulu:
         else:
             header_image_path = Path(header_image_path)
             self._header = cv2.imread(os.fspath(header_image_path))
-            self._aligner = HeaderAligner(self._header)
+            self._aligner = HeaderAligner(self._header, method=match_method)  # type: ignore[arg-type]
             self._template = HeaderTemplate.from_saved(
                 header_image_path.with_suffix(".json")
             )
@@ -221,6 +232,7 @@ class Taulu:
                     cell_height_factor,
                     cuts,
                     cut_fraction,
+                    match_method,
                 ]
             ):
                 raise TauluException(
@@ -330,7 +342,7 @@ class Taulu:
     def segment_table(
         self,
         image: MatLike | PathLike[str] | str,
-        filtered: Optional[MatLike | PathLike[str] | str] = None,
+        filtered: MatLike | PathLike[str] | str | None = None,
         debug_view: bool = False,
     ) -> TableGrid:
         """
