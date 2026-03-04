@@ -326,8 +326,6 @@ class Taulu:
             try:
                 from IPython import get_ipython
                 ip = get_ipython()
-                print(type(ip).__name__)
-                print(ip.config)
                 return ip is not None and "IPKernelApp" in ip.config
             except Exception:
                 return False
@@ -335,23 +333,24 @@ class Taulu:
         # Decide backend
         if backend not in ("auto", "gui", "notebook"):
             raise TauluException("backend must be one of: 'auto', 'gui', 'notebook'")
-        print('hello')
         if backend == "auto":
             use_notebook = running_in_notebook()
         else:
             use_notebook = (backend == "notebook")
 
         if use_notebook:
-            logger.info("Notebook environment detected/selected. Using notebook annotation backend.")
-            template = HeaderTemplate.annotate_image_notebook(os.fspath(image_path), crop=output_path.with_suffix(".png"))
+            # Notebook way
+            logger.info("\x1b[32mNotebook environment detected/selected. Using notebook annotation backend.")
+            session = HeaderTemplate.annotate_image_notebook(os.fspath(image_path), crop=output_path.with_suffix(".png"))
+            session._save_path = output_path.with_suffix(".json")
+            return session  # type: ignore
 
         else:
-            # GUI path (existing behavior)
+            # GUI way
             template = HeaderTemplate.annotate_image(
                 os.fspath(image_path), crop=output_path.with_suffix(".png")
             )
-
-        template.save(output_path.with_suffix(".json"))
+            template.save(output_path.with_suffix(".json"))
     
 
     def segment_table(
