@@ -332,7 +332,18 @@ class TableIndexer(ABC):
 
         pass
 
-    def crop_cell(self, image, cell: tuple[int, int], margin: int = 0) -> MatLike:
+    def crop_cell(
+        self,
+        image,
+        cell: tuple[int, int],
+        margin: int = 0,
+        margin_top: int | None = None,
+        margin_bottom: int | None = None,
+        margin_left: int | None = None,
+        margin_right: int | None = None,
+        margin_y: int | None = None,
+        margin_x: int | None = None,
+    ) -> MatLike:
         """
         Extract a single cell from the image with perspective correction.
 
@@ -350,4 +361,15 @@ class TableIndexer(ABC):
             >>> cell_img = grid.crop_cell(image, (0, 0))
             >>> cv2.imwrite("cell_0_0.png", cell_img)
         """
-        return self.crop_region(image, cell, cell, margin)
+        return self.crop_region(
+            image,
+            cell,
+            cell,
+            margin,
+            margin_top,
+            margin_bottom,
+            margin_left,
+            margin_right,
+            margin_y,
+            margin_x,
+        )
