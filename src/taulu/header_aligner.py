@@ -259,8 +259,6 @@ class HeaderAligner:
         # Sort matches by score
         matches = sorted(matches, key=lambda x: x.distance)
 
-        logger.info(f"matches: ({len(matches)}){matches}")
-
         # Remove not so good matches
         numGoodMatches = int(len(matches) * self._match_fraction)
         matches = matches[:numGoodMatches]

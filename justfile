@@ -3,8 +3,8 @@ alias ta := test-auto
 alias b := build
 
 # test this python project
-test-all file='':
-    uv run pytest {{file}}
+test-all +args:
+    uv run pytest {{args}}
 
 test-debug file='':
     uv run pytest {{file}} --log-cli-level=DEBUG -v -s

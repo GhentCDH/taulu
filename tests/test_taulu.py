@@ -113,7 +113,6 @@ def test_already_filtered():
         grow_threshold=0.5,
         look_distance=5,
         skip_astar_threshold=0.1,
-        match_method="sift",
         cuts=10,
         cut_fraction=0.8,
     )
