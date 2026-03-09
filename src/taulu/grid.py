@@ -327,13 +327,14 @@ class GridDetector:
         filtered = cv.normalize(1.0 - filtered, None, 0, 255, cv.NORM_MINMAX)
         return filtered.astype(np.uint8)
 
-    def apply(self, img: MatLike, visual: bool = False) -> MatLike:
+    def apply(self, img: MatLike, visual: bool = False, visual_notebook: bool = False) -> MatLike:
         """
         Apply the grid detection filter to the input image.
 
         Args:
             img (MatLike): the input image
-            visual (bool): whether to show intermediate steps
+            visual (bool): whether to show intermediate steps via OpenCV windows
+            visual_notebook (bool): whether to show intermediate steps inline in a Jupyter notebook
 
         Returns:
             MatLike: the filtered image, with high values (whiter pixels) at intersections of horizontal and vertical rules
@@ -346,11 +347,15 @@ class GridDetector:
 
         if visual:
             imu.show(binary, title="thresholded")
+        if visual_notebook:
+            imu.show_notebook(binary, title="thresholded")
 
         binary = self._apply_morphology(binary)
 
         if visual:
             imu.show(binary, title="dilated")
+        if visual_notebook:
+            imu.show_notebook(binary, title="dilated")
 
         filtered = self._apply_cross_matching(binary)
 
@@ -439,6 +444,7 @@ class GridDetector:
         cell_widths: list[int],
         cell_heights: list[int] | int,
         visual: bool = False,
+        visual_notebook: bool = False,
         window: str = WINDOW,
         goals_width: Optional[int] = None,
         filtered: Optional[MatLike | PathLike[str]] = None,
@@ -476,7 +482,7 @@ class GridDetector:
             img = cv.imread(os.fspath(img))
 
         if filtered is None:
-            filtered = self.apply(img, visual)
+            filtered = self.apply(img, visual, visual_notebook)
         else:
             if not isinstance(filtered, np.ndarray):
                 filtered = cv.imread(os.fspath(filtered))
@@ -485,6 +491,8 @@ class GridDetector:
 
         if visual:
             imu.show(filtered, window=window)
+        if visual_notebook:
+            imu.show_notebook(filtered, title="filtered")
 
         if isinstance(cell_heights, int):
             cell_heights = [cell_heights]

@@ -357,6 +357,7 @@ class Taulu:
         image: MatLike | PathLike[str] | str,
         filtered: Optional[MatLike | PathLike[str] | str] = None,
         debug_view: bool = False,
+        debug_view_notebook: bool = False,
     ) -> TableGrid:
         """
         Segment a table image into a grid of cells.
@@ -368,8 +369,10 @@ class Taulu:
             image: Table image to segment (file path or numpy array).
             filtered: Optional pre-filtered binary image for corner detection.
                 If provided, binarization parameters are ignored.
-            debug_view: Show intermediate processing steps. Press 'n' to advance,
+            debug_view: Show intermediate processing steps via OpenCV windows. Press 'n' to advance,
                 'q' to quit. Default: False
+            debug_view_notebook: Show intermediate processing steps inline in a Jupyter notebook
+                using matplotlib. Default: False
 
         Returns:
             TableGrid: Grid structure with methods for cell access (`crop_cell`,
@@ -385,7 +388,7 @@ class Taulu:
             image = cv2.imread(os.fspath(image))
 
         now = perf_counter()
-        h = self._aligner.align(image, visual=debug_view)
+        h = self._aligner.align(image, visual=debug_view, visual_notebook=debug_view_notebook)
         align_time = perf_counter() - now
         logger.info(f"Header alignment took {align_time:.2f} seconds")
 
@@ -418,6 +421,7 @@ class Taulu:
             self._template.cell_widths(0),
             self._cell_heights,  # ty:ignore
             visual=debug_view,
+            visual_notebook=debug_view_notebook,
             filtered=filtered,  # ty:ignore
             smooth=self._smooth,
         )

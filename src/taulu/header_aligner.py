@@ -170,7 +170,7 @@ class HeaderAligner:
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def _find_transform_of_template_on(
-        self, im: MatLike, visual: bool = False, window: str = WINDOW
+        self, im: MatLike, visual: bool = False, visual_notebook: bool = False, window: str = WINDOW
     ):
         im = self._scale_img(im)
         # Detect ORB features and compute descriptors.
@@ -192,7 +192,7 @@ class HeaderAligner:
         numGoodMatches = int(len(matches) * self._match_fraction)
         matches = matches[:numGoodMatches]
 
-        if visual:
+        if visual or visual_notebook:
             final_img_filtered = cv.drawMatches(
                 im,
                 keypoints_im,
@@ -202,7 +202,10 @@ class HeaderAligner:
                 None,  # type:ignore
                 cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
             )
-            imu.show(final_img_filtered, title="matches", window=window)
+            if visual:
+                imu.show(final_img_filtered, title="matches", window=window)
+            if visual_notebook:
+                imu.show_notebook(final_img_filtered, title="matches")
 
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -256,7 +259,7 @@ class HeaderAligner:
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def align(
-        self, img: MatLike | str, visual: bool = False, window: str = WINDOW
+        self, img: MatLike | str, visual: bool = False, visual_notebook: bool = False, window: str = WINDOW
     ) -> NDArray:
         """
         Calculates a homogeneous transformation matrix that maps pixels of
@@ -271,7 +274,7 @@ class HeaderAligner:
 
         img = self._preprocess_image(img)
 
-        h = self._find_transform_of_template_on(img, visual, window)
+        h = self._find_transform_of_template_on(img, visual, visual_notebook, window)
 
         if visual:
             self.view_alignment(img, h)
