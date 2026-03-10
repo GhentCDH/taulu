@@ -117,21 +117,20 @@ pub fn region_aware_fit(
     //
     // fit the other lines
     let mut avg_slope = 0.0;
-    let mut found_slope = false;
+    let mut slope_count: u32 = 0;
     #[allow(clippy::cast_precision_loss)]
-    for (i, (other_input, other_output)) in
-        other_inputs.iter().zip(other_outputs.iter()).enumerate()
-    {
+    for (other_input, other_output) in other_inputs.iter().zip(other_outputs.iter()) {
         if other_input.len() < 2 || other_output.len() < 2 {
             continue;
         }
         let coeffs = linear_polynomial_least_squares(1, other_input, other_output)?;
         assert_eq!(coeffs.len(), 2);
-        avg_slope = (coeffs[1] + avg_slope * (i as f32)) / ((i + 1) as f32);
-        found_slope = true;
+        avg_slope =
+            (coeffs[1] + avg_slope * (slope_count as f32)) / ((slope_count + 1) as f32);
+        slope_count += 1;
     }
 
-    if !found_slope {
+    if slope_count == 0 {
         return Err(Error::NotEnoughPoints);
     }
 
