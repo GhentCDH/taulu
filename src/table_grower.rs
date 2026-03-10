@@ -85,6 +85,9 @@ pub struct TableGrower {
     pub cuts: usize,
     /// Fraction of the corners to remove during a cut
     pub cut_fraction: f64,
+    /// Image dimensions (width, height) for bounds checking extrapolated points
+    pub image_width: i32,
+    pub image_height: i32,
     #[cfg(feature = "debug-tools")]
     rec: rerun::RecordingStream,
 }
@@ -416,6 +419,8 @@ impl TableGrower {
             min_row_count,
             cuts,
             cut_fraction,
+            image_width: cross_correlation.as_array().ncols() as i32,
+            image_height: cross_correlation.as_array().nrows() as i32,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         };
@@ -1138,6 +1143,11 @@ impl TableGrower {
             (sum_y / total_weight).round() as i32,
         );
 
+        // Reject predictions outside the image
+        if !result.within((0, 0, self.image_width, self.image_height)) {
+            return None;
+        }
+
         #[cfg(feature = "debug-tools")]
         self.log_parallelogram_result(result);
 
@@ -1696,6 +1706,8 @@ mod tests {
             min_row_count: 2,
             cuts: 0,
             cut_fraction: 0.1,
+            image_width: 1000,
+            image_height: 1000,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         }
@@ -1722,6 +1734,8 @@ mod tests {
             min_row_count: 2,
             cuts: 0,
             cut_fraction: 0.1,
+            image_width: 1000,
+            image_height: 1000,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         }
@@ -1831,6 +1845,8 @@ mod tests {
             min_row_count: 2,
             cuts: 0,
             cut_fraction: 0.1,
+            image_width: 1000,
+            image_height: 1000,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         };
@@ -1874,6 +1890,8 @@ mod tests {
             min_row_count: 2,
             cuts: 0,
             cut_fraction: 0.1,
+            image_width: 1000,
+            image_height: 1000,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         };
@@ -1916,6 +1934,8 @@ mod tests {
             min_row_count: 2,
             cuts: 0,
             cut_fraction: 0.1,
+            image_width: 1000,
+            image_height: 1000,
             #[cfg(feature = "debug-tools")]
             rec: start_rerun(),
         };
