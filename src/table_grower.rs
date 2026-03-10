@@ -1608,8 +1608,8 @@ fn find_best_corner_match_flat(
     let ideal_start_y = y - half;
 
     // Clamp to image bounds
-    let crop_x = ideal_start_x.max(0) as usize;
-    let crop_y = ideal_start_y.max(0) as usize;
+    let crop_x = (ideal_start_x.max(0) as usize).min(width);
+    let crop_y = (ideal_start_y.max(0) as usize).min(height);
 
     // Weight grid offset: how many weight rows/cols to skip because the
     // crop start was clamped to the image boundary
@@ -1617,8 +1617,12 @@ fn find_best_corner_match_flat(
     let offset_y = (crop_y as i32 - ideal_start_y) as usize;
 
     // Crop size: limited by image bounds AND remaining weight grid space
-    let crop_width = (width - crop_x).min(search_region - offset_x);
-    let crop_height = (height - crop_y).min(search_region - offset_y);
+    let crop_width = width
+        .saturating_sub(crop_x)
+        .min(search_region.saturating_sub(offset_x));
+    let crop_height = height
+        .saturating_sub(crop_y)
+        .min(search_region.saturating_sub(offset_y));
 
     if crop_width == 0 || crop_height == 0 {
         return Some((approx, 0.0));
