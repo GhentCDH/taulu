@@ -970,7 +970,154 @@ impl TableGrower {
         points
     }
 
+    /// Predict a missing grid point using the parallelogram rule.
+    ///
+    /// Enumerates all valid L-shaped triplets around `coord` and averages their
+    /// predictions, weighted by inverse Manhattan distance. For a smoothly warped
+    /// grid this is exact when the deformation is locally affine.
+    ///
+    /// Returns `None` when no complete L-shape exists.
+    #[allow(clippy::cast_precision_loss)]
+    fn parallelogram_extrapolate(&self, coord: Coord) -> Option<Point> {
+        // The four possible L-shape orientations around the missing point.
+        // Each is (dx_arm, dy_arm) giving the horizontal-arm and vertical-arm
+        // neighbour offsets; the diagonal is at (dx_arm, dy_arm).
+        const L_SHAPES: [(isize, isize); 4] = [(-1, -1), (1, -1), (-1, 1), (1, 1)];
+
+        let mut sum_x: f32 = 0.0;
+        let mut sum_y: f32 = 0.0;
+        let mut total_weight: f32 = 0.0;
+
+        let cx = coord.x() as isize;
+        let cy = coord.y() as isize;
+
+        for &(dx, dy) in &L_SHAPES {
+            // Try increasing distances along this L-shape direction
+            for dist in 1..=(self.look_distance as isize) {
+                let hx = cx + dx * dist;
+                let hy = cy;
+                let vx = cx;
+                let vy = cy + dy * dist;
+                let diag_x = cx + dx * dist;
+                let diag_y = cy + dy * dist;
+
+                // All three must be valid coordinates
+                let Ok(hx_u) = usize::try_from(hx) else {
+                    break;
+                };
+                let Ok(hy_u) = usize::try_from(hy) else {
+                    break;
+                };
+                let Ok(vx_u) = usize::try_from(vx) else {
+                    break;
+                };
+                let Ok(vy_u) = usize::try_from(vy) else {
+                    break;
+                };
+                let Ok(dx_u) = usize::try_from(diag_x) else {
+                    break;
+                };
+                let Ok(dy_u) = usize::try_from(diag_y) else {
+                    break;
+                };
+
+                let h_coord = Coord::new(hx_u, hy_u);
+                let v_coord = Coord::new(vx_u, vy_u);
+                let d_coord = Coord::new(dx_u, dy_u);
+
+                if !self.in_bounds(h_coord)
+                    || !self.in_bounds(v_coord)
+                    || !self.in_bounds(d_coord)
+                {
+                    break;
+                }
+
+                if let (Some(h_pt), Some(v_pt), Some(d_pt)) =
+                    (self[h_coord], self[v_coord], self[d_coord])
+                {
+                    // P(x,y) = P(h) + P(v) - P(diag)
+                    let pred_x = h_pt.x() + v_pt.x() - d_pt.x();
+                    let pred_y = h_pt.y() + v_pt.y() - d_pt.y();
+
+                    // Weight by inverse distance (closer L-shapes are more reliable)
+                    let weight = 1.0 / (dist as f32);
+                    sum_x += pred_x as f32 * weight;
+                    sum_y += pred_y as f32 * weight;
+                    total_weight += weight;
+
+                    // Found a valid L-shape in this direction, no need to go further
+                    break;
+                }
+            }
+        }
+
+        if total_weight == 0.0 {
+            return None;
+        }
+
+        #[allow(clippy::cast_possible_truncation)]
+        Some(Point(
+            (sum_x / total_weight).round() as i32,
+            (sum_y / total_weight).round() as i32,
+        ))
+    }
+
+    /// Count how many L-shaped triplets are available for parallelogram extrapolation.
+    fn parallelogram_l_shape_count(&self, coord: Coord) -> usize {
+        const L_SHAPES: [(isize, isize); 4] = [(-1, -1), (1, -1), (-1, 1), (1, 1)];
+
+        let cx = coord.x() as isize;
+        let cy = coord.y() as isize;
+        let mut count = 0;
+
+        for &(dx, dy) in &L_SHAPES {
+            for dist in 1..=(self.look_distance as isize) {
+                let hx = cx + dx * dist;
+                let vy = cy + dy * dist;
+                let diag_x = cx + dx * dist;
+                let diag_y = cy + dy * dist;
+
+                let Ok(hx_u) = usize::try_from(hx) else {
+                    break;
+                };
+                let Ok(vy_u) = usize::try_from(vy) else {
+                    break;
+                };
+                let Ok(dx_u) = usize::try_from(diag_x) else {
+                    break;
+                };
+                let Ok(dy_u) = usize::try_from(diag_y) else {
+                    break;
+                };
+
+                let h_coord = Coord::new(hx_u, coord.y());
+                let v_coord = Coord::new(coord.x(), vy_u);
+                let d_coord = Coord::new(dx_u, dy_u);
+
+                if !self.in_bounds(h_coord)
+                    || !self.in_bounds(v_coord)
+                    || !self.in_bounds(d_coord)
+                {
+                    break;
+                }
+
+                if self[h_coord].is_some() && self[v_coord].is_some() && self[d_coord].is_some() {
+                    count += 1;
+                    break;
+                }
+            }
+        }
+
+        count
+    }
+
     fn extrapolate_coord(&self, coord: Coord, degree: usize) -> Option<Point> {
+        // Prefer parallelogram extrapolation when L-shapes are available
+        if let Some(point) = self.parallelogram_extrapolate(coord) {
+            return Some(point);
+        }
+
+        // Fall back to regression-based extrapolation
         let neighbours_x = self.neighbour_points_x(coord);
         let neighbours_y = self.neighbour_points_y(coord);
 
@@ -983,18 +1130,51 @@ impl TableGrower {
     }
 
     fn extrapolate_one_internal(&self) -> Option<(Coord, Point)> {
-        // Get the missing corner with the maxmin neighbours in each direction
-        let (selected_location, neighbours_x, neighbours_y) =
-            self.extendable_corner_and_neighbours()?;
+        // Find the best empty cell to fill: prefer cells with more L-shapes,
+        // fall back to regression-neighbour count
+        let best = self
+            .corners
+            .par_iter()
+            .enumerate()
+            .flat_map_iter(|(y, row)| {
+                row.iter()
+                    .enumerate()
+                    .filter(|(_, cell)| cell.is_none())
+                    .map(move |(x, _)| Coord::new(x, y))
+            })
+            .map(|coord| {
+                let l_count = self.parallelogram_l_shape_count(coord);
+                let nb_count = if l_count == 0 {
+                    // Only compute regression neighbours if no L-shapes
+                    self.neighbour_points_x(coord)
+                        .len()
+                        .min(self.neighbour_points_y(coord).len())
+                } else {
+                    0
+                };
+                (coord, l_count, nb_count)
+            })
+            .max_by_key(|&(_, l_count, nb_count)| {
+                // Prioritise L-shape count (shifted left to dominate), then neighbour count
+                (l_count, nb_count)
+            })
+            .filter(|&(_, l_count, nb_count)| l_count > 0 || nb_count > 0)?;
 
+        let coord = best.0;
+
+        // Try parallelogram first, then regression fallback
+        if let Some(point) = self.parallelogram_extrapolate(coord) {
+            return Some((coord, point));
+        }
+
+        let neighbours_x = self.neighbour_points_x(coord);
+        let neighbours_y = self.neighbour_points_y(coord);
         let degree = 1;
-
-        let region = self.get_region(selected_location);
-
+        let region = self.get_region(coord);
         let intersection =
             self.intersect_regressions_region_aware(&neighbours_x, &neighbours_y, degree, &region)?;
 
-        Some((selected_location, intersection))
+        Some((coord, intersection))
     }
 
     /// Get a square region of size `look_distance` * 2 around the given coordinate
@@ -1509,7 +1689,12 @@ mod tests {
         let grower = create_test_table_grower();
         let result = grower.extrapolate_one_internal();
 
-        assert!(result.is_none());
+        // The parallelogram approach can extrapolate (x=2, y=2) using the
+        // L-shape at dist=2: h=(0,2), v=(2,0), diag=(0,0)
+        // P = P(6,40) + P(30,12) - P(10,10) = P(26, 42)
+        let (coord, point) = result.expect("parallelogram should find a valid extrapolation");
+        assert_eq!(coord, Coord::new(2, 2));
+        assert_eq!(point, Point(26, 42));
     }
 
     #[test]
@@ -1529,5 +1714,128 @@ mod tests {
         assert!(grower.in_bounds(Coord::new(3, 2))); // width-1, height-1
         assert!(!grower.in_bounds(Coord::new(4, 0))); // width
         assert!(!grower.in_bounds(Coord::new(0, 3))); // height
+    }
+
+    #[test]
+    fn test_parallelogram_extrapolate_single_l_shape() {
+        // 3x3 grid with 3 corners forming one L-shape for (1,1)
+        //  x . .
+        //  . ? .
+        //  . . .
+        // plus (1,0) and (0,1) to form the L at dist=1 for (1,1)
+        let mut corners = vec![vec![None; 3]; 3];
+        corners[0][0] = Some(Point(10, 10)); // (0,0) = diagonal
+        corners[0][1] = Some(Point(30, 12)); // (1,0) = horizontal arm
+        corners[1][0] = Some(Point(8, 30));  // (0,1) = vertical arm
+
+        let grower = TableGrower {
+            corners,
+            columns: 3,
+            edge: EdgeQueue::new(),
+            search_region: 10,
+            distance_penalty: 0.5,
+            cached_weights: vec![1.0f32; 100],
+            cached_weights_region: 10,
+            cached_weights_distance_penalty: 0.5,
+            column_widths: vec![4; 2],
+            row_heights: vec![4; 2],
+            look_distance: 3,
+            grow_threshold: 1.0,
+            skip_astar_threshold: 0.7,
+            min_row_count: 2,
+            cuts: 0,
+            cut_fraction: 0.1,
+            #[cfg(feature = "debug-tools")]
+            rec: start_rerun(),
+        };
+
+        // (1,1) should be predicted as P(1,0) + P(0,1) - P(0,0) = (30,12) + (8,30) - (10,10) = (28, 32)
+        let result = grower.parallelogram_extrapolate(Coord::new(1, 1));
+        assert_eq!(result, Some(Point(28, 32)));
+    }
+
+    #[test]
+    fn test_parallelogram_extrapolate_multiple_l_shapes() {
+        // 3x3 grid with all cells filled except center — a slightly warped grid
+        //  x x x
+        //  x ? x
+        //  x x x
+        let mut corners = vec![vec![None; 3]; 3];
+        corners[0][0] = Some(Point(10, 10));
+        corners[0][1] = Some(Point(30, 11));
+        corners[0][2] = Some(Point(50, 12));
+        corners[1][0] = Some(Point(9, 30));
+        // corners[1][1] = missing — the target
+        corners[1][2] = Some(Point(49, 32));
+        corners[2][0] = Some(Point(8, 50));
+        corners[2][1] = Some(Point(28, 51));
+        corners[2][2] = Some(Point(48, 52));
+
+        let grower = TableGrower {
+            corners,
+            columns: 3,
+            edge: EdgeQueue::new(),
+            search_region: 10,
+            distance_penalty: 0.5,
+            cached_weights: vec![1.0f32; 100],
+            cached_weights_region: 10,
+            cached_weights_distance_penalty: 0.5,
+            column_widths: vec![4; 2],
+            row_heights: vec![4; 2],
+            look_distance: 3,
+            grow_threshold: 1.0,
+            skip_astar_threshold: 0.7,
+            min_row_count: 2,
+            cuts: 0,
+            cut_fraction: 0.1,
+            #[cfg(feature = "debug-tools")]
+            rec: start_rerun(),
+        };
+
+        // All 4 L-shapes at dist=1 predict (29, 31):
+        //   P(0,1)+P(1,0)-P(0,0) = (9,30)+(30,11)-(10,10) = (29,31)
+        //   P(2,1)+P(1,0)-P(2,0) = (49,32)+(30,11)-(50,12) = (29,31)
+        //   P(0,1)+P(1,2)-P(0,2) = (9,30)+(28,51)-(8,50) = (29,31)
+        //   P(2,1)+P(1,2)-P(2,2) = (49,32)+(28,51)-(48,52) = (29,31)
+        let result = grower.parallelogram_extrapolate(Coord::new(1, 1));
+        assert_eq!(result, Some(Point(29, 31)));
+    }
+
+    #[test]
+    fn test_parallelogram_extrapolate_no_l_shapes() {
+        // Only diagonal corners filled — no L-shape arms exist
+        //  x . x
+        //  . ? .
+        //  x . x
+        let mut corners = vec![vec![None; 3]; 3];
+        corners[0][0] = Some(Point(10, 10));
+        corners[0][2] = Some(Point(50, 12));
+        corners[2][0] = Some(Point(8, 50));
+        corners[2][2] = Some(Point(48, 52));
+
+        let grower = TableGrower {
+            corners,
+            columns: 3,
+            edge: EdgeQueue::new(),
+            search_region: 10,
+            distance_penalty: 0.5,
+            cached_weights: vec![1.0f32; 100],
+            cached_weights_region: 10,
+            cached_weights_distance_penalty: 0.5,
+            column_widths: vec![4; 2],
+            row_heights: vec![4; 2],
+            look_distance: 3,
+            grow_threshold: 1.0,
+            skip_astar_threshold: 0.7,
+            min_row_count: 2,
+            cuts: 0,
+            cut_fraction: 0.1,
+            #[cfg(feature = "debug-tools")]
+            rec: start_rerun(),
+        };
+
+        // No L-shapes available for (1,1) — arms at (0,1),(2,1),(1,0),(1,2) are all empty
+        let result = grower.parallelogram_extrapolate(Coord::new(1, 1));
+        assert!(result.is_none());
     }
 }
