@@ -641,14 +641,21 @@ impl TableGrower {
             .collect()
     }
 
-    /// Cut a fraction of the corners randomly
+    /// Cut a fraction of the corners randomly, preserving the first (seed) row
     #[allow(
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss,
         clippy::cast_precision_loss
     )]
     fn cut(&mut self) {
-        let some_coords = self.some_coords();
+        let some_coords: Vec<Coord> = self
+            .some_coords()
+            .into_iter()
+            .filter(|c| c.y() > 0)
+            .collect();
+        if some_coords.is_empty() {
+            return;
+        }
         let amount_to_cut = (some_coords.len() as f64 * self.cut_fraction) as usize;
         let idxs = rand::seq::index::sample(&mut rand::rng(), some_coords.len(), amount_to_cut);
         for i in idxs {
