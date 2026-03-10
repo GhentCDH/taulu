@@ -1039,18 +1039,14 @@ impl TableGrower {
 
     /// Predict a missing grid point using the parallelogram rule.
     ///
-    /// Enumerates all valid L-shaped triplets around `coord` and averages their
-    /// predictions, weighted by inverse Manhattan distance. For a smoothly warped
-    /// grid this is exact when the deformation is locally affine.
+    /// Enumerates all valid L-shaped triplets around `coord` by independently
+    /// varying the horizontal offset (`h_dx`) and vertical offset (`v_dy`) within
+    /// `look_distance`. Each valid triplet produces a prediction weighted by
+    /// inverse Manhattan distance (`|h_dx| + |v_dy|`).
     ///
     /// Returns `None` when no complete L-shape exists.
-    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_precision_loss, clippy::cast_possible_wrap)]
     fn parallelogram_extrapolate(&self, coord: Coord) -> Option<Point> {
-        // The four possible L-shape orientations around the missing point.
-        // Each is (dx_arm, dy_arm) giving the horizontal-arm and vertical-arm
-        // neighbour offsets; the diagonal is at (dx_arm, dy_arm).
-        const L_SHAPES: [(isize, isize); 4] = [(-1, -1), (1, -1), (-1, 1), (1, 1)];
-
         let mut sum_x: f32 = 0.0;
         let mut sum_y: f32 = 0.0;
         let mut total_weight: f32 = 0.0;
@@ -1060,76 +1056,76 @@ impl TableGrower {
 
         let cx = coord.x() as isize;
         let cy = coord.y() as isize;
+        let ld = self.look_distance as isize;
 
-        for &(dx, dy) in &L_SHAPES {
-            // Try increasing distances along this L-shape direction
-            for dist in 1..=(self.look_distance as isize) {
-                let hx = cx + dx * dist;
-                let hy = cy;
-                let vx = cx;
-                let vy = cy + dy * dist;
-                let diag_x = cx + dx * dist;
-                let diag_y = cy + dy * dist;
+        // Iterate all (h_dx, v_dy) combinations independently
+        for h_dx in -ld..=ld {
+            if h_dx == 0 {
+                continue;
+            }
+            let hx = cx + h_dx;
+            let Ok(hx_u) = usize::try_from(hx) else {
+                continue;
+            };
+            let h_coord = Coord::new(hx_u, coord.y());
+            if !self.in_bounds(h_coord) {
+                continue;
+            }
+            let Some(h_pt) = self[h_coord] else {
+                continue;
+            };
 
-                // All three must be valid coordinates
-                let Ok(hx_u) = usize::try_from(hx) else {
-                    break;
-                };
-                let Ok(hy_u) = usize::try_from(hy) else {
-                    break;
-                };
-                let Ok(vx_u) = usize::try_from(vx) else {
-                    break;
-                };
+            for v_dy in -ld..=ld {
+                if v_dy == 0 {
+                    continue;
+                }
+                let vy = cy + v_dy;
+                let diag_x = cx + h_dx;
+                let diag_y = cy + v_dy;
+
                 let Ok(vy_u) = usize::try_from(vy) else {
-                    break;
+                    continue;
                 };
                 let Ok(dx_u) = usize::try_from(diag_x) else {
-                    break;
+                    continue;
                 };
                 let Ok(dy_u) = usize::try_from(diag_y) else {
-                    break;
+                    continue;
                 };
 
-                let h_coord = Coord::new(hx_u, hy_u);
-                let v_coord = Coord::new(vx_u, vy_u);
+                let v_coord = Coord::new(coord.x(), vy_u);
                 let d_coord = Coord::new(dx_u, dy_u);
 
-                if !self.in_bounds(h_coord)
-                    || !self.in_bounds(v_coord)
-                    || !self.in_bounds(d_coord)
-                {
-                    break;
+                if !self.in_bounds(v_coord) || !self.in_bounds(d_coord) {
+                    continue;
                 }
 
-                if let (Some(h_pt), Some(v_pt), Some(d_pt)) =
-                    (self[h_coord], self[v_coord], self[d_coord])
+                let (Some(v_pt), Some(d_pt)) = (self[v_coord], self[d_coord]) else {
+                    continue;
+                };
+
+                // P(x,y) = P(h) + P(v) - P(diag)
+                let pred_x = h_pt.x() + v_pt.x() - d_pt.x();
+                let pred_y = h_pt.y() + v_pt.y() - d_pt.y();
+
+                #[cfg(feature = "debug-tools")]
                 {
-                    // P(x,y) = P(h) + P(v) - P(diag)
-                    let pred_x = h_pt.x() + v_pt.x() - d_pt.x();
-                    let pred_y = h_pt.y() + v_pt.y() - d_pt.y();
-
-                    #[cfg(feature = "debug-tools")]
-                    {
-                        self.log_parallelogram_l_shape(
-                            h_pt,
-                            v_pt,
-                            d_pt,
-                            (pred_x, pred_y),
-                            l_shape_index,
-                        );
-                        l_shape_index += 1;
-                    }
-
-                    // Weight by inverse distance (closer L-shapes are more reliable)
-                    let weight = 1.0 / (dist as f32);
-                    sum_x += pred_x as f32 * weight;
-                    sum_y += pred_y as f32 * weight;
-                    total_weight += weight;
-
-                    // Found a valid L-shape in this direction, no need to go further
-                    break;
+                    self.log_parallelogram_l_shape(
+                        h_pt,
+                        v_pt,
+                        d_pt,
+                        (pred_x, pred_y),
+                        l_shape_index,
+                    );
+                    l_shape_index += 1;
                 }
+
+                // Weight by inverse Manhattan distance
+                let dist = (h_dx.unsigned_abs() + v_dy.unsigned_abs()) as f32;
+                let weight = 1.0 / dist;
+                sum_x += pred_x as f32 * weight;
+                sum_y += pred_y as f32 * weight;
+                total_weight += weight;
             }
         }
 
@@ -1155,47 +1151,48 @@ impl TableGrower {
     }
 
     /// Count how many L-shaped triplets are available for parallelogram extrapolation.
+    #[allow(clippy::cast_possible_wrap)]
     fn parallelogram_l_shape_count(&self, coord: Coord) -> usize {
-        const L_SHAPES: [(isize, isize); 4] = [(-1, -1), (1, -1), (-1, 1), (1, 1)];
-
         let cx = coord.x() as isize;
         let cy = coord.y() as isize;
+        let ld = self.look_distance as isize;
         let mut count = 0;
 
-        for &(dx, dy) in &L_SHAPES {
-            for dist in 1..=(self.look_distance as isize) {
-                let hx = cx + dx * dist;
-                let vy = cy + dy * dist;
-                let diag_x = cx + dx * dist;
-                let diag_y = cy + dy * dist;
+        for h_dx in -ld..=ld {
+            if h_dx == 0 {
+                continue;
+            }
+            let Ok(hx_u) = usize::try_from(cx + h_dx) else {
+                continue;
+            };
+            let h_coord = Coord::new(hx_u, coord.y());
+            if !self.in_bounds(h_coord) || self[h_coord].is_none() {
+                continue;
+            }
 
-                let Ok(hx_u) = usize::try_from(hx) else {
-                    break;
+            for v_dy in -ld..=ld {
+                if v_dy == 0 {
+                    continue;
+                }
+                let Ok(vy_u) = usize::try_from(cy + v_dy) else {
+                    continue;
                 };
-                let Ok(vy_u) = usize::try_from(vy) else {
-                    break;
+                let Ok(dx_u) = usize::try_from(cx + h_dx) else {
+                    continue;
                 };
-                let Ok(dx_u) = usize::try_from(diag_x) else {
-                    break;
-                };
-                let Ok(dy_u) = usize::try_from(diag_y) else {
-                    break;
+                let Ok(dy_u) = usize::try_from(cy + v_dy) else {
+                    continue;
                 };
 
-                let h_coord = Coord::new(hx_u, coord.y());
                 let v_coord = Coord::new(coord.x(), vy_u);
                 let d_coord = Coord::new(dx_u, dy_u);
 
-                if !self.in_bounds(h_coord)
-                    || !self.in_bounds(v_coord)
-                    || !self.in_bounds(d_coord)
+                if self.in_bounds(v_coord)
+                    && self.in_bounds(d_coord)
+                    && self[v_coord].is_some()
+                    && self[d_coord].is_some()
                 {
-                    break;
-                }
-
-                if self[h_coord].is_some() && self[v_coord].is_some() && self[d_coord].is_some() {
                     count += 1;
-                    break;
                 }
             }
         }
