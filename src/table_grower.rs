@@ -922,16 +922,18 @@ impl TableGrower {
                 points.push(point);
             }
 
-            let left = Coord::new(loc.x().saturating_sub(dx), loc.y());
-            if self.in_bounds(left) && self.corners[left.y()][left.x()].is_some() {
-                if let Some(last) = points.last()
-                    && let Some(left) = self[left]
-                    && *last == left
-                {
-                    continue;
-                }
-                if let Some(point) = self[left] {
-                    points.push(point);
+            if let Some(left_x) = loc.x().checked_sub(dx) {
+                let left = Coord::new(left_x, loc.y());
+                if self.in_bounds(left) && self.corners[left.y()][left.x()].is_some() {
+                    if let Some(last) = points.last()
+                        && let Some(left) = self[left]
+                        && *last == left
+                    {
+                        continue;
+                    }
+                    if let Some(point) = self[left] {
+                        points.push(point);
+                    }
                 }
             }
         }
@@ -950,16 +952,18 @@ impl TableGrower {
                 points.push(point);
             }
 
-            let up = Coord::new(loc.x(), loc.y().saturating_sub(dy));
-            if self.in_bounds(up) && self.corners[up.y()][up.x()].is_some() {
-                if let Some(last) = points.last()
-                    && let Some(up) = self[up]
-                    && *last == up
-                {
-                    continue;
-                }
-                if let Some(point) = self[up] {
-                    points.push(point);
+            if let Some(up_y) = loc.y().checked_sub(dy) {
+                let up = Coord::new(loc.x(), up_y);
+                if self.in_bounds(up) && self.corners[up.y()][up.x()].is_some() {
+                    if let Some(last) = points.last()
+                        && let Some(up) = self[up]
+                        && *last == up
+                    {
+                        continue;
+                    }
+                    if let Some(point) = self[up] {
+                        points.push(point);
+                    }
                 }
             }
         }
