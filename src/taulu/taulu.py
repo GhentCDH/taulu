@@ -77,7 +77,7 @@ class Taulu:
         look_distance: Splittable[int] = 3,
         grow_threshold: Splittable[float] = 0.3,
         smooth_grid: bool = False,
-        cuts: Splittable[int] = 3,
+        cuts: Splittable[int] = 0,
         cut_fraction: Splittable[float] = 0.5,
         match_method: Splittable[MatchMethod] = "orb",
     ):
