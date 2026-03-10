@@ -240,6 +240,68 @@ impl TableGrower {
             .expect(RERUN_EXPECT);
     }
 
+    /// Log an L-shaped triplet used for parallelogram extrapolation.
+    /// Draws lines from the diagonal point to each arm, showing the L-shape.
+    #[allow(clippy::cast_precision_loss)]
+    fn log_parallelogram_l_shape(
+        &self,
+        h_pt: Point,
+        v_pt: Point,
+        d_pt: Point,
+        prediction: (i32, i32),
+        index: usize,
+    ) {
+        let h = (h_pt.x() as f32, h_pt.y() as f32);
+        let v = (v_pt.x() as f32, v_pt.y() as f32);
+        let d = (d_pt.x() as f32, d_pt.y() as f32);
+        let p = (prediction.0 as f32, prediction.1 as f32);
+
+        // Draw L-shape: diag -> h_arm and diag -> v_arm
+        self.rec
+            .log(
+                format!("parallelogram/l_shape/{index}"),
+                &rerun::LineStrips2D::new([vec![h, d, v]])
+                    .with_colors([rerun::Color::from_rgb(255, 165, 0)])
+                    .with_radii([1.5]),
+            )
+            .expect(RERUN_EXPECT);
+
+        // Draw the three source points
+        self.rec
+            .log(
+                format!("parallelogram/sources/{index}"),
+                &rerun::Points2D::new([h, v, d])
+                    .with_colors([rerun::Color::from_rgb(255, 165, 0)])
+                    .with_radii([3.0]),
+            )
+            .expect(RERUN_EXPECT);
+
+        // Draw individual prediction
+        self.rec
+            .log(
+                format!("parallelogram/predictions/{index}"),
+                &rerun::Points2D::new([p])
+                    .with_colors([rerun::Color::from_rgb(255, 200, 0)])
+                    .with_radii([3.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
+    /// Log the final averaged parallelogram extrapolation result.
+    #[allow(clippy::cast_precision_loss)]
+    fn log_parallelogram_result(&self, result: Point) {
+        let p = (result.x() as f32, result.y() as f32);
+
+        self.rec
+            .log(
+                "parallelogram/result",
+                &rerun::Points2D::new([p])
+                    .with_colors([rerun::Color::from_rgb(0, 255, 255)])
+                    .with_radii([5.0]),
+            )
+            .expect(RERUN_EXPECT);
+    }
+
     fn log_regression_lines(
         &self,
         h_coeffs: &[f32],
@@ -988,6 +1050,9 @@ impl TableGrower {
         let mut sum_y: f32 = 0.0;
         let mut total_weight: f32 = 0.0;
 
+        #[cfg(feature = "debug-tools")]
+        let mut l_shape_index: usize = 0;
+
         let cx = coord.x() as isize;
         let cy = coord.y() as isize;
 
@@ -1039,6 +1104,18 @@ impl TableGrower {
                     let pred_x = h_pt.x() + v_pt.x() - d_pt.x();
                     let pred_y = h_pt.y() + v_pt.y() - d_pt.y();
 
+                    #[cfg(feature = "debug-tools")]
+                    {
+                        self.log_parallelogram_l_shape(
+                            h_pt,
+                            v_pt,
+                            d_pt,
+                            (pred_x, pred_y),
+                            l_shape_index,
+                        );
+                        l_shape_index += 1;
+                    }
+
                     // Weight by inverse distance (closer L-shapes are more reliable)
                     let weight = 1.0 / (dist as f32);
                     sum_x += pred_x as f32 * weight;
@@ -1056,10 +1133,15 @@ impl TableGrower {
         }
 
         #[allow(clippy::cast_possible_truncation)]
-        Some(Point(
+        let result = Point(
             (sum_x / total_weight).round() as i32,
             (sum_y / total_weight).round() as i32,
-        ))
+        );
+
+        #[cfg(feature = "debug-tools")]
+        self.log_parallelogram_result(result);
+
+        Some(result)
     }
 
     /// Count how many L-shaped triplets are available for parallelogram extrapolation.
