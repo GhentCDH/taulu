@@ -33,10 +33,9 @@ impl PartialOrd for EdgeCandidate {
 
 impl Ord for EdgeCandidate {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Max-heap by confidence
-        self.confidence
-            .partial_cmp(&other.confidence)
-            .unwrap_or(Ordering::Equal)
+        // Max-heap by confidence. NaN is treated as less than any value
+        // to preserve heap ordering invariants.
+        self.confidence.total_cmp(&other.confidence)
     }
 }
 
@@ -76,6 +75,10 @@ impl EdgeQueue {
     /// If a candidate already exists at this coordinate with lower confidence,
     /// it will be superseded (the old entry becomes stale in the heap).
     pub fn insert(&mut self, coord: Coord, point: Point, confidence: f64) {
+        // Reject NaN to preserve heap ordering invariants
+        if confidence.is_nan() {
+            return;
+        }
         // Only insert if this is a new best for this coord
         let dominated = self
             .index
