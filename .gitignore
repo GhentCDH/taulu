@@ -23,3 +23,7 @@ src/taulu/_core.abi3.so
 # dev
 examples/table_01*
 data/table_01.png
+examples/table_02*
+data/table_02.png
+examples/tables_02*
+examples/demo-Sven.ipynb

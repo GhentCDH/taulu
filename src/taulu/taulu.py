@@ -428,6 +428,9 @@ class Taulu:
         grid_time = perf_counter() - now
         logger.info(f"Grid detection took {grid_time:.2f} seconds")
 
+        if debug_view_notebook:
+            self._aligner.show_matches_notebook()
+
         if isinstance(table, Split):
             table = TableGrid.from_split(table, (0, 0))  # ty: ignore
 

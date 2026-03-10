@@ -107,6 +107,7 @@ class HeaderAligner:
         self._patch_size = patch_size
         self._match_fraction = match_fraction
         self._max_dist = max_dist
+        self._matches_notebook_img = None
 
     def _scale_img(self, img: MatLike) -> MatLike:
         if self._scale == 1.0:
@@ -205,7 +206,7 @@ class HeaderAligner:
             if visual:
                 imu.show(final_img_filtered, title="matches", window=window)
             if visual_notebook:
-                imu.show_notebook(final_img_filtered, title="matches")
+                self._matches_notebook_img = final_img_filtered
 
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -232,6 +233,12 @@ class HeaderAligner:
         h, _ = cv.findHomography(points1, points2, cv.RANSAC)
 
         return self._unscale_homography(h)
+
+    def show_matches_notebook(self):
+        """Display the stored feature matches image in the notebook (call after grid detection)."""
+        if self._matches_notebook_img is not None:
+            imu.show_notebook(self._matches_notebook_img, title="matches")
+            self._matches_notebook_img = None
 
     def view_alignment(self, img: MatLike, h: NDArray):
         """
