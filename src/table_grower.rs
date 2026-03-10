@@ -1328,28 +1328,28 @@ fn find_best_corner_match_flat(
     let (height, width) = cross_correlation.dim();
     let x = approx.x();
     let y = approx.y();
+    let half = (search_region as i32) / 2;
 
-    // Calculate crop boundaries (same as before)
-    let crop_x = std::cmp::max(0, x - (search_region as i32) / 2) as usize;
-    let crop_y = std::cmp::max(0, y - (search_region as i32) / 2) as usize;
-    let crop_width = std::cmp::min(search_region, width.saturating_sub(crop_x));
-    let crop_height = std::cmp::min(search_region, height.saturating_sub(crop_y));
+    // Ideal (unclamped) start of the search window in image coordinates
+    let ideal_start_x = x - half;
+    let ideal_start_y = y - half;
+
+    // Clamp to image bounds
+    let crop_x = ideal_start_x.max(0) as usize;
+    let crop_y = ideal_start_y.max(0) as usize;
+
+    // Weight grid offset: how many weight rows/cols to skip because the
+    // crop start was clamped to the image boundary
+    let offset_x = (crop_x as i32 - ideal_start_x) as usize;
+    let offset_y = (crop_y as i32 - ideal_start_y) as usize;
+
+    // Crop size: limited by image bounds AND remaining weight grid space
+    let crop_width = (width - crop_x).min(search_region - offset_x);
+    let crop_height = (height - crop_y).min(search_region - offset_y);
 
     if crop_width == 0 || crop_height == 0 {
         return Some((approx, 0.0));
     }
-
-    // Compute offset to center the cropped region within the search_region grid.
-    let offset_y = if search_region > crop_height {
-        (search_region - crop_height) / 2
-    } else {
-        0
-    };
-    let offset_x = if search_region > crop_width {
-        (search_region - crop_width) / 2
-    } else {
-        0
-    };
 
     // Iterate the crop directly over the backing image and compute weighted values on the fly.
     let mut best_value = 0.0f32;
