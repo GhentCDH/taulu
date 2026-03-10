@@ -284,6 +284,11 @@ pub fn find_polynomial_intersection(
     for _ in 0..20 {
         let h_y = evaluate_polynomial(&h, y);
         let h_der_y = evaluate_polynomial(&h_derivative, y);
+
+        if h_der_y.abs() < 1e-12 {
+            return None;
+        }
+
         let new_y = y - h_y / h_der_y;
 
         let dist = (y - new_y).abs();
@@ -293,7 +298,7 @@ pub fn find_polynomial_intersection(
             return Some((x, new_y));
         }
 
-        if dist.is_nan() {
+        if !dist.is_finite() {
             return None;
         }
 
