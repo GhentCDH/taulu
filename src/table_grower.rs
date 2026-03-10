@@ -1111,7 +1111,7 @@ impl TableGrower {
         degree: usize,
         region: &[Vec<Option<Point>>],
     ) -> Option<Point> {
-        if horizontal_points.len() < degree + 1 && vertical_points.len() < degree + 1 {
+        if horizontal_points.len() < degree + 1 || vertical_points.len() < degree + 1 {
             return None;
         }
 
@@ -1279,7 +1279,7 @@ fn intersect_regressions(
     vertical_points: &[Point],
     degree: usize,
 ) -> Option<Point> {
-    if horizontal_points.len() < degree + 1 && vertical_points.len() < degree + 1 {
+    if horizontal_points.len() < degree + 1 || vertical_points.len() < degree + 1 {
         return None;
     }
 
