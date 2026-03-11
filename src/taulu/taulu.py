@@ -77,6 +77,9 @@ class Taulu:
         look_distance: Splittable[int] = 3,
         grow_threshold: Splittable[float] = 0.3,
         smooth_grid: bool = False,
+        smooth_strength: float = 0.5,
+        smooth_iterations: int = 3,
+        smooth_degree: int = 1,
         cuts: Splittable[int] = 0,
         cut_fraction: Splittable[float] = 0.5,
         match_method: Splittable[MatchMethod] = "orb",
@@ -98,6 +101,9 @@ class Taulu:
             look_distance: Rows to examine for extrapolation. Default: 3
             grow_threshold: Corner acceptance confidence [0, 1]. Default: 0.3
             smooth_grid: Apply grid smoothing after detection. Default: False
+            smooth_strength: Blend factor per smoothing iteration (0.0-1.0). Default: 0.5
+            smooth_iterations: Number of smoothing passes. Default: 3
+            smooth_degree: Polynomial degree for smoothing regression (1 or 2). Default: 1
             cuts: Number of grid cuts during growing. Default: 3
             cut_fraction: Fraction of points to delete per cut. Default: 0.5
             match_method: Feature matching method for header alignment. One of "orb"
@@ -107,6 +113,9 @@ class Taulu:
         self._processing_scale = processing_scale
         self._cell_height_factor = cell_height_factor
         self._smooth = smooth_grid
+        self._smooth_strength = smooth_strength
+        self._smooth_iterations = smooth_iterations
+        self._smooth_degree = smooth_degree
 
         if cell_height_factor is None:
             cell_height_factor = [1.0]
@@ -407,6 +416,9 @@ class Taulu:
             visual=debug_view,
             filtered=filtered,  # ty:ignore
             smooth=self._smooth,
+            smooth_strength=self._smooth_strength,
+            smooth_iterations=self._smooth_iterations,
+            smooth_degree=self._smooth_degree,
         )
         grid_time = perf_counter() - now
         logger.info(f"Grid detection took {grid_time:.2f} seconds")
