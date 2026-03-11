@@ -444,7 +444,7 @@ class GridDetector:
         filtered: MatLike | PathLike[str] | None = None,
         smooth: bool = False,
         smooth_strength: float = 0.5,
-        smooth_iterations: int = 3,
+        smooth_iterations: int = 1,
         smooth_degree: int = 1,
     ) -> "TableGrid":
         """

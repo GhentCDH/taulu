@@ -645,7 +645,7 @@ impl TableGrower {
     /// - `strength`: blend factor per iteration (0.0 = no change, 1.0 = snap to prediction)
     /// - `iterations`: number of smoothing passes
     /// - `degree`: polynomial degree for regression (1 = linear, 2 = quadratic)
-    #[pyo3(signature = (strength = 0.5, iterations = 3, degree = 1))]
+    #[pyo3(signature = (strength = 0.5, iterations = 1, degree = 1))]
     fn smooth_grid(&mut self, strength: f32, iterations: usize, degree: usize) {
         let degree = degree.clamp(1, 2);
         let strength = strength.clamp(0.0, 1.0);
@@ -657,8 +657,7 @@ impl TableGrower {
                 let mut new_row = Vec::with_capacity(row.len());
                 for (x, cell) in row.iter().enumerate() {
                     if let Some(current) = cell
-                        && let Some(extrapolated) =
-                            self.extrapolate_coord(Coord::new(x, y), degree)
+                        && let Some(extrapolated) = self.extrapolate_coord(Coord::new(x, y), degree)
                     {
                         let smoothed = current * (1.0 - strength) + extrapolated * strength;
                         new_row.push(Some(smoothed));

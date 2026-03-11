@@ -78,7 +78,7 @@ class Taulu:
         grow_threshold: Splittable[float] = 0.3,
         smooth_grid: bool = False,
         smooth_strength: float = 0.5,
-        smooth_iterations: int = 3,
+        smooth_iterations: int = 1,
         smooth_degree: int = 1,
         cuts: Splittable[int] = 0,
         cut_fraction: Splittable[float] = 0.5,
