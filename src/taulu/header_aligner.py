@@ -20,7 +20,7 @@ from .error import TauluException
 
 logger = logging.getLogger(__name__)
 
-MatchMethod = Literal["orb", "sift", "surf"]
+MatchMethod = Literal["orb", "sift", "surf", "akaze"]
 
 
 class HeaderAligner:
@@ -49,6 +49,8 @@ class HeaderAligner:
       rotation changes. Slower but often more accurate.
     - **surf**: SURF features with BFMatcher (L2 norm). Requires opencv-contrib-python
       with non-free modules enabled. Fast and robust.
+    - **akaze**: AKAZE features with BFMatcher (Hamming distance). Patent-free,
+      handles scale/rotation well, and often more robust than ORB on documents.
 
     ## Preprocessing Options
 
@@ -214,6 +216,8 @@ class HeaderAligner:
             return cv.SIFT_create(  # type:ignore
                 nfeatures=self._max_features, sigma=2.5, edgeThreshold=10
             )
+        elif self._method == "akaze":
+            return cv.AKAZE_create()  # type:ignore
         elif self._method == "surf":
             # SURF is in xfeatures2d (requires opencv-contrib-python)
             return cv.xfeatures2d.SURF_create(hessianThreshold=400)  # type:ignore
@@ -228,6 +232,9 @@ class HeaderAligner:
         elif self._method == "sift":
             # SIFT uses float descriptors -> L2 norm with crossCheck
             return cv.BFMatcher(cv.NORM_L2, crossCheck=True)
+        elif self._method == "akaze":
+            # AKAZE uses binary descriptors -> Hamming distance
+            return cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
         elif self._method == "surf":
             # SURF uses float descriptors -> L2 norm
             return cv.BFMatcher(cv.NORM_L2, crossCheck=True)
