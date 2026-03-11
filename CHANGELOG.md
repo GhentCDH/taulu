@@ -1,4 +1,4 @@
-## [2.3.0] - 2026-03-11
+## [2.3.1] - 2026-03-11
 
 ### 🚀 Features
 
@@ -19,6 +19,8 @@
 - Ipynb
 - First working implementation of notebook functionality
 - Prep for notebook view of clickable cell viewer
+- Add AKAZE matcher for header alignment
+- Add alignment_scale parameter for independent header alignment downscaling
 
 ### 🐛 Bug Fixes
 
@@ -33,6 +35,7 @@
 - Reject parallelogram predictions outside image bounds
 - X-y reversed
 - Ty warnings and errors
+- Remove wrong assertion
 
 ### 📚 Documentation
 
