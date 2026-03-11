@@ -83,6 +83,7 @@ class Taulu:
         cuts: Splittable[int] = 0,
         cut_fraction: Splittable[float] = 0.5,
         match_method: Splittable[MatchMethod] = "orb",
+        alignment_scale: float = 1.0,
     ):
         """
         Args:
@@ -109,6 +110,8 @@ class Taulu:
             match_method: Feature matching method for header alignment. One of "orb"
                 (fast, patent-free), "sift" (robust, uses FLANN), or "surf" (requires
                 opencv-contrib-python). Default: "orb"
+            alignment_scale: Downscale factor (0, 1] for header alignment only. Lower
+                values speed up feature matching. Default: 1.0
         """
         self._processing_scale = processing_scale
         self._cell_height_factor = cell_height_factor
@@ -164,12 +167,12 @@ class Taulu:
                 HeaderAligner(
                     self._header.left,
                     method=get_param(match_method, "left"),
-                    scale=get_param(self._processing_scale, "left"),
+                    scale=alignment_scale,
                 ),
                 HeaderAligner(
                     self._header.right,
                     method=get_param(match_method, "right"),
-                    scale=get_param(self._processing_scale, "right"),
+                    scale=alignment_scale,
                 ),
             )
 
@@ -219,7 +222,7 @@ class Taulu:
         else:
             header_image_path = Path(header_image_path)
             self._header = cv2.imread(os.fspath(header_image_path))
-            self._aligner = HeaderAligner(self._header, method=match_method)  # type: ignore[arg-type]
+            self._aligner = HeaderAligner(self._header, method=match_method, scale=alignment_scale)  # type: ignore[arg-type]
             self._template = HeaderTemplate.from_saved(
                 header_image_path.with_suffix(".json")
             )
