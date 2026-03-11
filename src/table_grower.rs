@@ -1209,26 +1209,29 @@ impl TableGrower {
     }
 
     fn extrapolate_coord(&self, coord: Coord, degree: usize) -> Option<Point> {
-        // Prefer parallelogram extrapolation when L-shapes are available
-        if let Some(point) = self.parallelogram_extrapolate(coord) {
-            return Some(point);
-        }
-
-        // Fall back to regression-based extrapolation
+        // Prefer regression-based extrapolation when enough neighbours exist
         let neighbours_x = self.neighbour_points_x(coord);
         let neighbours_y = self.neighbour_points_y(coord);
 
-        if neighbours_y.len() < degree + 1 || neighbours_x.len() < degree + 1 {
-            return None;
+        if neighbours_y.len() >= degree + 1 && neighbours_x.len() >= degree + 1 {
+            let region = self.get_region(coord);
+            if let Some(point) = self.intersect_regressions_region_aware(
+                &neighbours_x,
+                &neighbours_y,
+                degree,
+                &region,
+            ) {
+                return Some(point);
+            }
         }
 
-        let region = self.get_region(coord);
-        self.intersect_regressions_region_aware(&neighbours_x, &neighbours_y, degree, &region)
+        // Fall back to parallelogram extrapolation when regression can't produce a result
+        self.parallelogram_extrapolate(coord)
     }
 
     fn extrapolate_one_internal(&self) -> Option<(Coord, Point)> {
-        // Find the best empty cell to fill: prefer cells with more L-shapes,
-        // fall back to regression-neighbour count
+        // Find the best empty cell to fill: prefer cells with more regression
+        // neighbours, fall back to L-shape count for parallelogram extrapolation
         let best = self
             .corners
             .par_iter()
@@ -1240,38 +1243,27 @@ impl TableGrower {
                     .map(move |(x, _)| Coord::new(x, y))
             })
             .map(|coord| {
-                let l_count = self.parallelogram_l_shape_count(coord);
-                let nb_count = if l_count == 0 {
-                    // Only compute regression neighbours if no L-shapes
-                    self.neighbour_points_x(coord)
-                        .len()
-                        .min(self.neighbour_points_y(coord).len())
+                let nb_count = self
+                    .neighbour_points_x(coord)
+                    .len()
+                    .min(self.neighbour_points_y(coord).len());
+                let l_count = if nb_count < 2 {
+                    // Only compute L-shapes if regression can't work
+                    self.parallelogram_l_shape_count(coord)
                 } else {
                     0
                 };
-                (coord, l_count, nb_count)
+                (coord, nb_count, l_count)
             })
-            .max_by_key(|&(_, l_count, nb_count)| {
-                // Prioritise L-shape count (shifted left to dominate), then neighbour count
-                (l_count, nb_count)
+            .max_by_key(|&(_, nb_count, l_count)| {
+                // Prioritise regression neighbour count, then L-shape count as fallback
+                (nb_count, l_count)
             })
-            .filter(|&(_, l_count, nb_count)| l_count > 0 || nb_count > 0)?;
+            .filter(|&(_, nb_count, l_count)| nb_count > 0 || l_count > 0)?;
 
         let coord = best.0;
-
-        // Try parallelogram first, then regression fallback
-        if let Some(point) = self.parallelogram_extrapolate(coord) {
-            return Some((coord, point));
-        }
-
-        let neighbours_x = self.neighbour_points_x(coord);
-        let neighbours_y = self.neighbour_points_y(coord);
-        let degree = 1;
-        let region = self.get_region(coord);
-        let intersection =
-            self.intersect_regressions_region_aware(&neighbours_x, &neighbours_y, degree, &region)?;
-
-        Some((coord, intersection))
+        self.extrapolate_coord(coord, 1)
+            .map(|point| (coord, point))
     }
 
     /// Get a square region of size `look_distance` * 2 around the given coordinate
