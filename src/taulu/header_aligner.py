@@ -328,7 +328,6 @@ class HeaderAligner:
         """
 
         im = imu.ensure_gray(img)
-        assert self._template is MatLike
         header = imu.ensure_gray(self._unscale_img(self._template))
         height, width = im.shape
 
