@@ -254,6 +254,7 @@ class HeaderTemplate(TableIndexer):
 
         if type(template) is str:
             value = cv.imread(template)
+            assert value is not None
             template = value
         template = cast(MatLike, template)
 
@@ -275,15 +276,15 @@ class HeaderTemplate(TableIndexer):
                 if start_point is not None:
                     line: list[int] = [start_point[1], start_point[0], x, y]
 
-                    cv.line(  # type:ignore
-                        anno_template,  # type:ignore
+                    cv.line(
+                        anno_template,
                         (start_point[1], start_point[0]),
                         (x, y),
                         (0, 255, 0),
                         2,
                         cv.LINE_AA,
                     )
-                    cv.imshow(constants.WINDOW, anno_template)  # type:ignore
+                    cv.imshow(constants.WINDOW, anno_template)
 
                     lines.append(line)
                     start_point = None
@@ -371,8 +372,8 @@ class HeaderTemplate(TableIndexer):
 
         fig, ax = plt.subplots(figsize=(15, 15))
 
-        fig.canvas.toolbar_visible = False
-        fig.canvas.header_visible = False
+        fig.canvas.toolbar_visible = False  # ty:ignore[unresolved-attribute]
+        fig.canvas.header_visible = False  # ty:ignore[unresolved-attribute]
         fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
 
         ax.imshow(display_img)
@@ -483,8 +484,8 @@ class HeaderTemplate(TableIndexer):
         drawn_lines: list = []
 
         fig, ax = plt.subplots(figsize=(15, 12))
-        fig.canvas.toolbar_visible = False
-        fig.canvas.header_visible = False
+        fig.canvas.toolbar_visible = False  # ty:ignore[unresolved-attribute]
+        fig.canvas.header_visible = False  # ty:ignore[unresolved-attribute]
         ax.imshow(display_img)
         ax.set_title("Click pairs of points to draw lines. Lines: 0")
         ax.set_axis_off()
@@ -588,14 +589,14 @@ class HeaderTemplate(TableIndexer):
             if event == cv.EVENT_LBUTTONDOWN:
                 point = (x, y)
 
-                cv.circle(  # type:ignore
-                    anno_template,  # type:ignore
+                cv.circle(
+                    anno_template,
                     (x, y),
                     4,
                     (0, 255, 0),
                     2,
                 )
-                cv.imshow(constants.WINDOW, anno_template)  # type:ignore
+                cv.imshow(constants.WINDOW, anno_template)
 
                 points.append(point)
             elif event == cv.EVENT_RBUTTONDOWN:
@@ -763,10 +764,8 @@ class HeaderTemplate(TableIndexer):
         bottom_right = bottom_rule.intersection(right_rule)
 
         if not all(
-            [
-                point is not None
-                for point in [top_left, top_right, bottom_left, bottom_right]
-            ]
+            point is not None
+            for point in [top_left, top_right, bottom_left, bottom_right]
         ):
             raise TauluException("the lines around this cell do not intersect")
 

@@ -179,7 +179,7 @@ class TableIndexer(ABC):
     ):
         polygon = self.cell_polygon(cell)
         points = np.int32(list(polygon))  # type:ignore
-        cv.polylines(image, [points], True, color, thickness, cv.LINE_AA)  # type:ignore
+        cv.polylines(image, [points], True, color, thickness, cv.LINE_AA)
         cv.putText(
             image,
             str(cell),
@@ -319,7 +319,9 @@ class TableIndexer(ABC):
             >>> print(session.cells)  # [(0, 0), (1, 2), ...]
         """
         if not isinstance(image, np.ndarray):
-            image = cv.imread(os.fspath(image))
+            tmp_image = cv.imread(os.fspath(image))
+            assert tmp_image is not None
+            image = tmp_image
 
         import ipywidgets as widgets
         import matplotlib.pyplot as plt
@@ -332,8 +334,8 @@ class TableIndexer(ABC):
         img_with_highlights = np.copy(display_img)
 
         fig, ax = plt.subplots(figsize=(15, 12))
-        fig.canvas.toolbar_visible = False
-        fig.canvas.header_visible = False
+        fig.canvas.toolbar_visible = False  # ty:ignore[unresolved-attribute]
+        fig.canvas.header_visible = False  # ty:ignore[unresolved-attribute]
 
         im_display = ax.imshow(img_with_highlights)
         ax.set_title("Click cells to highlight them. Cells clicked: 0")
@@ -363,9 +365,6 @@ class TableIndexer(ABC):
         status_label = widgets.Label(
             value="Click on cells to highlight them", style={"font_size": "18px"}
         )
-
-        # Highlighted cells for visual tracking
-        highlighted_polygons = []
 
         def draw_highlight(cell_idx: tuple[int, int]):
             """Draw a highlighted cell on the image."""
@@ -541,7 +540,7 @@ class TableIndexer(ABC):
         src_pts = np.array([lt, rt, rb, lb], dtype="float32")
         dst_pts = np.array([[0, 0], [w, 0], [w, h], [0, h]], dtype="float32")
         m = cv.getPerspectiveTransform(src_pts, dst_pts)
-        warped = cv.warpPerspective(image, m, (int(w), int(h)))  # type:ignore
+        warped = cv.warpPerspective(image, m, (int(w), int(h)))
 
         return warped
 

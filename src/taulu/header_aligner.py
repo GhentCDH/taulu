@@ -164,7 +164,9 @@ class HeaderAligner:
         """Set the template image as a path or an image"""
 
         if type(value) is str:
-            value = cv.imread(value)
+            tmp_value = cv.imread(value)
+            assert tmp_value is not None
+            value = tmp_value
             self._template = value
 
         # TODO: check if the image has the right properties (dimensions etc.)
@@ -260,8 +262,8 @@ class HeaderAligner:
         matches = sorted(matches, key=lambda x: x.distance)
 
         # Remove not so good matches
-        numGoodMatches = int(len(matches) * self._match_fraction)
-        matches = matches[:numGoodMatches]
+        num_good_matches = int(len(matches) * self._match_fraction)
+        matches = matches[:num_good_matches]
 
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -286,7 +288,9 @@ class HeaderAligner:
         points2 = points2[mask_array]
 
         # Filter matches for visualization
-        filtered_matches = [m for m, keep in zip(matches, mask_array) if keep]
+        filtered_matches = [
+            m for m, keep in zip(matches, mask_array, strict=False) if keep
+        ]
 
         if visual:
             final_img_filtered = cv.drawMatches(
@@ -295,7 +299,7 @@ class HeaderAligner:
                 self._template,
                 keypoints_tg,
                 filtered_matches[:100],
-                None,  # type:ignore
+                None,
                 cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
             )
             imu.show(final_img_filtered, title="matches", window=window)
@@ -317,6 +321,7 @@ class HeaderAligner:
         """
 
         im = imu.ensure_gray(img)
+        assert self._template is MatLike
         header = imu.ensure_gray(self._unscale_img(self._template))
         height, width = im.shape
 
@@ -341,7 +346,9 @@ class HeaderAligner:
         logger.info("Aligning header with supplied table image")
 
         if type(img) is str:
-            img = cv.imread(img)
+            tmp_img = cv.imread(img)
+            assert tmp_img is not None
+            img = tmp_img
         img = cast(MatLike, img)
 
         img = self._preprocess_image(img)
@@ -364,7 +371,7 @@ class HeaderAligner:
         """
 
         point = np.array([[point[0], point[1], 1]])  # type:ignore
-        transformed = np.dot(h, point.T)  # type:ignore
+        transformed = np.dot(h, point.T)
 
         transformed /= transformed[2]
 

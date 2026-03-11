@@ -479,7 +479,11 @@ class GridDetector:
             raise ValueError("cell_widths must contain at least one value")
 
         if not isinstance(img, np.ndarray):
-            img = cv.imread(os.fspath(cast(PathLike[str], img)))
+            tmp_img = cv.imread(os.fspath(cast(PathLike[str], img)))
+            assert tmp_img is not None
+            img = tmp_img
+
+        img = cast(MatLike, img)
 
         if filtered is None:
             filtered = self.apply(img, visual)
@@ -569,7 +573,6 @@ class GridDetector:
 
         if visual:
             threshold = self._grow_threshold
-            look_distance = self._look_distance
 
             # python implementation of rust loops, for visualization purposes
             # note this is a LOT slower
@@ -656,8 +659,6 @@ class GridDetector:
         # if gray, convert to BGR
         if len(screen.shape) == 2 or screen.shape[2] == 1:
             debug_img = cv.cvtColor(screen, cv.COLOR_GRAY2BGR)
-        else:
-            debug_img = cast(MatLike, screen)
 
         debug_img = imu.draw_points(debug_img, path, color=(200, 200, 0), thickness=2)
         debug_img = imu.draw_points(
@@ -722,7 +723,7 @@ class GridDetector:
             goals = [(int(g[0] * self._scale), int(g[1] * self._scale)) for g in goals]
 
         # calculate bounding box with margin
-        all_points = goals + [start]
+        all_points = [*goals, start]
         xs = [p[0] for p in all_points]
         ys = [p[1] for p in all_points]
 

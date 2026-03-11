@@ -121,7 +121,7 @@ class Taulu:
             cell_height_factor = [1.0]
 
         if isinstance(header_image_path, Split) or isinstance(header_anno_path, Split):
-            header = Split(Path(header_image_path.left), Path(header_image_path.right))
+            header = Split(Path(header_image_path.left), Path(header_image_path.right))  # ty:ignore[possibly-missing-attribute]
 
             if not exists(header.left.with_suffix(".png")) or not exists(
                 header.right.with_suffix(".png")
@@ -146,15 +146,15 @@ class Taulu:
                 )
 
             else:
-                if not exists(header_anno_path.left) or not exists(
-                    header_anno_path.right
+                if not exists(header_anno_path.left) or not exists(  # ty:ignore[possibly-missing-attribute]
+                    header_anno_path.right  # ty:ignore[possibly-missing-attribute]
                 ):
                     raise TauluException(
                         "The header annotation files you provided do not exist (or they aren't .json files)"
                     )
 
-                template_left = HeaderTemplate.from_saved(header_anno_path.left)
-                template_right = HeaderTemplate.from_saved(header_anno_path.right)
+                template_left = HeaderTemplate.from_saved(header_anno_path.left)  # ty:ignore[possibly-missing-attribute]
+                template_right = HeaderTemplate.from_saved(header_anno_path.right)  # ty:ignore[possibly-missing-attribute]
 
             self._header = Split(
                 cv2.imread(os.fspath(header.left)), cv2.imread(os.fspath(header.right))
@@ -262,8 +262,8 @@ class Taulu:
                 min_rows=min_rows,  # ty: ignore
                 look_distance=look_distance,  # ty: ignore
                 grow_threshold=grow_threshold,  # ty: ignore
-                cuts=cuts,
-                cut_fraction=cut_fraction,
+                cuts=cuts,  # ty:ignore
+                cut_fraction=cut_fraction,  # ty:ignore
             )
 
     @staticmethod
@@ -373,7 +373,7 @@ class Taulu:
                 os.fspath(image_path), crop=output_path.with_suffix(".png")
             )
             session._save_path = output_path.with_suffix(".json")
-            return session  # type: ignore
+            return session
 
         else:
             # GUI way
@@ -412,7 +412,9 @@ class Taulu:
 
         if not isinstance(image, MatLike):
             image = cast(str | PathLike[str], image)
-            image = cv2.imread(os.fspath(image))
+            tmp_image = cv2.imread(os.fspath(image))
+            assert tmp_image is not None
+            image = tmp_image
 
         now = perf_counter()
         h = self._aligner.align(image, visual=debug_view)
