@@ -132,8 +132,11 @@ The following is a summary of the most important parameters and how you could tu
 **These methods are the most useful**:
 
 - `Taulu.annotate`: create an annotation file for a header image. This requires an image of a table with a clear header. Taulu will first ask you to crop the header in the image (by clicking four points, one for each corner). Then, it will ask you to annotate the lines in the header (by clicking two points per line, one for each endpoint). The annotation file will be saved as a `json` file and a `png` with the same name.
-- `Taulu.segment_table`: given an input image, segment into a `TableGrid` object.
+- `Taulu.__init__`: initialize a Taulu instance with a header image and parameters.
   - `cell_height_factor`: a float or a list of floats that determine the expected height of each row in the table, relative to the height of the header. If the list is shorter than the number of rows, the last value will be repeated for the remaining rows. If a single float is given, it will be used for all rows.
+- `Taulu.segment_table`: given an input image, segment into a `TableGrid` object.
+  - `filtered`: optional pre-filtered binary image for corner detection. If provided, binarization parameters are ignored.
+  - `debug_view`: show intermediate processing steps (note: crashes in Jupyter notebooks due to OpenCV window handling).
 
 ### `TableGrid`
 

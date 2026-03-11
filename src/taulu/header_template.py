@@ -9,9 +9,10 @@ import math
 import os
 from collections.abc import Iterable
 from os import PathLike
-from typing import cast
+from typing import Optional, cast
 
 import cv2 as cv
+import matplotlib.pyplot as plt
 import numpy as np
 from cv2.typing import MatLike
 
@@ -147,6 +148,45 @@ class _Rule:
         return (x, y)
 
 
+class AnnotationSession:
+    """
+    Session object for notebook-based annotation.
+
+    In Jupyter notebooks with %matplotlib widget, plt.show() is non-blocking.
+    This session object holds the result once the user clicks "Done".
+
+    Usage:
+        session = HeaderTemplate.annotate_image_notebook("image.png")
+        # ... interact with the plot, click Done ...
+        template = session.result  # Access the HeaderTemplate after clicking Done
+    """
+
+    def __init__(self):
+        self._result: HeaderTemplate | None = None
+        self._save_path: PathLike[str] | None = None
+        self._crop_path: PathLike[str] | None = None
+        self._margin: int = 10
+        self._original_template: MatLike | None = None
+
+    @property
+    def result(self) -> Optional["HeaderTemplate"]:
+        """Returns the HeaderTemplate once Done is clicked, or None if not yet done."""
+        return self._result
+
+    @property
+    def is_done(self) -> bool:
+        """Returns True if the user has clicked Done."""
+        return self._result is not None
+
+    def save(self, path: PathLike[str]):
+        """Save the result to a JSON file. Raises if not done yet."""
+        if self._result is None:
+            raise TauluException(
+                "Cannot save: annotation not complete. Click 'Done' first."
+            )
+        self._result.save(path)
+
+
 class HeaderTemplate(TableIndexer):
     def __init__(self, rules: Iterable[Iterable[int]]):
         """
@@ -274,6 +314,262 @@ class HeaderTemplate(TableIndexer):
         imu.show(anno_template, get_point, title="annotate the header")
 
         return HeaderTemplate(lines)
+
+    @staticmethod
+    @log_calls(level=logging.DEBUG)
+    def annotate_image_notebook(
+        template: MatLike | str, crop: PathLike[str] | None = None, margin: int = 10
+    ) -> "AnnotationSession":
+        """
+        Notebook-compatible version of annotate_image. Returns an AnnotationSession immediately.
+        Interact with the widget and click Done to finalize.
+        Access the result via session.result after clicking Done.
+
+        Args:
+            template: the image on which to annotate the header lines
+            crop (str | None): if str, crop the template image first, then do the annotation.
+                The cropped image will be stored at the supplied path
+            margin (int): margin to add around the cropping of the header
+
+        Returns:
+            AnnotationSession: access .result after clicking Done to get the HeaderTemplate.
+        """
+        if isinstance(template, str):
+            tmp = cv.imread(template)
+            assert tmp is not None
+            template = tmp
+
+        session = AnnotationSession()
+        session._crop_path = crop
+        session._margin = margin
+        session._original_template = template
+
+        if crop is not None:
+            # First show crop UI, then annotation UI
+            HeaderTemplate._crop_notebook(template, margin, session)
+        else:
+            # Go directly to annotation
+            HeaderTemplate._show_annotation_ui(template, session)
+
+        return session
+
+    @staticmethod
+    def _crop_notebook(template: MatLike, margin: int, session: "AnnotationSession"):
+        """Notebook-compatible crop UI using matplotlib + ipywidgets."""
+        import ipywidgets as widgets
+        from IPython.display import display
+
+        display_img = cv.cvtColor(template, cv.COLOR_BGR2RGB)
+
+        points: list[tuple[int, int]] = []
+        drawn_points: list = []
+
+        # Create output widget to contain everything
+        _out = widgets.Output(
+            layout=widgets.Layout(width="800px", height="600px", overflow="hidden")
+        )
+
+        fig, ax = plt.subplots(figsize=(15, 15))
+
+        fig.canvas.toolbar_visible = False
+        fig.canvas.header_visible = False
+        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
+
+        ax.imshow(display_img)
+        ax.set_title(
+            "Annotate the header: \nClick 4 corners of the header region such that the entire header is contained within the rectangle."
+        )
+        ax.set_axis_off()
+
+        # Create ipywidgets buttons
+        done_button = widgets.Button(
+            description="Done Cropping",
+            button_style="success",
+            layout=widgets.Layout(width="200px", height="50px"),
+        )
+
+        undo_button = widgets.Button(
+            description="Undo Last Point",
+            button_style="warning",
+            layout=widgets.Layout(width="200px", height="50px"),
+        )
+
+        done_button.style.font_size = "18px"
+        undo_button.style.font_size = "18px"
+
+        status_label = widgets.Label(
+            value="Press 'Done' when finished. Press 'Undo Last Point' to remove the last point.",
+            style={"font_size": "18px"},
+        )
+
+        def on_click(event):
+            if event.inaxes != ax or event.xdata is None:
+                return
+
+            x, y = int(event.xdata), int(event.ydata)
+
+            if event.button == 1:  # Left click - add point
+                points.append((x, y))
+                (point_marker,) = ax.plot(x, y, "go", markersize=10)
+                drawn_points.append(point_marker)
+                status_label.value = f"Points: {len(points)}/4"
+                fig.canvas.draw_idle()
+
+        def on_undo(_):
+            if points:
+                points.pop()
+                drawn_points.pop().remove()
+                status_label.value = f"Points: {len(points)}/4"
+                fig.canvas.draw_idle()
+
+        def on_done(_):
+            nonlocal cid
+
+            if len(points) != 4:
+                status_label.value = (
+                    f"Error: Need exactly 4 points! Currently have {len(points)}"
+                )
+                return
+
+            fig.canvas.mpl_disconnect(cid)
+
+            # Crop the image
+            points_np = np.array(points)
+            img_h, img_w = template.shape[:2]
+            x_min = max(int(np.min(points_np[:, 0])) - margin, 0)
+            y_min = max(int(np.min(points_np[:, 1])) - margin, 0)
+            x_max = min(int(np.max(points_np[:, 0])) + margin, img_w)
+            y_max = min(int(np.max(points_np[:, 1])) + margin, img_h)
+
+            cropped = template[y_min:y_max, x_min:x_max]
+
+            # Save cropped image if path provided
+            if session._crop_path is not None:
+                cv.imwrite(os.fspath(session._crop_path), cropped)
+
+            # Close current figure and show annotation UI
+            plt.close(fig)
+            done_button.close()
+            undo_button.close()
+            status_label.close()
+
+            # Show annotation UI
+            HeaderTemplate._show_annotation_ui(cropped, session)
+
+        done_button.on_click(on_done)
+        undo_button.on_click(on_undo)
+
+        cid = fig.canvas.mpl_connect("button_press_event", on_click)
+
+        # Display figure first, then buttons below
+        plt.tight_layout(pad=0)
+        plt.show()
+        display(widgets.HBox([done_button, undo_button, status_label]))
+
+    @staticmethod
+    def _show_annotation_ui(template: MatLike, session: "AnnotationSession"):
+        """Show the line annotation UI using matplotlib + ipywidgets."""
+        import ipywidgets as widgets
+        from IPython.display import display
+
+        print(
+            "\x1b[32m[Taulu]: Don't forget to save annotations with annotation.save()!"
+        )
+
+        display_img = cv.cvtColor(template, cv.COLOR_BGR2RGB)
+
+        lines: list[list[int]] = []
+        start_point: list[tuple[int, int] | None] = [None]
+        drawn_lines: list = []
+
+        fig, ax = plt.subplots(figsize=(15, 12))
+        fig.canvas.toolbar_visible = False
+        fig.canvas.header_visible = False
+        ax.imshow(display_img)
+        ax.set_title("Click pairs of points to draw lines. Lines: 0")
+        ax.set_axis_off()
+
+        # Create ipywidgets buttons
+        done_button = widgets.Button(
+            description="Done Annotating",
+            button_style="success",
+            layout=widgets.Layout(width="200px", height="50px"),
+        )
+        undo_button = widgets.Button(
+            description="Undo Last Line",
+            button_style="warning",
+            layout=widgets.Layout(width="200px", height="50px"),
+        )
+        status_label = widgets.Label(
+            value="Click to start a line, click again to end it",
+            style={"font_size": "18px"},
+        )
+
+        done_button.style.font_size = "18px"
+        undo_button.style.font_size = "18px"
+
+        def on_click(event):
+            if event.inaxes != ax or event.xdata is None:
+                return
+
+            x, y = int(event.xdata), int(event.ydata)
+
+            if event.button == 1:  # Left click
+                if start_point[0] is not None:
+                    x0, y0 = start_point[0]
+                    lines.append([x0, y0, x, y])
+                    (ln,) = ax.plot([x0, x], [y0, y], color="lime", linewidth=2)
+                    drawn_lines.append(ln)
+                    ax.set_title(
+                        f"Click pairs of points to draw lines. Lines: {len(lines)}"
+                    )
+                    status_label.value = (
+                        f"Line {len(lines)} added. Click to start next line."
+                    )
+                    fig.canvas.draw_idle()
+                    start_point[0] = None
+                else:
+                    start_point[0] = (x, y)
+                    status_label.value = (
+                        f"Start point set at ({x}, {y}). Click end point."
+                    )
+                    # Draw a temporary marker
+                    ax.plot(x, y, "ro", markersize=5)
+                    fig.canvas.draw_idle()
+
+        def on_undo(_):
+            start_point[0] = None
+            if lines:
+                lines.pop()
+                drawn_lines.pop().remove()
+                ax.set_title(
+                    f"Click pairs of points to draw lines. Lines: {len(lines)}"
+                )
+                status_label.value = f"Undone. Lines: {len(lines)}"
+                fig.canvas.draw_idle()
+
+        def on_done(_):
+            session._result = HeaderTemplate(lines)
+            fig.canvas.mpl_disconnect(cid)
+            done_button.disabled = True
+            undo_button.disabled = True
+            ax.set_title(
+                f"Done! {len(lines)} lines annotated. Call session.save() to save."
+            )
+            status_label.value = (
+                "Annotation complete! Run session.save('filename.json') to save."
+            )
+            fig.canvas.draw_idle()
+
+        done_button.on_click(on_done)
+        undo_button.on_click(on_undo)
+
+        cid = fig.canvas.mpl_connect("button_press_event", on_click)
+
+        # Display figure first, then buttons below
+        plt.tight_layout(pad=0)
+        plt.show()
+        display(widgets.HBox([done_button, undo_button, status_label]))
 
     @staticmethod
     @log_calls(level=logging.DEBUG, include_return=True)

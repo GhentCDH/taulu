@@ -9,7 +9,7 @@ from os import PathLike
 from os.path import exists
 from pathlib import Path
 from time import perf_counter
-from typing import cast
+from typing import Literal, cast
 
 import cv2
 from cv2.typing import MatLike
@@ -267,7 +267,12 @@ class Taulu:
             )
 
     @staticmethod
-    def annotate(image_path: PathLike[str] | str, output_path: PathLike[str] | str):
+    def annotate(
+        image_path: PathLike[str] | str,
+        output_path: PathLike[str] | str,
+        *,
+        backend: Literal["auto", "gui", "notebook"] = "auto",
+    ):
         """
         Interactive tool to create header annotations for table segmentation.
 
@@ -342,11 +347,40 @@ class Taulu:
 
         output_path = Path(output_path)
 
-        template = HeaderTemplate.annotate_image(
-            os.fspath(image_path), crop=output_path.with_suffix(".png")
-        )
+        def running_in_notebook() -> bool:
+            try:
+                from IPython import get_ipython
 
-        template.save(output_path.with_suffix(".json"))
+                ip = get_ipython()
+                return ip is not None and "IPKernelApp" in ip.config
+            except Exception:
+                return False
+
+        # Decide backend
+        if backend not in ("auto", "gui", "notebook"):
+            raise TauluException("backend must be one of: 'auto', 'gui', 'notebook'")
+        if backend == "auto":
+            use_notebook = running_in_notebook()
+        else:
+            use_notebook = backend == "notebook"
+
+        if use_notebook:
+            # Notebook way
+            logger.info(
+                "\x1b[32mNotebook environment detected/selected. Using notebook annotation backend."
+            )
+            session = HeaderTemplate.annotate_image_notebook(
+                os.fspath(image_path), crop=output_path.with_suffix(".png")
+            )
+            session._save_path = output_path.with_suffix(".json")
+            return session  # type: ignore
+
+        else:
+            # GUI way
+            template = HeaderTemplate.annotate_image(
+                os.fspath(image_path), crop=output_path.with_suffix(".png")
+            )
+            template.save(output_path.with_suffix(".json"))
 
     def segment_table(
         self,
