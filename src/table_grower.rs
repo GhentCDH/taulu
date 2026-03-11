@@ -635,31 +635,44 @@ impl TableGrower {
         Ok(())
     }
 
-    #[pyo3(signature= (degree = 1, amount = 1.0))]
-    fn smooth_grid(&mut self, degree: usize, amount: f32) {
+    /// Iteratively smooth the grid by blending each point toward its
+    /// regression-predicted position.
+    ///
+    /// Each iteration recomputes predictions from the *current* (already partially
+    /// smoothed) grid, so corrections propagate across the grid over multiple
+    /// passes — similar to Laplacian smoothing on a mesh.
+    ///
+    /// - `strength`: blend factor per iteration (0.0 = no change, 1.0 = snap to prediction)
+    /// - `iterations`: number of smoothing passes
+    /// - `degree`: polynomial degree for regression (1 = linear, 2 = quadratic)
+    #[pyo3(signature = (strength = 0.5, iterations = 3, degree = 1))]
+    fn smooth_grid(&mut self, strength: f32, iterations: usize, degree: usize) {
         let degree = degree.clamp(1, 2);
-        let amount = amount.clamp(0.0, 1.0);
+        let strength = strength.clamp(0.0, 1.0);
 
-        let mut new_corners = Vec::with_capacity(self.corners.len());
+        for _ in 0..iterations {
+            let mut new_corners = Vec::with_capacity(self.corners.len());
 
-        for (y, row) in self.corners.iter().enumerate() {
-            let mut new_row = Vec::with_capacity(row.len());
-            for (x, cell) in row.iter().enumerate() {
-                if let Some(current) = cell
-                    && let Some(extrapolated) = self.extrapolate_coord(Coord::new(x, y), degree)
-                {
-                    let extrapolated = current * (1.0 - amount) + extrapolated * amount;
-                    new_row.push(Some(extrapolated));
-                } else if cell.is_some() {
-                    new_row.push(*cell);
-                } else {
-                    new_row.push(None);
+            for (y, row) in self.corners.iter().enumerate() {
+                let mut new_row = Vec::with_capacity(row.len());
+                for (x, cell) in row.iter().enumerate() {
+                    if let Some(current) = cell
+                        && let Some(extrapolated) =
+                            self.extrapolate_coord(Coord::new(x, y), degree)
+                    {
+                        let smoothed = current * (1.0 - strength) + extrapolated * strength;
+                        new_row.push(Some(smoothed));
+                    } else if cell.is_some() {
+                        new_row.push(*cell);
+                    } else {
+                        new_row.push(None);
+                    }
                 }
+                new_corners.push(new_row);
             }
-            new_corners.push(new_row);
-        }
 
-        self.corners = new_corners;
+            self.corners = new_corners;
+        }
     }
 }
 
@@ -1262,8 +1275,7 @@ impl TableGrower {
             .filter(|&(_, nb_count, l_count)| nb_count > 0 || l_count > 0)?;
 
         let coord = best.0;
-        self.extrapolate_coord(coord, 1)
-            .map(|point| (coord, point))
+        self.extrapolate_coord(coord, 1).map(|point| (coord, point))
     }
 
     /// Get a square region of size `look_distance` * 2 around the given coordinate
@@ -1315,8 +1327,7 @@ impl TableGrower {
         let result = similar_steps
             .iter()
             .zip(gaussian_weights.iter())
-            .filter(|(step, _weight)| step.is_some())
-            .map(|(step, weight)| step.expect("filter") * *weight)
+            .filter_map(|(step, weight)| step.map(|s| s * *weight))
             .fold(Point(0, 0), |acc, val| acc + val);
 
         #[allow(clippy::cast_precision_loss)]
