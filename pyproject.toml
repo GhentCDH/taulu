@@ -21,6 +21,7 @@ torch = ["pillow>=11.3.0"]
 
 [project.scripts]
 taulu = "taulu:main"
+taulu-schema = "taulu.schema:main"
 
 [tool.pytest.ini_options]
 markers = ["visual: marks tests that require visual confirmation"]

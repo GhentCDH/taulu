@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 
 from taulu.header_template import HeaderTemplate
 
+from .config import TauluConfig
 from .error import TauluException
 from .grid import GridDetector, TableGrid
 from .header_aligner import HeaderAligner, MatchMethod
@@ -268,6 +269,29 @@ class Taulu:
                 cuts=cuts,  # ty:ignore
                 cut_fraction=cut_fraction,  # ty:ignore
             )
+
+    @classmethod
+    def from_config(cls, config: TauluConfig) -> "Taulu":
+        """
+        Create a :class:`Taulu` instance from a :class:`~taulu.config.TauluConfig`.
+
+        Args:
+            config: A populated :class:`~taulu.config.TauluConfig` instance.
+
+        Returns:
+            A :class:`Taulu` instance configured according to ``config``.
+
+        Example::
+
+            from taulu import Taulu
+            from taulu.config import TauluConfig
+
+            config = TauluConfig.from_toml("my_table.toml")
+            taulu = Taulu.from_config(config)
+        """
+        import dataclasses
+
+        return cls(**{f.name: getattr(config, f.name) for f in dataclasses.fields(config)})
 
     @staticmethod
     def annotate(

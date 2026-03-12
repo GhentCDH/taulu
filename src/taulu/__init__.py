@@ -45,6 +45,7 @@ if __name__ == "__main__":
 If you want a high-level overview of how to use Taulu, see [the Taulu class](./taulu.html#taulu.taulu.Taulu)
 """
 
+from .config import TauluConfig
 from .grid import GridDetector, TableGrid
 from .header_aligner import HeaderAligner, MatchMethod
 from .header_template import HeaderTemplate
@@ -61,6 +62,7 @@ __pdoc__["types"] = False
 __pdoc__["img_util"] = False
 
 __all__ = [
+    "TauluConfig",
     "GridDetector",
     "HeaderAligner",
     "HeaderTemplate",
