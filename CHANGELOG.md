@@ -1,3 +1,14 @@
+## [2.4.0] - 2026-03-12
+
+### 🚀 Features
+
+- TauluConfig; data class that can be loaded from TOML, with TOML schema
+- Default 'akaze' matcher (faster!)
+- TableIndexer.highlight_all_cells accepts paths too
+
+### 🐛 Bug Fixes
+
+- DeepConvNet.load type hint
 ## [2.3.1] - 2026-03-11
 
 ### 🚀 Features
