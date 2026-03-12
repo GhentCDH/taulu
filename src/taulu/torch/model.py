@@ -84,7 +84,7 @@ class DeepConvNet(nn.Module):
         )
 
     @classmethod
-    def load(cls, path, device=None):
+    def load(cls, path, device=None) -> "DeepConvNet":
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         checkpoint = torch.load(path, map_location=device)
