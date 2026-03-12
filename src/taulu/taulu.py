@@ -83,7 +83,7 @@ class Taulu:
         smooth_degree: int = 1,
         cuts: Splittable[int] = 0,
         cut_fraction: Splittable[float] = 0.5,
-        match_method: Splittable[MatchMethod] = "orb",
+        match_method: Splittable[MatchMethod] = "akaze",
         alignment_scale: float = 1.0,
     ):
         """
@@ -109,13 +109,12 @@ class Taulu:
             cuts: Number of grid cuts during growing. Default: 3
             cut_fraction: Fraction of points to delete per cut. Default: 0.5
             match_method: Feature matching method for header alignment. One of "orb"
-                (fast, patent-free), "sift" (robust, uses FLANN), or "surf" (requires
-                opencv-contrib-python). Default: "orb"
+                (fast, patent-free), "sift" (robust, uses FLANN), or "akaze" (robust,
+                patent-free). Default: "akaze"
             alignment_scale: Downscale factor (0, 1] for header alignment only. Lower
                 values speed up feature matching. Default: 1.0
         """
         self._processing_scale = processing_scale
-        self._cell_height_factor = cell_height_factor
         self._smooth = smooth_grid
         self._smooth_strength = smooth_strength
         self._smooth_iterations = smooth_iterations
@@ -123,6 +122,8 @@ class Taulu:
 
         if cell_height_factor is None:
             cell_height_factor = [1.0]
+
+        self._cell_height_factor = cell_height_factor
 
         if isinstance(header_image_path, Split) or isinstance(header_anno_path, Split):
             header = Split(Path(header_image_path.left), Path(header_image_path.right))  # ty:ignore[possibly-missing-attribute]
