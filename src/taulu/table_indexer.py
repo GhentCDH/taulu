@@ -192,10 +192,12 @@ class TableIndexer(ABC):
 
     def highlight_all_cells(
         self,
-        image: MatLike,
+        image: MatLike | os.PathLike[str] | str,
         color: tuple[int, int, int] = (0, 0, 255),
         thickness: int = 1,
     ) -> MatLike:
+        if not isinstance(image, np.ndarray):
+            image = cv.imread(os.fspath(image))  # ty:ignore
         img = np.copy(image)
 
         for cell in self.cells():
