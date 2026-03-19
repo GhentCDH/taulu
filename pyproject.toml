@@ -73,7 +73,7 @@ known-first-party = [
 no-matching-overload = "ignore"
 
 [tool.uv]
-constraint-dependencies = ["tornado>=6.5.5"]
+constraint-dependencies = ["tornado>=6.5.5", "fonttools>=4.60.2"]
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]
