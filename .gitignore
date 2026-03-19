@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+.ipynb_checkpoints
 
 # Virtual environments
 .venv
@@ -27,3 +28,4 @@ examples/table_02*
 data/table_02.png
 examples/tables_02*
 examples/demo-Sven.ipynb
+

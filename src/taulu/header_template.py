@@ -161,12 +161,9 @@ class AnnotationSession:
         template = session.result  # Access the HeaderTemplate after clicking Done
     """
 
-    def __init__(self):
+    def __init__(self, crop_path: None | PathLike[str] = None):
         self._result: HeaderTemplate | None = None
-        self._save_path: PathLike[str] | None = None
-        self._crop_path: PathLike[str] | None = None
-        self._margin: int = 10
-        self._original_template: MatLike | None = None
+        self._crop_path: PathLike[str] | None = crop_path
 
     @property
     def result(self) -> Optional["HeaderTemplate"]:
@@ -340,10 +337,7 @@ class HeaderTemplate(TableIndexer):
             assert tmp is not None
             template = tmp
 
-        session = AnnotationSession()
-        session._crop_path = crop
-        session._margin = margin
-        session._original_template = template
+        session = AnnotationSession(crop)
 
         if crop is not None:
             # First show crop UI, then annotation UI
@@ -365,16 +359,10 @@ class HeaderTemplate(TableIndexer):
         points: list[tuple[int, int]] = []
         drawn_points: list = []
 
-        # Create output widget to contain everything
-        _out = widgets.Output(
-            layout=widgets.Layout(width="800px", height="600px", overflow="hidden")
-        )
-
         fig, ax = plt.subplots(figsize=(15, 15))
 
         fig.canvas.toolbar_visible = False  # ty:ignore[unresolved-attribute]
         fig.canvas.header_visible = False  # ty:ignore[unresolved-attribute]
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
 
         ax.imshow(display_img, origin="upper")
         ax.set_title(
@@ -454,24 +442,24 @@ class HeaderTemplate(TableIndexer):
             if session._crop_path is not None:
                 cv.imwrite(os.fspath(session._crop_path), cropped)
 
-            # Close current figure and show annotation UI
             plt.close(fig)
-            done_button.close()
-            undo_button.close()
-            status_label.close()
-
-            # Show annotation UI
-            HeaderTemplate._show_annotation_ui(cropped, session)
+            container.clear_output()
+            with container:
+                HeaderTemplate._show_annotation_ui(cropped, session)
 
         done_button.on_click(on_done)
         undo_button.on_click(on_undo)
 
         cid = fig.canvas.mpl_connect("button_press_event", on_click)
 
-        # Display figure first, then buttons below
-        plt.tight_layout(pad=0)
-        plt.show()
-        display(widgets.HBox([done_button, undo_button, status_label]))
+        # Anchor an Output widget to the cell, then render inside it so that
+        # on_done can clear and re-populate it without leaving the cell context.
+        container = widgets.Output()
+        display(container)
+        with container:
+            plt.tight_layout(pad=0)
+            plt.show()
+            display(widgets.HBox([done_button, undo_button, status_label]))
 
     @staticmethod
     def _show_annotation_ui(template: MatLike, session: "AnnotationSession"):
@@ -480,7 +468,7 @@ class HeaderTemplate(TableIndexer):
         from IPython.display import display
 
         print(
-            "\x1b[32m[Taulu]: Don't forget to save annotations with annotation.save()!"
+            "\x1b[32m[Taulu]: Don't forget to save annotations with annotation.save()!\x1b[0m"
         )
 
         display_img = cv.cvtColor(template, cv.COLOR_BGR2RGB)
@@ -488,6 +476,7 @@ class HeaderTemplate(TableIndexer):
         lines: list[list[int]] = []
         start_point: list[tuple[int, int] | None] = [None]
         drawn_lines: list = []
+        start_markers: list = []
 
         fig, ax = plt.subplots(figsize=(15, 12))
         fig.canvas.toolbar_visible = False  # ty:ignore[unresolved-attribute]
@@ -533,6 +522,9 @@ class HeaderTemplate(TableIndexer):
                     lines.append([x0, y0, x, y])
                     (ln,) = ax.plot([x0, x], [y0, y], color="lime", linewidth=2)
                     drawn_lines.append(ln)
+                    # Remove the start-point marker now that the line is complete
+                    if start_markers:
+                        start_markers.pop().remove()
                     ax.set_title(
                         f"Click pairs of points to draw lines. Lines: {len(lines)}"
                     )
@@ -546,11 +538,15 @@ class HeaderTemplate(TableIndexer):
                     status_label.value = (
                         f"Start point set at ({x}, {y}). Click end point."
                     )
-                    # Draw a temporary marker
-                    ax.plot(x, y, "ro", markersize=5)
+                    # Draw a temporary marker (tracked so undo can remove it)
+                    (marker,) = ax.plot(x, y, "ro", markersize=5)
+                    start_markers.append(marker)
                     fig.canvas.draw_idle()
 
         def on_undo(_):
+            # Clear any pending start-point marker
+            if start_markers:
+                start_markers.pop().remove()
             start_point[0] = None
             if lines:
                 lines.pop()
