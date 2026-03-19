@@ -376,7 +376,7 @@ class HeaderTemplate(TableIndexer):
         fig.canvas.header_visible = False  # ty:ignore[unresolved-attribute]
         fig.subplots_adjust(left=0.1, right=0.95, top=0.95, bottom=0.1)
 
-        ax.imshow(display_img)
+        ax.imshow(display_img, origin="upper")
         ax.set_title(
             "Annotate the header: \nClick 4 corners of the header region such that the entire header is contained within the rectangle."
         )
@@ -404,10 +404,16 @@ class HeaderTemplate(TableIndexer):
         )
 
         def on_click(event):
-            if event.inaxes != ax or event.xdata is None:
+            if event.inaxes != ax or event.xdata is None or event.ydata is None:
                 return
 
-            x, y = int(event.xdata), int(event.ydata)
+            # Round coordinates to integers for pixel-perfect annotation
+            x, y = round(event.xdata), round(event.ydata)
+
+            # Validate coordinates are within image bounds
+            img_h, img_w = template.shape[:2]
+            x = max(0, min(x, img_w - 1))
+            y = max(0, min(y, img_h - 1))
 
             if event.button == 1:  # Left click - add point
                 points.append((x, y))
@@ -486,7 +492,7 @@ class HeaderTemplate(TableIndexer):
         fig, ax = plt.subplots(figsize=(15, 12))
         fig.canvas.toolbar_visible = False  # ty:ignore[unresolved-attribute]
         fig.canvas.header_visible = False  # ty:ignore[unresolved-attribute]
-        ax.imshow(display_img)
+        ax.imshow(display_img, origin="upper")
         ax.set_title("Click pairs of points to draw lines. Lines: 0")
         ax.set_axis_off()
 
@@ -510,10 +516,16 @@ class HeaderTemplate(TableIndexer):
         undo_button.style.font_size = "18px"
 
         def on_click(event):
-            if event.inaxes != ax or event.xdata is None:
+            if event.inaxes != ax or event.xdata is None or event.ydata is None:
                 return
 
-            x, y = int(event.xdata), int(event.ydata)
+            # Round coordinates to integers for pixel-perfect annotation
+            x, y = round(event.xdata), round(event.ydata)
+
+            # Validate coordinates are within image bounds
+            img_h, img_w = template.shape[:2]
+            x = max(0, min(x, img_w - 1))
+            y = max(0, min(y, img_h - 1))
 
             if event.button == 1:  # Left click
                 if start_point[0] is not None:

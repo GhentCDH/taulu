@@ -71,6 +71,34 @@ def show(
             break
 
 
+def show_notebook(image, title: str | None = None):
+    """
+    Display an image inline in a Jupyter notebook using matplotlib.
+
+    Args:
+        image: the image to display (grayscale or BGR)
+        title (str | None): optional title shown above the image
+    """
+    import matplotlib.figure
+    from IPython.display import display
+
+    # Convert BGR to RGB if color image
+    if len(image.shape) == 3 and image.shape[2] == 3:
+        display_img = image[:, :, ::-1]
+    else:
+        display_img = image
+
+    # Use Figure() directly to avoid pyplot's auto-display with %matplotlib widget
+    fig = matplotlib.figure.Figure()
+    ax = fig.add_subplot(111)
+    ax.imshow(display_img, cmap="gray" if len(image.shape) == 2 else None, origin="upper")
+    ax.set_axis_off()
+    if title:
+        ax.set_title(title)
+    fig.tight_layout()
+    display(fig)
+
+
 def push(img: MatLike):
     global stored
     stored.append(img)

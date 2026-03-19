@@ -128,6 +128,7 @@ class HeaderAligner:
         self._match_fraction = match_fraction
         self._max_dist = max_dist
         self._validate_method()
+        self._matches_notebook_img = None
 
     def _scale_img(self, img: MatLike) -> MatLike:
         if self._scale == 1.0:
@@ -247,7 +248,11 @@ class HeaderAligner:
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def _find_transform_of_template_on(
-        self, im: MatLike, visual: bool = False, window: str = WINDOW
+        self,
+        im: MatLike,
+        visual: bool = False,
+        visual_notebook: bool = False,
+        window: str = WINDOW,
     ):
         im = self._scale_img(im)
 
@@ -271,6 +276,21 @@ class HeaderAligner:
         # Remove not so good matches
         num_good_matches = int(len(matches) * self._match_fraction)
         matches = matches[:num_good_matches]
+
+        if visual or visual_notebook:
+            final_img_filtered = cv.drawMatches(
+                im,
+                keypoints_im,
+                self._template,
+                keypoints_tg,
+                matches[:10],
+                None,
+                cv.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS,
+            )
+            if visual:
+                imu.show(final_img_filtered, title="matches", window=window)
+            if visual_notebook:
+                self._matches_notebook_img = final_img_filtered
 
         # Extract location of good matches
         points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -316,6 +336,12 @@ class HeaderAligner:
 
         return self._unscale_homography(h)
 
+    def show_matches_notebook(self):
+        """Display the stored feature matches image in the notebook (call after grid detection)."""
+        if self._matches_notebook_img is not None:
+            imu.show_notebook(self._matches_notebook_img, title="matches")
+            self._matches_notebook_img = None
+
     def view_alignment(self, img: MatLike, h: NDArray):
         """
         Show the alignment of the template on the given image
@@ -342,7 +368,11 @@ class HeaderAligner:
 
     @log_calls(level=logging.DEBUG, include_return=True)
     def align(
-        self, img: MatLike | str, visual: bool = False, window: str = WINDOW
+        self,
+        img: MatLike | str,
+        visual: bool = False,
+        visual_notebook: bool = False,
+        window: str = WINDOW,
     ) -> NDArray:
         """
         Calculates a homogeneous transformation matrix that maps pixels of
@@ -359,7 +389,7 @@ class HeaderAligner:
 
         img = self._preprocess_image(img)
 
-        h = self._find_transform_of_template_on(img, visual, window)
+        h = self._find_transform_of_template_on(img, visual, visual_notebook, window)
 
         if visual:
             self.view_alignment(img, h)
