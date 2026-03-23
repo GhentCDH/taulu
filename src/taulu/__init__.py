@@ -9,7 +9,7 @@ used as a starting point for the search algorithm that finds the table grid.
 
 Here is an example python script of how to use Taulu:
 ```python
-from taulu import Taulu
+from taulu import Taulu, Split
 import os
 
 
@@ -25,8 +25,8 @@ def setup():
 
 
 def main():
-    taulu = Taulu(("table_00_header_left.png", "table_00_header_right.png"))
-    table = taulu.segment_table("../data/table_00.png",  cell_height_factor=0.8, debug_view=True)
+    taulu = Taulu(Split("table_00_header_left.png", "table_00_header_right.png"))
+    table = taulu.segment_table("../data/table_00.png", debug_view=True)
 
     table.show_cells("../data/table_00.png")
 

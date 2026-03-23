@@ -93,8 +93,11 @@ def _apply_margin(
 
 class TableIndexer(ABC):
     """
-    Subclasses implement methods for going from a pixel in the input image to a table cell index,
-    and cropping an image to the given table cell index.
+    Abstract base class for table cell indexing and cropping.
+
+    Subclasses (`TableGrid`, `HeaderTemplate`) implement the `cols`, `rows`,
+    and `cell_polygon` interface. This base provides shared methods for
+    mapping pixel coordinates to cell indices and cropping cells/regions.
     """
 
     def __init__(self):

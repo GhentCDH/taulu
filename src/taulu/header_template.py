@@ -185,11 +185,16 @@ class AnnotationSession:
 
 
 class HeaderTemplate(TableIndexer):
+    """
+    Defines the structure of a table header as a set of rules (lines).
+
+    Created via `HeaderTemplate.from_saved` (loading a JSON annotation) or
+    `AnnotationSession` (interactive annotation). Provides cell position
+    lookups and expected row heights for the grid-growing algorithm.
+    """
+
     def __init__(self, rules: Iterable[Iterable[int]]):
         """
-        A TableTemplate is a collection of rules of a table. This class implements methods
-        for finding cell positions in a table image, given the template the image adheres to.
-
         Args:
             rules: 2D array of lines, where each line is represented as [x0, y0, x1, y1]
         """

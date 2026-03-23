@@ -778,7 +778,11 @@ class GridDetector:
 
 class TableGrid(TableIndexer):
     """
-    A data class that allows segmenting the image into cells
+    Represents a detected table grid as a 2D array of intersection points.
+
+    Returned by `Taulu.segment_table`. Provides methods for querying cell
+    locations, cropping cells/regions from the source image, and interactive
+    visualization. Can be saved to and restored from JSON.
     """
 
     _right_offset: int | None = None

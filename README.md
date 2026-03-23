@@ -112,7 +112,7 @@ The following is a summary of the most important parameters and how you could tu
 
 ### `Taulu`
 
-- `header_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a tuple of the left and right header images.
+- `header_image_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a `Split` of the left and right header images.
 - `kernel_size`, `cross_width`: The GridDetector uses a kernel to detect intersections of rules in the image. The kernel looks like this:
 
   ![kernel diagram](./data/kernel.svg)
@@ -121,7 +121,7 @@ The following is a summary of the most important parameters and how you could tu
   Note that the optimal values will depend on the `morph_size` parameter too.
 
 - `morph_size`: The GridDetector uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `morph_size`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As a result, this parameter affects the optimal `cross_width` and `cross_height`.
-- `region`: This parameter influences the search algorithm. The algorithm has a rough idea of where the next corner point should be. At that location, the algorithm then finds the best match that is within a square of size `region` around that point, and selects that as the detected corner. Visualized:
+- `search_region`: This parameter influences the search algorithm. The algorithm has a rough idea of where the next corner point should be. At that location, the algorithm then finds the best match that is within a square of size `search_region` around that point, and selects that as the detected corner. Visualized:
 
   ![search algorithm region](./data/search.svg)
 

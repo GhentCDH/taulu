@@ -104,9 +104,9 @@ class Taulu:
             grow_threshold: Corner acceptance confidence [0, 1]. Default: 0.3
             smooth_grid: Apply grid smoothing after detection. Default: False
             smooth_strength: Blend factor per smoothing iteration (0.0-1.0). Default: 0.5
-            smooth_iterations: Number of smoothing passes. Default: 3
+            smooth_iterations: Number of smoothing passes. Default: 1
             smooth_degree: Polynomial degree for smoothing regression (1 or 2). Default: 1
-            cuts: Number of grid cuts during growing. Default: 3
+            cuts: Number of grid cuts during growing. Default: 0
             cut_fraction: Fraction of points to delete per cut. Default: 0.5
             match_method: Feature matching method for header alignment. One of "orb"
                 (fast, patent-free), "sift" (robust, uses FLANN), or "akaze" (robust,
