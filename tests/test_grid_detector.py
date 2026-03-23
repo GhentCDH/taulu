@@ -1,5 +1,3 @@
-from typing import cast
-
 import cv2
 import pytest
 from util import (
@@ -35,7 +33,7 @@ def test_thumb():
     template = HeaderTemplate.from_saved(header_left_anno_path(0))
 
     # known start point (should be retrieved from template alignment)
-    start = [(834, 1222)]
+    start: list[tuple[int, int] | None] = [(834, 1222)]
 
     points = filter.find_table_points(
         im, start, template.cell_widths(0), template.cell_height(), visual=True
@@ -62,12 +60,10 @@ def test_filter():
     im = cv2.imread(table_image_path(1))
     assert im is not None, f"Image {table_image_path(1)} couldn't be read"
 
-    template = cast(
-        HeaderTemplate, HeaderTemplate.from_saved(header_right_anno_path(1))
-    )
+    template = HeaderTemplate.from_saved(header_right_anno_path(1))
 
     # known start point (should be retrieved from template alignment)
-    start = [(3397, 779)]
+    start: list[tuple[int, int] | None] = [(3397, 779)]
     # start = [(37, 1585)]
 
     points = filter.find_table_points(
@@ -97,7 +93,7 @@ def test_text_regions():
     template = HeaderTemplate.from_saved(header_anno_path(0))
 
     # known start point (should be retrieved from template alignment)
-    start = [(242, 422)]
+    start: list[tuple[int, int] | None] = [(242, 422)]
 
     points = filter.find_table_points(
         im, start, template.cell_widths(0), template.cell_height(), visual=False

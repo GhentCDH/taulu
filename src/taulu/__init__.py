@@ -62,7 +62,6 @@ __pdoc__["types"] = False
 __pdoc__["img_util"] = False
 
 __all__ = [
-    "TauluConfig",
     "GridDetector",
     "HeaderAligner",
     "HeaderTemplate",
@@ -71,10 +70,11 @@ __all__ = [
     "TableGrid",
     "TableIndexer",
     "Taulu",
+    "TauluConfig",
 ]
 
 try:
-    from . import gpu
+    from . import gpu  # noqa: F401  # ty: ignore[unresolved-import]
 
     __all__.append("gpu")
 except ImportError:

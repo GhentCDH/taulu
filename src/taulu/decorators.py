@@ -2,7 +2,10 @@ import datetime
 import functools
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 def log_calls(
@@ -10,7 +13,7 @@ def log_calls(
     level: int = logging.INFO,
     include_return: bool = False,
     max_arg_length: int = 100,
-) -> Callable:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator to log function calls with their arguments and timestamp.
 
@@ -30,7 +33,7 @@ def log_calls(
             return processed_data
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         # Get logger for the function's module if none provided
         func_logger = logger or logging.getLogger(func.__module__)
 
@@ -52,9 +55,10 @@ def log_calls(
             args_str = ", ".join(arg_strs)
 
             # Log function call
+            func_name = func.__name__  # ty: ignore[unresolved-attribute]
             func_logger.log(
                 level,
-                f"CALL: {func.__name__}({args_str}) at {datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]}",
+                f"CALL: {func_name}({args_str}) at {datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]}",
             )
 
             try:
@@ -64,7 +68,7 @@ def log_calls(
                 # Log return value if requested
                 if include_return:
                     result_repr = _format_arg(result, max_arg_length)
-                    func_logger.log(level, f"RETURN: {func.__name__} -> {result_repr}")
+                    func_logger.log(level, f"RETURN: {func_name} -> {result_repr}")
 
                 return result
 
@@ -72,7 +76,7 @@ def log_calls(
                 # Log exceptions
                 func_logger.log(
                     logging.ERROR,
-                    f"EXCEPTION: {func.__name__} raised {type(e).__name__}: {e!s}",
+                    f"EXCEPTION: {func_name} raised {type(e).__name__}: {e!s}",
                 )
                 raise
 

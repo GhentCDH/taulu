@@ -6,10 +6,11 @@ import math
 
 TOLERANCE = math.pi / 6  # Same as in header_template.py
 
+
 def check_file(filename):
-    with open(filename, 'r') as f:
+    with open(filename) as f:
         data = json.load(f)
-        rules = data['rules']
+        rules = data["rules"]
 
     print(f"\n{filename}:")
     print(f"  Total rules: {len(rules)}")
@@ -18,7 +19,7 @@ def check_file(filename):
     v_count = 0
 
     for i, rule in enumerate(rules):
-        x0, y0, x1, y1 = rule['x0'], rule['y0'], rule['x1'], rule['y1']
+        x0, y0, x1, y1 = rule["x0"], rule["y0"], rule["x1"], rule["y1"]
 
         # Calculate angle
         y_diff = y1 - y0
@@ -33,8 +34,9 @@ def check_file(filename):
         is_horizontal = -TOLERANCE <= angle <= TOLERANCE
 
         # Check if vertical
-        is_vertical = (angle <= -math.pi / 2 + TOLERANCE or
-                      angle >= math.pi / 2 - TOLERANCE)
+        is_vertical = (
+            angle <= -math.pi / 2 + TOLERANCE or angle >= math.pi / 2 - TOLERANCE
+        )
 
         angle_deg = math.degrees(angle)
 
@@ -56,13 +58,14 @@ def check_file(filename):
 
     return h_count, v_count
 
+
 # Check all files
 files = [
     "header.json",
     "table_00_left.json",
     "table_00_right.json",
     "table_01_left.json",
-    "table_01_right.json"
+    "table_01_right.json",
 ]
 
 for f in files:

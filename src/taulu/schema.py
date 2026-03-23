@@ -102,7 +102,7 @@ def generate_schema() -> dict:
             },
             "sauvola_k": {
                 **_splittable(_FLOAT),
-                "description": "Binarization threshold (0.0–1.0). Higher = less noise. Default: 0.25",
+                "description": "Binarization threshold (0.0-1.0). Higher = less noise. Default: 0.25",
                 "default": 0.25,
             },
             "search_region": {
@@ -162,7 +162,7 @@ def generate_schema() -> dict:
             },
             "smooth_strength": {
                 **_FLOAT,
-                "description": "Blend factor per smoothing iteration (0.0–1.0). Default: 0.5",
+                "description": "Blend factor per smoothing iteration (0.0-1.0). Default: 0.5",
                 "default": 0.5,
             },
             "smooth_iterations": {

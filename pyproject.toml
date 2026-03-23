@@ -53,6 +53,7 @@ select = [
 ]
 ignore = [
   "E501", # line too long (ruff format handles this)
+  "N818", # exception name should end with Error
 ]
 
 [tool.ruff.format]
@@ -69,6 +70,12 @@ known-first-party = [
   "qwenvlm",
 ]
 
+[tool.ty.src]
+exclude = [
+  "src/taulu/torch/",
+  "examples/demo.ipynb",
+]
+
 [tool.ty.rules]
 no-matching-overload = "ignore"
 
@@ -80,4 +87,11 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [dependency-groups]
-dev = ["py-spy>=0.4.0", "pytest>=8.3.5", "pdoc>=15.0.4", "maturin>=1.0,<2.0"]
+dev = [
+  "py-spy>=0.4.0",
+  "pytest>=8.3.5",
+  "pdoc>=15.0.4",
+  "maturin>=1.0,<2.0",
+  "ruff>=0.15.7",
+  "ty>=0.0.24",
+]

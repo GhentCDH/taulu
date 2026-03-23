@@ -161,9 +161,9 @@ class AnnotationSession:
         template = session.result  # Access the HeaderTemplate after clicking Done
     """
 
-    def __init__(self, crop_path: None | PathLike[str] = None):
+    def __init__(self, crop_path: None | PathLike[str] | str = None):
         self._result: HeaderTemplate | None = None
-        self._crop_path: PathLike[str] | None = crop_path
+        self._crop_path: PathLike[str] | str | None = crop_path
 
     @property
     def result(self) -> Optional["HeaderTemplate"]:
@@ -216,7 +216,7 @@ class HeaderTemplate(TableIndexer):
 
     @staticmethod
     @log_calls(level=logging.DEBUG)
-    def from_saved(path: PathLike[str]) -> "HeaderTemplate":
+    def from_saved(path: PathLike[str] | str) -> "HeaderTemplate":
         with open(path) as f:
             data = json.load(f)
             rules = data["rules"]
@@ -235,7 +235,9 @@ class HeaderTemplate(TableIndexer):
     @staticmethod
     @log_calls(level=logging.DEBUG)
     def annotate_image(
-        template: MatLike | str, crop: PathLike[str] | None = None, margin: int = 10
+        template: MatLike | str,
+        crop: PathLike[str] | str | None = None,
+        margin: int = 10,
     ) -> "HeaderTemplate":
         """
         Utility method that allows users to create a template form a template image.
@@ -316,7 +318,9 @@ class HeaderTemplate(TableIndexer):
     @staticmethod
     @log_calls(level=logging.DEBUG)
     def annotate_image_notebook(
-        template: MatLike | str, crop: PathLike[str] | None = None, margin: int = 10
+        template: MatLike | str,
+        crop: PathLike[str] | str | None = None,
+        margin: int = 10,
     ) -> "AnnotationSession":
         """
         Notebook-compatible version of annotate_image. Returns an AnnotationSession immediately.

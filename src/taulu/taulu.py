@@ -126,7 +126,7 @@ class Taulu:
         self._cell_height_factor = cell_height_factor
 
         if isinstance(header_image_path, Split) or isinstance(header_anno_path, Split):
-            header = Split(Path(header_image_path.left), Path(header_image_path.right))  # ty:ignore[possibly-missing-attribute]
+            header = Split(Path(header_image_path.left), Path(header_image_path.right))
 
             if not exists(header.left.with_suffix(".png")) or not exists(
                 header.right.with_suffix(".png")
@@ -151,15 +151,15 @@ class Taulu:
                 )
 
             else:
-                if not exists(header_anno_path.left) or not exists(  # ty:ignore[possibly-missing-attribute]
-                    header_anno_path.right  # ty:ignore[possibly-missing-attribute]
+                if not exists(header_anno_path.left) or not exists(  # ty: ignore[unresolved-attribute]
+                    header_anno_path.right  # ty: ignore[unresolved-attribute]
                 ):
                     raise TauluException(
                         "The header annotation files you provided do not exist (or they aren't .json files)"
                     )
 
-                template_left = HeaderTemplate.from_saved(header_anno_path.left)  # ty:ignore[possibly-missing-attribute]
-                template_right = HeaderTemplate.from_saved(header_anno_path.right)  # ty:ignore[possibly-missing-attribute]
+                template_left = HeaderTemplate.from_saved(header_anno_path.left)  # ty: ignore[unresolved-attribute]
+                template_right = HeaderTemplate.from_saved(header_anno_path.right)  # ty: ignore[unresolved-attribute]
 
             self._header = Split(
                 cv2.imread(os.fspath(header.left)), cv2.imread(os.fspath(header.right))
@@ -224,7 +224,11 @@ class Taulu:
         else:
             header_image_path = Path(header_image_path)
             self._header = cv2.imread(os.fspath(header_image_path))
-            self._aligner = HeaderAligner(self._header, method=match_method, scale=alignment_scale)  # type: ignore[arg-type]
+            self._aligner = HeaderAligner(
+                self._header,
+                method=cast(MatchMethod, match_method),
+                scale=alignment_scale,
+            )
             self._template = HeaderTemplate.from_saved(
                 header_image_path.with_suffix(".json")
             )
@@ -253,7 +257,9 @@ class Taulu:
                     "Split parameters can only be used with split headers (tuple header_path)"
                 )
 
-            self._cell_heights = self._template.cell_heights(self._cell_height_factor)
+            self._cell_heights = self._template.cell_heights(
+                cast(list[float] | float, self._cell_height_factor)
+            )
 
             self._grid_detector = GridDetector(
                 kernel_size=kernel_size,  # ty: ignore
@@ -292,7 +298,9 @@ class Taulu:
         """
         import dataclasses
 
-        return cls(**{f.name: getattr(config, f.name) for f in dataclasses.fields(config)})
+        return cls(
+            **{f.name: getattr(config, f.name) for f in dataclasses.fields(config)}
+        )
 
     @staticmethod
     def annotate(
@@ -400,7 +408,7 @@ class Taulu:
             session = HeaderTemplate.annotate_image_notebook(
                 os.fspath(image_path), crop=output_path.with_suffix(".png")
             )
-            session._save_path = output_path.with_suffix(".json")
+            session._save_path = output_path.with_suffix(".json")  # ty: ignore[unresolved-attribute]
             return session
 
         else:
@@ -448,7 +456,11 @@ class Taulu:
             image = tmp_image
 
         now = perf_counter()
-        h = self._aligner.align(image, visual=debug_view, visual_notebook=debug_view_notebook)
+        h = self._aligner.align(
+            image,  # ty: ignore[invalid-argument-type]
+            visual=debug_view,
+            visual_notebook=debug_view_notebook,
+        )
         align_time = perf_counter() - now
         logger.info(f"Header alignment took {align_time:.2f} seconds")
 

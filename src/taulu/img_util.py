@@ -91,7 +91,9 @@ def show_notebook(image, title: str | None = None):
     # Use Figure() directly to avoid pyplot's auto-display with %matplotlib widget
     fig = matplotlib.figure.Figure()
     ax = fig.add_subplot(111)
-    ax.imshow(display_img, cmap="gray" if len(image.shape) == 2 else None, origin="upper")
+    ax.imshow(
+        display_img, cmap="gray" if len(image.shape) == 2 else None, origin="upper"
+    )
     ax.set_axis_off()
     if title:
         ax.set_title(title)

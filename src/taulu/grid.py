@@ -327,7 +327,9 @@ class GridDetector:
         filtered = cv.normalize(1.0 - filtered, None, 0, 255, cv.NORM_MINMAX)
         return filtered.astype(np.uint8)
 
-    def apply(self, img: MatLike, visual: bool = False, visual_notebook: bool = False) -> MatLike:
+    def apply(
+        self, img: MatLike, visual: bool = False, visual_notebook: bool = False
+    ) -> MatLike:
         """
         Apply the grid detection filter to the input image.
 
@@ -511,8 +513,10 @@ class GridDetector:
             if top_row[i] is None:
                 continue
 
+            point = top_row[i]
+            assert point is not None
             adjusted, confidence = self.find_nearest(
-                filtered, top_row[i], int(self._search_region * 2)
+                filtered, point, int(self._search_region * 2)
             )
 
             if confidence < 0.15:

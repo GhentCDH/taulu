@@ -105,5 +105,9 @@ class TauluConfig:
                 data = tomllib.load(f)
             merged.update(data)
 
-        parsed = {key: _parse_value(value) for key, value in merged.items() if not key.startswith("$")}
+        parsed = {
+            key: _parse_value(value)
+            for key, value in merged.items()
+            if not key.startswith("$")
+        }
         return cls(**parsed)
