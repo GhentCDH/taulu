@@ -1,3 +1,29 @@
+## [2.5.0] - 2026-03-23
+
+### 🚀 Features
+
+- WIP notebook compatible debug viewer
+- Demo notebook
+
+### 🐛 Bug Fixes
+
+- Remove absolute machine-specific paths
+- Show annotation widget after cropping in notebooks
+- Notebook Google Colab
+- Type hinting issues
+
+### 🔨 Build
+
+- Pillow >=12.1.1 to fix security issue (CVE-2026-25990)
+- Tornado transient dep >=6.5.5 for security (CVE-2026-31958)
+- Update rerun version for lz4_flex security issue
+- Fonttools>=4.60.2 for CVE-2026-31958
+- Add CI for ruff and ty checking
+
+### ⚙️ Miscellaneous Tasks
+
+- Add CODEOWNERS
+- Add prek.toml for pre-commit checks
 ## [2.4.0] - 2026-03-12
 
 ### 🚀 Features
