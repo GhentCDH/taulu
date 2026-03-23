@@ -1,0 +1,44 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v5.0.0"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-yaml" },
+  { id = "check-toml" },
+  { id = "check-json" },
+  { id = "check-added-large-files" },
+  { id = "check-merge-conflict" },
+  { id = "debug-statements" }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "ruff-format",
+    name = "ruff format",
+    entry = "uv run ruff format",
+    language = "system",
+    types = ["python"]
+  },
+  {
+    id = "ruff-check",
+    name = "ruff check",
+    entry = "uv run ruff check --fix",
+    language = "system",
+    types = ["python"]
+  },
+  {
+    id = "ty-check",
+    name = "ty type check",
+    entry = "uv run ty check",
+    language = "system",
+    types = ["python"],
+    pass_filenames = false
+  }
+]
