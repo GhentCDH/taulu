@@ -9,7 +9,7 @@ from util import (
     table_left_image_path,
 )
 
-from taulu import GridDetector, HeaderTemplate
+from taulu import TableDetector, TableTemplate
 from taulu.img_util import show
 
 
@@ -19,18 +19,18 @@ from taulu.img_util import show
     reason="Files needed for test are missing",
 )
 def test_thumb():
-    filter = GridDetector(
-        kernel_size=41,
-        cross_width=10,
-        morph_size=7,
-        search_region=30,
-        sauvola_k=0.05,
-        distance_penalty=0.5,
+    filter = TableDetector(
+        intersection_kernel_size=41,
+        line_thickness=10,
+        line_gap_fill=7,
+        search_radius=30,
+        binarization_sensitivity=0.05,
+        position_weight=0.5,
     )
     im = cv2.imread(table_image_path(3))
     assert im is not None, f"Image {table_image_path(3)} couldn't be read"
 
-    template = HeaderTemplate.from_saved(header_left_anno_path(0))
+    template = TableTemplate.from_saved(header_left_anno_path(0))
 
     # known start point (should be retrieved from template alignment)
     start: list[tuple[int, int] | None] = [(834, 1222)]
@@ -49,18 +49,18 @@ def test_thumb():
     reason="Files needed for test are missing",
 )
 def test_filter():
-    filter = GridDetector(
-        kernel_size=41,
-        cross_width=10,
-        morph_size=7,
-        search_region=40,
-        sauvola_k=0.05,
-        distance_penalty=0.8,
+    filter = TableDetector(
+        intersection_kernel_size=41,
+        line_thickness=10,
+        line_gap_fill=7,
+        search_radius=40,
+        binarization_sensitivity=0.05,
+        position_weight=0.8,
     )
     im = cv2.imread(table_image_path(1))
     assert im is not None, f"Image {table_image_path(1)} couldn't be read"
 
-    template = HeaderTemplate.from_saved(header_right_anno_path(1))
+    template = TableTemplate.from_saved(header_right_anno_path(1))
 
     # known start point (should be retrieved from template alignment)
     start: list[tuple[int, int] | None] = [(3397, 779)]
@@ -84,13 +84,17 @@ def test_filter():
     reason="Files needed for test are missing",
 )
 def test_text_regions():
-    filter = GridDetector(
-        kernel_size=41, cross_width=6, morph_size=4, search_region=50, sauvola_k=0.05
+    filter = TableDetector(
+        intersection_kernel_size=41,
+        line_thickness=6,
+        line_gap_fill=4,
+        search_radius=50,
+        binarization_sensitivity=0.05,
     )
     im = cv2.imread(table_left_image_path(0))
     assert im is not None, f"Image {table_left_image_path(0)} couldn't be read"
 
-    template = HeaderTemplate.from_saved(header_anno_path(0))
+    template = TableTemplate.from_saved(header_anno_path(0))
 
     # known start point (should be retrieved from template alignment)
     start: list[tuple[int, int] | None] = [(242, 422)]

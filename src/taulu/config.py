@@ -7,22 +7,22 @@ TOML format
 -----------
 Scalar values map directly to parameters::
 
-    header_image_path = "header.png"
-    sauvola_k = 0.25
-    kernel_size = 41
+    template_path = "header.png"
+    binarization_sensitivity = 0.25
+    intersection_kernel_size = 41
 
 For split (two-page) tables, use a table with ``left`` and ``right`` keys for
 any parameter that differs between sides::
 
-    [header_image_path]
+    [template_path]
     left = "header_left.png"
     right = "header_right.png"
 
-    [kernel_size]
+    [intersection_kernel_size]
     left = 41
     right = 35
 
-    sauvola_k = 0.25  # same for both sides — scalar is fine
+    binarization_sensitivity = 0.25  # same for both sides — scalar is fine
 """
 
 import tomllib
@@ -55,28 +55,28 @@ class TauluConfig:
     :meth:`Taulu.from_config <taulu.Taulu.from_config>`.
     """
 
-    header_image_path: Splittable[str]
-    cell_height_factor: Splittable[float] | Splittable[list[float]] | None = None
-    header_anno_path: Splittable[str] | None = None
-    sauvola_k: Splittable[float] = 0.25
-    search_region: Splittable[int] = 60
-    distance_penalty: Splittable[float] = 0.4
-    cross_width: Splittable[int] = 10
-    morph_size: Splittable[int] = 4
-    kernel_size: Splittable[int] = 41
-    processing_scale: Splittable[float] = 1.0
-    skip_astar_threshold: Splittable[float] = 0.2
+    template_path: Splittable[str]
+    row_height_factor: Splittable[float] | Splittable[list[float]] | None = None
+    annotation_path: Splittable[str] | None = None
+    binarization_sensitivity: Splittable[float] = 0.25
+    search_radius: Splittable[int] = 60
+    position_weight: Splittable[float] = 0.4
+    line_thickness: Splittable[int] = 10
+    line_gap_fill: Splittable[int] = 4
+    intersection_kernel_size: Splittable[int] = 41
+    detection_scale: Splittable[float] = 1.0
+    pathfinding_threshold: Splittable[float] = 0.2
     min_rows: Splittable[int] = 5
-    look_distance: Splittable[int] = 3
-    grow_threshold: Splittable[float] = 0.3
-    smooth_grid: bool = False
+    extrapolation_distance: Splittable[int] = 3
+    detection_threshold: Splittable[float] = 0.3
+    smooth: bool = False
     smooth_strength: float = 0.5
     smooth_iterations: int = 1
     smooth_degree: int = 1
-    cuts: Splittable[int] = 0
-    cut_fraction: Splittable[float] = 0.5
-    match_method: Splittable[str] = "akaze"
-    alignment_scale: float = 1.0
+    growing_resets: Splittable[int] = 0
+    reset_fraction: Splittable[float] = 0.5
+    feature_detector: Splittable[str] = "akaze"
+    matching_scale: float = 1.0
 
     @classmethod
     def from_toml(cls, *paths: PathLike[str] | str) -> "TauluConfig":
@@ -96,7 +96,7 @@ class TauluConfig:
             A fully populated :class:`TauluConfig` instance.
 
         Raises:
-            KeyError: If a required field (``header_image_path``) is missing.
+            KeyError: If a required field (``template_path``) is missing.
             TypeError: If a field value has an unexpected type.
         """
         merged: dict = {}

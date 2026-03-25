@@ -132,7 +132,7 @@ def train_model(
         >>> from pathlib import Path
         >>> import json
         >>>
-        >>> # Load annotations from saved TableGrids
+        >>> # Load annotations from saved SegmentedTables
         >>> images = [Path("table_01.png"), Path("table_02.png")]
         >>> coords = []
         >>> for img in images:

@@ -97,13 +97,13 @@ The Taulu class combines the components into one simple API, as seen in [Usage](
 
 The algorithm identifies the header's location in the input image, which provides a starting point. From there, it scans the image to find intersections of the rules (borders) and segments the image into cells accordingly.
 
-The output is a `TableGrid` object that contains the detected intersections and which defines some useful methods, enabling you to segment the image into rows, columns, and cells.
+The output is a `SegmentedTable` object that contains the detected intersections and which defines some useful methods, enabling you to segment the image into rows, columns, and cells.
 
 The main classes are:
 
-- `HeaderAligner`: Uses template matching to identify the header's location in the input images.
-- `HeaderTemplate`: Stores header template information by reading an annotation JSON file. You can create this file by running `HeaderTemplate.annotate_image`.
-- `GridDetector`: Processes the image to identify intersections of horizontal and vertical lines (borders). To see its progress, you can run it with `debug_view=True`. This should allow you to tune the parameters to your data.
+- `TemplateMatcher`: Uses template matching to identify the header's location in the input images.
+- `TableTemplate`: Stores header template information by reading an annotation JSON file. You can create this file by running `TableTemplate.annotate_image`.
+- `TableDetector`: Processes the image to identify intersections of horizontal and vertical lines (borders). To see its progress, you can run it with `debug_view=True`. This should allow you to tune the parameters to your data.
 
 ## Parameters and Methods
 
@@ -112,40 +112,40 @@ The following is a summary of the most important parameters and how you could tu
 
 ### `Taulu`
 
-- `header_image_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a `Split` of the left and right header images.
-- `kernel_size`, `cross_width`: The GridDetector uses a kernel to detect intersections of rules in the image. The kernel looks like this:
+- `template_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a `Split` of the left and right header images.
+- `intersection_kernel_size`, `line_thickness`: The `TableDetector` uses a kernel to detect intersections of rules in the image. The kernel looks like this:
 
   ![kernel diagram](./data/kernel.svg)
 
-  The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result (because `debug_view=True`), which you can use to estimate the `cross_width` and `kernel_size` values that fit your image.
-  Note that the optimal values will depend on the `morph_size` parameter too.
+  The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result (because `debug_view=True`), which you can use to estimate the `line_thickness` and `intersection_kernel_size` values that fit your image.
+  Note that the optimal values will depend on the `line_gap_fill` parameter too.
 
-- `morph_size`: The GridDetector uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `morph_size`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As a result, this parameter affects the optimal `cross_width` and `cross_height`.
-- `search_region`: This parameter influences the search algorithm. The algorithm has a rough idea of where the next corner point should be. At that location, the algorithm then finds the best match that is within a square of size `search_region` around that point, and selects that as the detected corner. Visualized:
+- `line_gap_fill`: The `TableDetector` uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `line_gap_fill`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As a result, this parameter affects the optimal `line_thickness` and `line_thickness_horizontal`.
+- `search_radius`: This parameter influences the search algorithm. The algorithm has a rough idea of where the next corner point should be. At that location, the algorithm then finds the best match that is within a square of size `search_radius` around that point, and selects that as the detected corner. Visualized:
 
   ![search algorithm region](./data/search.svg)
 
   A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too. You can see this region as blue squares when running the segmentation with `debug_view=True`
 
-- `sauvola_k`: This parameter adjusts the threshold that is used when binarizing the image. The larger `sauvola_k` more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table.
+- `binarization_sensitivity`: This parameter adjusts the threshold that is used when binarizing the image. The larger `binarization_sensitivity` more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table.
 
 **These methods are the most useful**:
 
 - `Taulu.annotate`: create an annotation file for a header image. This requires an image of a table with a clear header. Taulu will first ask you to crop the header in the image (by clicking four points, one for each corner). Then, it will ask you to annotate the lines in the header (by clicking two points per line, one for each endpoint). The annotation file will be saved as a `json` file and a `png` with the same name.
 - `Taulu.__init__`: initialize a Taulu instance with a header image and parameters.
-  - `cell_height_factor`: a float or a list of floats that determine the expected height of each row in the table, relative to the height of the header. If the list is shorter than the number of rows, the last value will be repeated for the remaining rows. If a single float is given, it will be used for all rows.
-- `Taulu.segment_table`: given an input image, segment into a `TableGrid` object.
+  - `row_height_factor`: a float or a list of floats that determine the expected height of each row in the table, relative to the height of the header. If the list is shorter than the number of rows, the last value will be repeated for the remaining rows. If a single float is given, it will be used for all rows.
+- `Taulu.segment_table`: given an input image, segment into a `SegmentedTable` object.
   - `filtered`: optional pre-filtered binary image for corner detection. If provided, binarization parameters are ignored.
   - `debug_view`: show intermediate processing steps (note: crashes in Jupyter notebooks due to OpenCV window handling).
 
-### `TableGrid`
+### `SegmentedTable`
 
-`Taulu.segment_table` returns a `TableGrid` instance, which you can use to get information about the location and bounding box of cells in your image.
+`Taulu.segment_table` returns a `SegmentedTable` instance, which you can use to get information about the location and bounding box of cells in your image.
 
 These methods are the most useful:
 
-- `save`: save the `TableGrid` object as a `json` file
-- `from_saved`: restore a `TableGrid` object from a `json` file
+- `save`: save the `SegmentedTable` object as a `json` file
+- `from_saved`: restore a `SegmentedTable` object from a `json` file
 - `cell`: given a location in the image (`(tuple[float, float]`), return the cell index `(row, column)`
 - `cell_polygon`: get the polygon (left top, right top, right bottom, left bottom) of the cell in the image
 - `region`: given a start and end cell, get the polygon that surrounds all cells in between (inclusive range)

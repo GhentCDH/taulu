@@ -13,11 +13,11 @@ Multiple TOML files can be merged, with later files overriding earlier ones::
 
     "$schema" = "./taulu-config.schema.json"
     # common.toml — shared parameters
-    sauvola_k = 0.05
+    binarization_sensitivity = 0.05
 
     # left.toml — overrides only what differs
     "$schema" = "./taulu-config.schema.json"
-    header_image_path = "header_left.png"
+    template_path = "header_left.png"
 """
 
 import json
@@ -43,7 +43,7 @@ _INT = {"type": "integer"}
 _FLOAT = {"type": "number"}
 _STR = {"type": "string"}
 _BOOL = {"type": "boolean"}
-_MATCH_METHOD = {"type": "string", "enum": ["orb", "sift", "akaze"]}
+_FEATURE_DETECTOR = {"type": "string", "enum": ["orb", "sift", "akaze"]}
 _CELL_HEIGHT_FACTOR = {
     "oneOf": [
         {"type": "number"},
@@ -59,7 +59,7 @@ def generate_schema() -> dict:
         "description": (
             "Configuration file for the Taulu table segmentation library. "
             "Multiple files can be merged via TauluConfig.from_toml('common.toml', 'left.toml'), "
-            "with later files overriding earlier ones. header_image_path is required across "
+            "with later files overriding earlier ones. template_path is required across "
             "the merged set but may live in any of the files."
         ),
         "type": "object",
@@ -69,11 +69,11 @@ def generate_schema() -> dict:
                 "type": "string",
                 "description": "Path or URL to this JSON Schema file.",
             },
-            "header_image_path": {
+            "template_path": {
                 **_splittable(_STR),
                 "description": "Path to header template image(s). Use left/right split for two-page tables.",
             },
-            "header_anno_path": {
+            "annotation_path": {
                 "oneOf": [
                     _STR,
                     {
@@ -83,9 +83,9 @@ def generate_schema() -> dict:
                         "additionalProperties": False,
                     },
                 ],
-                "description": "Explicit annotation JSON path. Default: inferred from header_image_path.",
+                "description": "Explicit annotation JSON path. Default: inferred from template_path.",
             },
-            "cell_height_factor": {
+            "row_height_factor": {
                 "oneOf": [
                     _CELL_HEIGHT_FACTOR,
                     {
@@ -100,42 +100,42 @@ def generate_schema() -> dict:
                 ],
                 "description": "Row height relative to header (e.g. 0.8 for 80%). Default: [1.0]",
             },
-            "sauvola_k": {
+            "binarization_sensitivity": {
                 **_splittable(_FLOAT),
                 "description": "Binarization threshold (0.0-1.0). Higher = less noise. Default: 0.25",
                 "default": 0.25,
             },
-            "search_region": {
+            "search_radius": {
                 **_splittable(_INT),
                 "description": "Corner search area in pixels. Default: 60",
                 "default": 60,
             },
-            "distance_penalty": {
+            "position_weight": {
                 **_splittable(_FLOAT),
                 "description": "Position penalty weight [0, 1]. Default: 0.4",
                 "default": 0.4,
             },
-            "cross_width": {
+            "line_thickness": {
                 **_splittable(_INT),
                 "description": "Cross-kernel width matching line thickness. Default: 10",
                 "default": 10,
             },
-            "morph_size": {
+            "line_gap_fill": {
                 **_splittable(_INT),
                 "description": "Morphological dilation size for gap filling. Default: 4",
                 "default": 4,
             },
-            "kernel_size": {
+            "intersection_kernel_size": {
                 **_splittable(_INT),
                 "description": "Cross-kernel size (must be odd). Default: 41",
                 "default": 41,
             },
-            "processing_scale": {
+            "detection_scale": {
                 **_splittable(_FLOAT),
                 "description": "Image downscale factor (0, 1]. Default: 1.0",
                 "default": 1.0,
             },
-            "skip_astar_threshold": {
+            "pathfinding_threshold": {
                 **_splittable(_FLOAT),
                 "description": "Confidence threshold to skip A* pathfinding. Default: 0.2",
                 "default": 0.2,
@@ -145,17 +145,17 @@ def generate_schema() -> dict:
                 "description": "Minimum rows before completion. Default: 5",
                 "default": 5,
             },
-            "look_distance": {
+            "extrapolation_distance": {
                 **_splittable(_INT),
                 "description": "Rows to examine for extrapolation. Default: 3",
                 "default": 3,
             },
-            "grow_threshold": {
+            "detection_threshold": {
                 **_splittable(_FLOAT),
                 "description": "Corner acceptance confidence [0, 1]. Default: 0.3",
                 "default": 0.3,
             },
-            "smooth_grid": {
+            "smooth": {
                 **_BOOL,
                 "description": "Apply grid smoothing after detection. Default: false",
                 "default": False,
@@ -176,22 +176,22 @@ def generate_schema() -> dict:
                 "default": 1,
                 "enum": [1, 2],
             },
-            "cuts": {
+            "growing_resets": {
                 **_splittable(_INT),
-                "description": "Number of grid cuts during growing. Default: 0",
+                "description": "Number of grid resets during growing. Default: 0",
                 "default": 0,
             },
-            "cut_fraction": {
+            "reset_fraction": {
                 **_splittable(_FLOAT),
-                "description": "Fraction of points to delete per cut. Default: 0.5",
+                "description": "Fraction of points to delete per reset. Default: 0.5",
                 "default": 0.5,
             },
-            "match_method": {
-                **_splittable(_MATCH_METHOD),
+            "feature_detector": {
+                **_splittable(_FEATURE_DETECTOR),
                 "description": "Feature matching method: 'orb' (fast), 'sift' (robust), 'akaze'. Default: 'akaze'",
                 "default": "akaze",
             },
-            "alignment_scale": {
+            "matching_scale": {
                 **_FLOAT,
                 "description": "Downscale factor (0, 1] for header alignment only. Default: 1.0",
                 "default": 1.0,

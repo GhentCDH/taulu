@@ -1,5 +1,5 @@
 """
-A HeaderTemplate defines the structure of a table header.
+A TableTemplate defines the structure of a table header.
 """
 
 import csv
@@ -156,18 +156,18 @@ class AnnotationSession:
     This session object holds the result once the user clicks "Done".
 
     Usage:
-        session = HeaderTemplate.annotate_image_notebook("image.png")
+        session = TableTemplate.annotate_image_notebook("image.png")
         # ... interact with the plot, click Done ...
-        template = session.result  # Access the HeaderTemplate after clicking Done
+        template = session.result  # Access the TableTemplate after clicking Done
     """
 
     def __init__(self, crop_path: None | PathLike[str] | str = None):
-        self._result: HeaderTemplate | None = None
+        self._result: TableTemplate | None = None
         self._crop_path: PathLike[str] | str | None = crop_path
 
     @property
-    def result(self) -> Optional["HeaderTemplate"]:
-        """Returns the HeaderTemplate once Done is clicked, or None if not yet done."""
+    def result(self) -> Optional["TableTemplate"]:
+        """Returns the TableTemplate once Done is clicked, or None if not yet done."""
         return self._result
 
     @property
@@ -184,11 +184,11 @@ class AnnotationSession:
         self._result.save(path)
 
 
-class HeaderTemplate(TableIndexer):
+class TableTemplate(TableIndexer):
     """
     Defines the structure of a table header as a set of rules (lines).
 
-    Created via `HeaderTemplate.from_saved` (loading a JSON annotation) or
+    Created via `TableTemplate.from_saved` (loading a JSON annotation) or
     `AnnotationSession` (interactive annotation). Provides cell position
     lookups and expected row heights for the grid-growing algorithm.
     """
@@ -211,7 +211,7 @@ class HeaderTemplate(TableIndexer):
     @log_calls(level=logging.DEBUG)
     def save(self, path: PathLike[str]):
         """
-        Save the HeaderTemplate to the given path, as a json
+        Save the TableTemplate to the given path, as a json
         """
 
         data = {"rules": [r.to_dict() for r in self._rules]}
@@ -221,13 +221,13 @@ class HeaderTemplate(TableIndexer):
 
     @staticmethod
     @log_calls(level=logging.DEBUG)
-    def from_saved(path: PathLike[str] | str) -> "HeaderTemplate":
+    def from_saved(path: PathLike[str] | str) -> "TableTemplate":
         with open(path) as f:
             data = json.load(f)
             rules = data["rules"]
             rules = [[r["x0"], r["y0"], r["x1"], r["y1"]] for r in rules]
 
-            return HeaderTemplate(rules)
+            return TableTemplate(rules)
 
     @property
     def cols(self) -> int:
@@ -243,7 +243,7 @@ class HeaderTemplate(TableIndexer):
         template: MatLike | str,
         crop: PathLike[str] | str | None = None,
         margin: int = 10,
-    ) -> "HeaderTemplate":
+    ) -> "TableTemplate":
         """
         Utility method that allows users to create a template form a template image.
 
@@ -263,7 +263,7 @@ class HeaderTemplate(TableIndexer):
         template = cast(MatLike, template)
 
         if crop is not None:
-            cropped = HeaderTemplate._crop(template, margin)
+            cropped = TableTemplate._crop(template, margin)
             cv.imwrite(os.fspath(crop), cropped)
             template = cropped
 
@@ -318,7 +318,7 @@ class HeaderTemplate(TableIndexer):
 
         imu.show(anno_template, get_point, title="annotate the header")
 
-        return HeaderTemplate(lines)
+        return TableTemplate(lines)
 
     @staticmethod
     @log_calls(level=logging.DEBUG)
@@ -339,7 +339,7 @@ class HeaderTemplate(TableIndexer):
             margin (int): margin to add around the cropping of the header
 
         Returns:
-            AnnotationSession: access .result after clicking Done to get the HeaderTemplate.
+            AnnotationSession: access .result after clicking Done to get the TableTemplate.
         """
         if isinstance(template, str):
             tmp = cv.imread(template)
@@ -350,10 +350,10 @@ class HeaderTemplate(TableIndexer):
 
         if crop is not None:
             # First show crop UI, then annotation UI
-            HeaderTemplate._crop_notebook(template, margin, session)
+            TableTemplate._crop_notebook(template, margin, session)
         else:
             # Go directly to annotation
-            HeaderTemplate._show_annotation_ui(template, session)
+            TableTemplate._show_annotation_ui(template, session)
 
         return session
 
@@ -454,7 +454,7 @@ class HeaderTemplate(TableIndexer):
             plt.close(fig)
             container.clear_output()
             with container:
-                HeaderTemplate._show_annotation_ui(cropped, session)
+                TableTemplate._show_annotation_ui(cropped, session)
 
         done_button.on_click(on_done)
         undo_button.on_click(on_undo)
@@ -567,7 +567,7 @@ class HeaderTemplate(TableIndexer):
                 fig.canvas.draw_idle()
 
         def on_done(_):
-            session._result = HeaderTemplate(lines)
+            session._result = TableTemplate(lines)
             fig.canvas.mpl_disconnect(cid)
             done_button.disabled = True
             undo_button.disabled = True
@@ -670,7 +670,7 @@ class HeaderTemplate(TableIndexer):
         return cropped
 
     @staticmethod
-    def from_vgg_annotation(annotation: str) -> "HeaderTemplate":
+    def from_vgg_annotation(annotation: str) -> "TableTemplate":
         """
         Create a TableTemplate from annotations made in [vgg](https://annotate.officialstatistics.org/), using the polylines tool.
 
@@ -691,7 +691,7 @@ class HeaderTemplate(TableIndexer):
                             [x_points[0], y_points[0], x_points[1], y_points[1]]
                         )
 
-        return HeaderTemplate(rules)
+        return TableTemplate(rules)
 
     def cell_width(self, i: int) -> int:
         self._check_col_idx(i)
@@ -830,4 +830,4 @@ class HeaderTemplate(TableIndexer):
     def text_regions(
         self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -20
     ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
-        raise TauluException("text_regions should not be called on a HeaderTemplate")
+        raise TauluException("text_regions should not be called on a TableTemplate")

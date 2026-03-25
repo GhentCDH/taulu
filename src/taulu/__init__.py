@@ -46,12 +46,12 @@ If you want a high-level overview of how to use Taulu, see [the Taulu class](./t
 """
 
 from .config import TauluConfig
-from .grid import GridDetector, TableGrid
-from .header_aligner import HeaderAligner, MatchMethod
-from .header_template import HeaderTemplate
+from .grid import SegmentedTable, TableDetector
 from .split import Split
 from .table_indexer import TableIndexer
+from .table_template import TableTemplate
 from .taulu import Taulu
+from .template_matcher import FeatureDetector, TemplateMatcher
 
 __pdoc__ = {}
 __pdoc__["constants"] = False
@@ -62,15 +62,15 @@ __pdoc__["types"] = False
 __pdoc__["img_util"] = False
 
 __all__ = [
-    "GridDetector",
-    "HeaderAligner",
-    "HeaderTemplate",
-    "MatchMethod",
+    "FeatureDetector",
+    "SegmentedTable",
     "Split",
-    "TableGrid",
+    "TableDetector",
     "TableIndexer",
+    "TableTemplate",
     "Taulu",
     "TauluConfig",
+    "TemplateMatcher",
 ]
 
 try:

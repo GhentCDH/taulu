@@ -34,18 +34,18 @@ def simple_bench_astar():
 
 def taulu_bench():
     tl = Taulu(
-        header_image_path=Split(header_left_image_path(1), header_right_image_path(1)),
-        header_anno_path=Split(header_left_anno_path(1), header_right_anno_path(1)),
-        cell_height_factor=Split([0.35, 0.23], [0.37, 0.24]),
-        sauvola_k=0.05,
-        search_region=40,
-        distance_penalty=0.8,
-        kernel_size=31,
-        cross_width=8,
-        morph_size=4,
+        template_path=Split(header_left_image_path(1), header_right_image_path(1)),
+        annotation_path=Split(header_left_anno_path(1), header_right_anno_path(1)),
+        row_height_factor=Split([0.35, 0.23], [0.37, 0.24]),
+        binarization_sensitivity=0.05,
+        search_radius=40,
+        position_weight=0.8,
+        intersection_kernel_size=31,
+        line_thickness=8,
+        line_gap_fill=4,
         min_rows=10,
-        grow_threshold=0.5,
-        look_distance=2,
+        detection_threshold=0.5,
+        extrapolation_distance=2,
     )
 
     im = cv2.imread(table_image_path(1))

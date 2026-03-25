@@ -1,7 +1,7 @@
 import pytest
 from util import files_exist, header_image_path, table_image_path
 
-from taulu import HeaderTemplate
+from taulu import TableTemplate
 
 
 @pytest.mark.skipif(
@@ -9,7 +9,7 @@ from taulu import HeaderTemplate
     reason="Files needed for test are missing",
 )
 def test_annotation():
-    _ = HeaderTemplate.annotate_image(header_image_path(0))
+    _ = TableTemplate.annotate_image(header_image_path(0))
 
 
 @pytest.mark.skipif(
@@ -17,4 +17,4 @@ def test_annotation():
     reason="Files needed for test are missing",
 )
 def test_annotation_crop():
-    _ = HeaderTemplate.annotate_image(table_image_path(0), crop="/tmp/header.png")
+    _ = TableTemplate.annotate_image(table_image_path(0), crop="/tmp/header.png")

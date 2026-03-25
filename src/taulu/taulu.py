@@ -15,13 +15,13 @@ import cv2
 from cv2.typing import MatLike
 from numpy.typing import NDArray
 
-from taulu.header_template import HeaderTemplate
+from taulu.table_template import TableTemplate
 
 from .config import TauluConfig
 from .error import TauluException
-from .grid import GridDetector, TableGrid
-from .header_aligner import HeaderAligner, MatchMethod
+from .grid import SegmentedTable, TableDetector
 from .split import Split
+from .template_matcher import FeatureDetector, TemplateMatcher
 
 # needed: header images, header templates, parameters
 
@@ -48,7 +48,7 @@ class Taulu:
     Workflow:
         1. Create annotated header images via `Taulu.annotate()`
         2. Initialize Taulu with header(s) and parameters
-        3. Call `segment_table()` to get a `TableGrid` with cell boundaries
+        3. Call `segment_table()` to get a `SegmentedTable` with cell boundaries
 
     For two-page tables, use `Split[T]` to provide different parameters for
     left and right sides.
@@ -63,70 +63,70 @@ class Taulu:
 
     def __init__(
         self,
-        header_image_path: Splittable[PathLike[str]] | Splittable[str],
-        cell_height_factor: Splittable[float] | Splittable[list[float]] | None = None,
-        header_anno_path: Splittable[PathLike[str]] | Splittable[str] | None = None,
-        sauvola_k: Splittable[float] = 0.25,
-        search_region: Splittable[int] = 60,
-        distance_penalty: Splittable[float] = 0.4,
-        cross_width: Splittable[int] = 10,
-        morph_size: Splittable[int] = 4,
-        kernel_size: Splittable[int] = 41,
-        processing_scale: Splittable[float] = 1.0,
-        skip_astar_threshold: Splittable[float] = 0.2,
+        template_path: Splittable[PathLike[str]] | Splittable[str],
+        row_height_factor: Splittable[float] | Splittable[list[float]] | None = None,
+        annotation_path: Splittable[PathLike[str]] | Splittable[str] | None = None,
+        binarization_sensitivity: Splittable[float] = 0.25,
+        search_radius: Splittable[int] = 60,
+        position_weight: Splittable[float] = 0.4,
+        line_thickness: Splittable[int] = 10,
+        line_gap_fill: Splittable[int] = 4,
+        intersection_kernel_size: Splittable[int] = 41,
+        detection_scale: Splittable[float] = 1.0,
+        pathfinding_threshold: Splittable[float] = 0.2,
         min_rows: Splittable[int] = 5,
-        look_distance: Splittable[int] = 3,
-        grow_threshold: Splittable[float] = 0.3,
-        smooth_grid: bool = False,
+        extrapolation_distance: Splittable[int] = 3,
+        detection_threshold: Splittable[float] = 0.3,
+        smooth: bool = False,
         smooth_strength: float = 0.5,
         smooth_iterations: int = 1,
         smooth_degree: int = 1,
-        cuts: Splittable[int] = 0,
-        cut_fraction: Splittable[float] = 0.5,
-        match_method: Splittable[MatchMethod] = "akaze",
-        alignment_scale: float = 1.0,
+        growing_resets: Splittable[int] = 0,
+        reset_fraction: Splittable[float] = 0.5,
+        feature_detector: Splittable[FeatureDetector] = "akaze",
+        matching_scale: float = 1.0,
     ):
         """
         Args:
-            header_image_path: Path to header template image(s). Use `Split` for two-page tables.
-            cell_height_factor: Row height relative to header (e.g., 0.8 for 80%). Default: [1.0]
-            header_anno_path: Explicit annotation JSON path. Default: inferred from image path.
-            sauvola_k: Binarization threshold (0.0-1.0). Higher = less noise. Default: 0.25
-            search_region: Corner search area in pixels. Default: 60
-            distance_penalty: Position penalty weight [0, 1]. Default: 0.4
-            cross_width: Cross-kernel width matching line thickness. Default: 10
-            morph_size: Morphological dilation size. Default: 4
-            kernel_size: Cross-kernel size (odd). Default: 41
-            processing_scale: Image downscale factor (0, 1]. Default: 1.0
-            skip_astar_threshold: Confidence to skip A* pathfinding. Default: 0.2
+            template_path: Path to header template image(s). Use `Split` for two-page tables.
+            row_height_factor: Row height relative to header (e.g., 0.8 for 80%). Default: [1.0]
+            annotation_path: Explicit annotation JSON path. Default: inferred from image path.
+            binarization_sensitivity: Binarization threshold (0.0-1.0). Higher = less noise. Default: 0.25
+            search_radius: Corner search area in pixels. Default: 60
+            position_weight: Position penalty weight [0, 1]. Default: 0.4
+            line_thickness: Cross-kernel width matching line thickness. Default: 10
+            line_gap_fill: Morphological dilation size. Default: 4
+            intersection_kernel_size: Cross-kernel size (odd). Default: 41
+            detection_scale: Image downscale factor (0, 1]. Default: 1.0
+            pathfinding_threshold: Confidence to skip A* pathfinding. Default: 0.2
             min_rows: Minimum rows before completion. Default: 5
-            look_distance: Rows to examine for extrapolation. Default: 3
-            grow_threshold: Corner acceptance confidence [0, 1]. Default: 0.3
-            smooth_grid: Apply grid smoothing after detection. Default: False
+            extrapolation_distance: Rows to examine for extrapolation. Default: 3
+            detection_threshold: Corner acceptance confidence [0, 1]. Default: 0.3
+            smooth: Apply grid smoothing after detection. Default: False
             smooth_strength: Blend factor per smoothing iteration (0.0-1.0). Default: 0.5
             smooth_iterations: Number of smoothing passes. Default: 1
             smooth_degree: Polynomial degree for smoothing regression (1 or 2). Default: 1
-            cuts: Number of grid cuts during growing. Default: 0
-            cut_fraction: Fraction of points to delete per cut. Default: 0.5
-            match_method: Feature matching method for header alignment. One of "orb"
+            growing_resets: Number of grid cuts during growing. Default: 0
+            reset_fraction: Fraction of points to delete per cut. Default: 0.5
+            feature_detector: Feature matching method for header alignment. One of "orb"
                 (fast, patent-free), "sift" (robust, uses FLANN), or "akaze" (robust,
                 patent-free). Default: "akaze"
-            alignment_scale: Downscale factor (0, 1] for header alignment only. Lower
+            matching_scale: Downscale factor (0, 1] for header alignment only. Lower
                 values speed up feature matching. Default: 1.0
         """
-        self._processing_scale = processing_scale
-        self._smooth = smooth_grid
+        self._detection_scale = detection_scale
+        self._smooth = smooth
         self._smooth_strength = smooth_strength
         self._smooth_iterations = smooth_iterations
         self._smooth_degree = smooth_degree
 
-        if cell_height_factor is None:
-            cell_height_factor = [1.0]
+        if row_height_factor is None:
+            row_height_factor = [1.0]
 
-        self._cell_height_factor = cell_height_factor
+        self._row_height_factor = row_height_factor
 
-        if isinstance(header_image_path, Split) or isinstance(header_anno_path, Split):
-            header = Split(Path(header_image_path.left), Path(header_image_path.right))
+        if isinstance(template_path, Split) or isinstance(annotation_path, Split):
+            header = Split(Path(template_path.left), Path(template_path.right))
 
             if not exists(header.left.with_suffix(".png")) or not exists(
                 header.right.with_suffix(".png")
@@ -135,7 +135,7 @@ class Taulu:
                     "The header images you provided do not exist (or they aren't .png files)"
                 )
 
-            if header_anno_path is None:
+            if annotation_path is None:
                 if not exists(header.left.with_suffix(".json")) or not exists(
                     header.right.with_suffix(".json")
                 ):
@@ -143,114 +143,122 @@ class Taulu:
                         "You need to annotate the headers of your table first\n\nsee the Taulu.annotate method"
                     )
 
-                template_left = HeaderTemplate.from_saved(
+                template_left = TableTemplate.from_saved(
                     header.left.with_suffix(".json")
                 )
-                template_right = HeaderTemplate.from_saved(
+                template_right = TableTemplate.from_saved(
                     header.right.with_suffix(".json")
                 )
 
             else:
-                if not exists(header_anno_path.left) or not exists(  # ty: ignore[unresolved-attribute]
-                    header_anno_path.right  # ty: ignore[unresolved-attribute]
+                if not exists(annotation_path.left) or not exists(  # ty: ignore[unresolved-attribute]
+                    annotation_path.right  # ty: ignore[unresolved-attribute]
                 ):
                     raise TauluException(
                         "The header annotation files you provided do not exist (or they aren't .json files)"
                     )
 
-                template_left = HeaderTemplate.from_saved(header_anno_path.left)  # ty: ignore[unresolved-attribute]
-                template_right = HeaderTemplate.from_saved(header_anno_path.right)  # ty: ignore[unresolved-attribute]
+                template_left = TableTemplate.from_saved(annotation_path.left)  # ty: ignore[unresolved-attribute]
+                template_right = TableTemplate.from_saved(annotation_path.right)  # ty: ignore[unresolved-attribute]
 
             self._header = Split(
                 cv2.imread(os.fspath(header.left)), cv2.imread(os.fspath(header.right))
             )
 
             self._aligner = Split(
-                HeaderAligner(
+                TemplateMatcher(
                     self._header.left,
-                    method=get_param(match_method, "left"),
-                    scale=alignment_scale,
+                    method=get_param(feature_detector, "left"),
+                    scale=matching_scale,
                 ),
-                HeaderAligner(
+                TemplateMatcher(
                     self._header.right,
-                    method=get_param(match_method, "right"),
-                    scale=alignment_scale,
+                    method=get_param(feature_detector, "right"),
+                    scale=matching_scale,
                 ),
             )
 
             self._template = Split(template_left, template_right)
 
             self._cell_heights = Split(
-                self._template.left.cell_heights(get_param(cell_height_factor, "left")),
+                self._template.left.cell_heights(get_param(row_height_factor, "left")),
                 self._template.right.cell_heights(
-                    get_param(cell_height_factor, "right")
+                    get_param(row_height_factor, "right")
                 ),
             )
 
-            # Create GridDetector for left and right with potentially different parameters
+            # Create TableDetector for left and right with potentially different parameters
             self._grid_detector = Split(
-                GridDetector(
-                    kernel_size=get_param(kernel_size, "left"),
-                    cross_width=get_param(cross_width, "left"),
-                    morph_size=get_param(morph_size, "left"),
-                    search_region=get_param(search_region, "left"),
-                    sauvola_k=get_param(sauvola_k, "left"),
-                    distance_penalty=get_param(distance_penalty, "left"),
-                    scale=get_param(self._processing_scale, "left"),
-                    skip_astar_threshold=get_param(skip_astar_threshold, "left"),
+                TableDetector(
+                    intersection_kernel_size=get_param(
+                        intersection_kernel_size, "left"
+                    ),
+                    line_thickness=get_param(line_thickness, "left"),
+                    line_gap_fill=get_param(line_gap_fill, "left"),
+                    search_radius=get_param(search_radius, "left"),
+                    binarization_sensitivity=get_param(
+                        binarization_sensitivity, "left"
+                    ),
+                    position_weight=get_param(position_weight, "left"),
+                    detection_scale=get_param(self._detection_scale, "left"),
+                    pathfinding_threshold=get_param(pathfinding_threshold, "left"),
                     min_rows=get_param(min_rows, "left"),
-                    look_distance=get_param(look_distance, "left"),
-                    grow_threshold=get_param(grow_threshold, "left"),
-                    cuts=get_param(cuts, "left"),
-                    cut_fraction=get_param(cut_fraction, "left"),
+                    extrapolation_distance=get_param(extrapolation_distance, "left"),
+                    detection_threshold=get_param(detection_threshold, "left"),
+                    growing_resets=get_param(growing_resets, "left"),
+                    reset_fraction=get_param(reset_fraction, "left"),
                 ),
-                GridDetector(
-                    kernel_size=get_param(kernel_size, "right"),
-                    cross_width=get_param(cross_width, "right"),
-                    morph_size=get_param(morph_size, "right"),
-                    search_region=get_param(search_region, "right"),
-                    sauvola_k=get_param(sauvola_k, "right"),
-                    distance_penalty=get_param(distance_penalty, "right"),
-                    scale=get_param(self._processing_scale, "right"),
-                    skip_astar_threshold=get_param(skip_astar_threshold, "right"),
+                TableDetector(
+                    intersection_kernel_size=get_param(
+                        intersection_kernel_size, "right"
+                    ),
+                    line_thickness=get_param(line_thickness, "right"),
+                    line_gap_fill=get_param(line_gap_fill, "right"),
+                    search_radius=get_param(search_radius, "right"),
+                    binarization_sensitivity=get_param(
+                        binarization_sensitivity, "right"
+                    ),
+                    position_weight=get_param(position_weight, "right"),
+                    detection_scale=get_param(self._detection_scale, "right"),
+                    pathfinding_threshold=get_param(pathfinding_threshold, "right"),
                     min_rows=get_param(min_rows, "right"),
-                    look_distance=get_param(look_distance, "right"),
-                    grow_threshold=get_param(grow_threshold, "right"),
-                    cuts=get_param(cuts, "right"),
-                    cut_fraction=get_param(cut_fraction, "right"),
+                    extrapolation_distance=get_param(extrapolation_distance, "right"),
+                    detection_threshold=get_param(detection_threshold, "right"),
+                    growing_resets=get_param(growing_resets, "right"),
+                    reset_fraction=get_param(reset_fraction, "right"),
                 ),
             )
 
         else:
-            header_image_path = Path(header_image_path)
-            self._header = cv2.imread(os.fspath(header_image_path))
-            self._aligner = HeaderAligner(
+            template_path = Path(template_path)
+            self._header = cv2.imread(os.fspath(template_path))
+            self._aligner = TemplateMatcher(
                 self._header,
-                method=cast(MatchMethod, match_method),
-                scale=alignment_scale,
+                method=cast(FeatureDetector, feature_detector),
+                scale=matching_scale,
             )
-            self._template = HeaderTemplate.from_saved(
-                header_image_path.with_suffix(".json")
+            self._template = TableTemplate.from_saved(
+                template_path.with_suffix(".json")
             )
 
             # For single header, parameters should not be Split objects
             if any(
                 isinstance(param, Split)
                 for param in [
-                    sauvola_k,
-                    search_region,
-                    distance_penalty,
-                    cross_width,
-                    morph_size,
-                    kernel_size,
-                    processing_scale,
+                    binarization_sensitivity,
+                    search_radius,
+                    position_weight,
+                    line_thickness,
+                    line_gap_fill,
+                    intersection_kernel_size,
+                    detection_scale,
                     min_rows,
-                    look_distance,
-                    grow_threshold,
-                    cell_height_factor,
-                    cuts,
-                    cut_fraction,
-                    match_method,
+                    extrapolation_distance,
+                    detection_threshold,
+                    row_height_factor,
+                    growing_resets,
+                    reset_fraction,
+                    feature_detector,
                 ]
             ):
                 raise TauluException(
@@ -258,23 +266,23 @@ class Taulu:
                 )
 
             self._cell_heights = self._template.cell_heights(
-                cast(list[float] | float, self._cell_height_factor)
+                cast(list[float] | float, self._row_height_factor)
             )
 
-            self._grid_detector = GridDetector(
-                kernel_size=kernel_size,  # ty: ignore
-                cross_width=cross_width,  # ty: ignore
-                morph_size=morph_size,  # ty: ignore
-                search_region=search_region,  # ty: ignore
-                sauvola_k=sauvola_k,  # ty: ignore
-                distance_penalty=distance_penalty,  # ty: ignore
-                scale=self._processing_scale,  # ty: ignore
-                skip_astar_threshold=skip_astar_threshold,  # ty: ignore
+            self._grid_detector = TableDetector(
+                intersection_kernel_size=intersection_kernel_size,  # ty: ignore
+                line_thickness=line_thickness,  # ty: ignore
+                line_gap_fill=line_gap_fill,  # ty: ignore
+                search_radius=search_radius,  # ty: ignore
+                binarization_sensitivity=binarization_sensitivity,  # ty: ignore
+                position_weight=position_weight,  # ty: ignore
+                detection_scale=self._detection_scale,  # ty: ignore
+                pathfinding_threshold=pathfinding_threshold,  # ty: ignore
                 min_rows=min_rows,  # ty: ignore
-                look_distance=look_distance,  # ty: ignore
-                grow_threshold=grow_threshold,  # ty: ignore
-                cuts=cuts,  # ty:ignore
-                cut_fraction=cut_fraction,  # ty:ignore
+                extrapolation_distance=extrapolation_distance,  # ty: ignore
+                detection_threshold=detection_threshold,  # ty: ignore
+                growing_resets=growing_resets,  # ty:ignore
+                reset_fraction=reset_fraction,  # ty:ignore
             )
 
     @classmethod
@@ -405,7 +413,7 @@ class Taulu:
             logger.info(
                 "\x1b[32mNotebook environment detected/selected. Using notebook annotation backend."
             )
-            session = HeaderTemplate.annotate_image_notebook(
+            session = TableTemplate.annotate_image_notebook(
                 os.fspath(image_path), crop=output_path.with_suffix(".png")
             )
             session._save_path = output_path.with_suffix(".json")  # ty: ignore[unresolved-attribute]
@@ -413,7 +421,7 @@ class Taulu:
 
         else:
             # GUI way
-            template = HeaderTemplate.annotate_image(
+            template = TableTemplate.annotate_image(
                 os.fspath(image_path), crop=output_path.with_suffix(".png")
             )
             template.save(output_path.with_suffix(".json"))
@@ -424,7 +432,7 @@ class Taulu:
         filtered: MatLike | PathLike[str] | str | None = None,
         debug_view: bool = False,
         debug_view_notebook: bool = False,
-    ) -> TableGrid:
+    ) -> SegmentedTable:
         """
         Segment a table image into a grid of cells.
 
@@ -441,7 +449,7 @@ class Taulu:
                 using matplotlib. Default: False
 
         Returns:
-            TableGrid: Grid structure with methods for cell access (`crop_cell`,
+            SegmentedTable: Grid structure with methods for cell access (`crop_cell`,
                 `cell_polygon`), visualization (`show_cells`), and persistence
                 (`save`, `from_saved`).
 
@@ -466,7 +474,7 @@ class Taulu:
 
         # find the starting point for the table grid algorithm
 
-        def make_top_row(template: HeaderTemplate, aligner: HeaderAligner, h: NDArray):
+        def make_top_row(template: TableTemplate, aligner: TemplateMatcher, h: NDArray):
             top_row = []
             for x in range(template.cols + 1):
                 on_template = template.intersection((1, x))
@@ -507,6 +515,6 @@ class Taulu:
             self._aligner.show_matches_notebook()
 
         if isinstance(table, Split):
-            table = TableGrid.from_split(table, (0, 0))  # ty: ignore
+            table = SegmentedTable.from_split(table, (0, 0))  # ty: ignore
 
         return table

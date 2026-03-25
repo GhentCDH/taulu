@@ -1,5 +1,5 @@
 """
-Header alignment functionality
+Template matching / alignment functionality
 """
 
 import logging
@@ -20,10 +20,10 @@ from .error import TauluException
 
 logger = logging.getLogger(__name__)
 
-MatchMethod = Literal["orb", "sift", "surf", "akaze"]
+FeatureDetector = Literal["orb", "sift", "surf", "akaze"]
 
 
-class HeaderAligner:
+class TemplateMatcher:
     """
     Aligns table header templates to subject images using feature-based registration.
 
@@ -68,7 +68,7 @@ class HeaderAligner:
     Args:
         template (MatLike | PathLike[str] | str | None): Header template image or path.
             This should contain a clear, representative view of the table header.
-        method (MatchMethod): Feature detection/matching method. One of "orb", "sift",
+        method (FeatureDetector): Feature detection/matching method. One of "orb", "sift",
             or "surf". Default is "orb".
         max_features (int): Maximum features to detect. More features = slower
             but potentially more robust matching.
@@ -85,7 +85,7 @@ class HeaderAligner:
     def __init__(
         self,
         template: None | MatLike | PathLike[str] | str = None,
-        method: MatchMethod = "orb",
+        method: FeatureDetector = "orb",
         max_features: int = 100_000,
         patch_size: int = 31,
         match_fraction: float = 0.3,
@@ -96,7 +96,7 @@ class HeaderAligner:
         """
         Args:
             template (MatLike | str): (path of) template image, with the table template clearly visible
-            method (MatchMethod): feature detection/matching method ("orb", "sift", or "surf")
+            method (FeatureDetector): feature detection/matching method ("orb", "sift", or "surf")
             max_features (int): maximal number of features that will be extracted
             patch_size (int): for ORB feature extractor (only used with method="orb")
             match_fraction (float): best fraction of matches that are kept
@@ -153,7 +153,7 @@ class HeaderAligner:
         return inv_scale_matrix @ h @ scale_matrix
 
     @property
-    def method(self) -> MatchMethod:
+    def method(self) -> FeatureDetector:
         """The feature detection/matching method being used."""
         return self._method
 

@@ -95,7 +95,7 @@ class TableIndexer(ABC):
     """
     Abstract base class for table cell indexing and cropping.
 
-    Subclasses (`TableGrid`, `HeaderTemplate`) implement the `cols`, `rows`,
+    Subclasses (`SegmentedTable`, `TableTemplate`) implement the `cols`, `rows`,
     and `cell_polygon` interface. This base provides shared methods for
     mapping pixel coordinates to cell indices and cropping cells/regions.
     """

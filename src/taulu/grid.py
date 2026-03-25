@@ -22,10 +22,10 @@ from . import img_util as imu
 from ._core import TableGrower
 from .constants import WINDOW
 from .decorators import log_calls
-from .header_template import _Rule
 from .img_util import ensure_gray
 from .split import Split
 from .table_indexer import TableIndexer
+from .table_template import _Rule
 
 show_time = 0
 
@@ -116,7 +116,7 @@ def median_slope(lines: list[tuple[PointFloat, PointFloat]]) -> float:
         return math.tan(median_angle)
 
 
-class GridDetector:
+class TableDetector:
     """
     Detects table grid intersections using morphological filtering and template matching.
 
@@ -133,12 +133,12 @@ class GridDetector:
 
     ## Tuning Guidelines
 
-    - **kernel_size**: Increase if you need more selectivity (fewer false positives)
-    - **cross_width/height**: Should match rule thickness after morphology
-    - **morph_size**: Increase to connect more broken lines, but this thickens rules
-    - **sauvola_k**: Increase to threshold more aggressively (remove noise)
-    - **search_region**: Increase for documents with more warping/distortion
-    - **distance_penalty**: Increase to prefer corners closer to expected positions
+    - **intersection_kernel_size**: Increase if you need more selectivity (fewer false positives)
+    - **line_thickness/line_thickness_horizontal**: Should match rule thickness after morphology
+    - **line_gap_fill**: Increase to connect more broken lines, but this thickens rules
+    - **binarization_sensitivity**: Increase to threshold more aggressively (remove noise)
+    - **search_radius**: Increase for documents with more warping/distortion
+    - **position_weight**: Increase to prefer corners closer to expected positions
 
     ## Visual Debugging
 
@@ -147,115 +147,121 @@ class GridDetector:
 
     def __init__(
         self,
-        kernel_size: int = 21,
-        cross_width: int = 6,
-        cross_height: int | None = None,
-        morph_size: int | None = None,
-        sauvola_k: float = 0.04,
-        sauvola_window: int = 15,
-        scale: float = 1.0,
-        search_region: int = 40,
-        distance_penalty: float = 0.4,
-        skip_astar_threshold: float = 0.2,
+        intersection_kernel_size: int = 21,
+        line_thickness: int = 6,
+        line_thickness_horizontal: int | None = None,
+        line_gap_fill: int | None = None,
+        binarization_sensitivity: float = 0.04,
+        binarization_window: int = 15,
+        detection_scale: float = 1.0,
+        search_radius: int = 40,
+        position_weight: float = 0.4,
+        pathfinding_threshold: float = 0.2,
         min_rows: int = 5,
-        grow_threshold: float = 0.3,
-        look_distance: int = 4,
-        cuts: int = 3,
-        cut_fraction: float = 0.5,
+        detection_threshold: float = 0.3,
+        extrapolation_distance: int = 4,
+        growing_resets: int = 3,
+        reset_fraction: float = 0.5,
     ):
         """
         Args:
-            kernel_size (int): the size of the cross kernel
+            intersection_kernel_size (int): the size of the cross kernel
                 a larger kernel size often means that more penalty is applied, often leading
                 to more sparse results
-            cross_width (int): the width of one of the edges in the cross filter, should be
+            line_thickness (int): the width of one of the edges in the cross filter, should be
                 roughly equal to the width of the rules in the image after morphology is applied
-            cross_height (int | None): useful if the horizontal rules and vertical rules
+            line_thickness_horizontal (int | None): useful if the horizontal rules and vertical rules
                 have different sizes
-            morph_size (int | None): the size of the morphology operators that are applied before
+            line_gap_fill (int | None): the size of the morphology operators that are applied before
                 the cross kernel. 'bridges the gaps' of broken-up lines
-            sauvola_k (float): threshold parameter for sauvola thresholding
-            sauvola_window (int): window_size parameter for sauvola thresholding
-            scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
-            search_region (int): area in which to search for a new max value in `find_nearest` etc.
-            distance_penalty (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
-            skip_astar_threshold (float): minimum confidence score during table growing based on heuristic jump on which to skipastar pathfinding
+            binarization_sensitivity (float): threshold parameter for sauvola thresholding
+            binarization_window (int): window_size parameter for sauvola thresholding
+            detection_scale (float): image scale factor to do calculations on (useful for increasing calculation speed mostly)
+            search_radius (int): area in which to search for a new max value in `find_nearest` etc.
+            position_weight (float): how much the point finding algorithm penalizes points that are further in the region [0, 1]
+            pathfinding_threshold (float): minimum confidence score during table growing based on heuristic jump on which to skip astar pathfinding
             min_rows (int): minimum number of rows to find before stopping the table finding algorithm
-            grow_threshold (float): the threshold for accepting a new point when growing the table
-            look_distance (int): how many points away to look when calculating the median slope
-            cuts (int): The amount of cuts (large deletions) to do in the grid during table growing
-            cut_fraction (float): The portion of the already-chosen corner points to delete during cutting
+            detection_threshold (float): the threshold for accepting a new point when growing the table
+            extrapolation_distance (int): how many points away to look when calculating the median slope
+            growing_resets (int): The amount of cuts (large deletions) to do in the grid during table growing
+            reset_fraction (float): The portion of the already-chosen corner points to delete during cutting
         """
         self._validate_parameters(
-            kernel_size,
-            cross_width,
-            cross_height,
-            morph_size,
-            search_region,
-            sauvola_k,
-            sauvola_window,
-            distance_penalty,
-            skip_astar_threshold,
-            cuts,
-            cut_fraction,
+            intersection_kernel_size,
+            line_thickness,
+            line_thickness_horizontal,
+            line_gap_fill,
+            search_radius,
+            binarization_sensitivity,
+            binarization_window,
+            position_weight,
+            pathfinding_threshold,
+            growing_resets,
+            reset_fraction,
         )
 
-        self._kernel_size = kernel_size
-        self._cross_width = cross_width
-        self._cross_height = cross_width if cross_height is None else cross_height
-        self._morph_size = morph_size if morph_size is not None else cross_width
-        self._search_region = search_region
-        self._sauvola_k = sauvola_k
-        self._sauvola_window = sauvola_window
-        self._distance_penalty = distance_penalty
-        self._scale = scale
-        self._skip_astar_threshold = skip_astar_threshold
+        self._intersection_kernel_size = intersection_kernel_size
+        self._line_thickness = line_thickness
+        self._line_thickness_horizontal = (
+            line_thickness
+            if line_thickness_horizontal is None
+            else line_thickness_horizontal
+        )
+        self._line_gap_fill = (
+            line_gap_fill if line_gap_fill is not None else line_thickness
+        )
+        self._search_radius = search_radius
+        self._binarization_sensitivity = binarization_sensitivity
+        self._binarization_window = binarization_window
+        self._position_weight = position_weight
+        self._scale = detection_scale
+        self._pathfinding_threshold = pathfinding_threshold
         self._min_rows = min_rows
-        self._grow_threshold = grow_threshold
-        self._look_distance = look_distance
-        self._cuts = cuts
-        self._cut_fraction = cut_fraction
+        self._detection_threshold = detection_threshold
+        self._extrapolation_distance = extrapolation_distance
+        self._growing_resets = growing_resets
+        self._reset_fraction = reset_fraction
 
         self._cross_kernel = self._create_cross_kernel()
 
     def _validate_parameters(
         self,
-        kernel_size: int,
-        cross_width: int,
-        cross_height: int | None,
-        morph_size: int | None,
-        search_region: int,
-        sauvola_k: float,
-        sauvola_window: int,
-        distance_penalty: float,
-        skip_astar_threshold: float,
-        cuts: int,
-        cut_fraction: float,
+        intersection_kernel_size: int,
+        line_thickness: int,
+        line_thickness_horizontal: int | None,
+        line_gap_fill: int | None,
+        search_radius: int,
+        binarization_sensitivity: float,
+        binarization_window: int,
+        position_weight: float,
+        pathfinding_threshold: float,
+        growing_resets: int,
+        reset_fraction: float,
     ) -> None:
         """Validate initialization parameters."""
-        if kernel_size % 2 == 0:
-            raise ValueError("kernel_size must be odd")
+        if intersection_kernel_size % 2 == 0:
+            raise ValueError("intersection_kernel_size must be odd")
         if (
-            kernel_size <= 0
-            or cross_width <= 0
-            or search_region <= 0
-            or sauvola_window <= 0
+            intersection_kernel_size <= 0
+            or line_thickness <= 0
+            or search_radius <= 0
+            or binarization_window <= 0
         ):
             raise ValueError("Size parameters must be positive")
-        if cross_height is not None and cross_height <= 0:
-            raise ValueError("cross_height must be positive")
-        if morph_size is not None and morph_size <= 0:
-            raise ValueError("morph_size must be positive")
-        if not 0 <= distance_penalty <= 1:
-            raise ValueError("distance_penalty must be in [0, 1]")
-        if sauvola_k <= 0:
-            raise ValueError("sauvola_k must be positive")
-        if skip_astar_threshold < 0 or skip_astar_threshold > 1:
-            raise ValueError("skip_astar_threshold must be in [0, 1]")
-        if cut_fraction < 0 or cut_fraction > 1:
-            raise ValueError("cut_fraction must be in [0, 1]")
-        if cuts < 0:
-            raise ValueError("cuts must be zero or positive")
+        if line_thickness_horizontal is not None and line_thickness_horizontal <= 0:
+            raise ValueError("line_thickness_horizontal must be positive")
+        if line_gap_fill is not None and line_gap_fill <= 0:
+            raise ValueError("line_gap_fill must be positive")
+        if not 0 <= position_weight <= 1:
+            raise ValueError("position_weight must be in [0, 1]")
+        if binarization_sensitivity <= 0:
+            raise ValueError("binarization_sensitivity must be positive")
+        if pathfinding_threshold < 0 or pathfinding_threshold > 1:
+            raise ValueError("pathfinding_threshold must be in [0, 1]")
+        if reset_fraction < 0 or reset_fraction > 1:
+            raise ValueError("reset_fraction must be in [0, 1]")
+        if growing_resets < 0:
+            raise ValueError("growing_resets must be zero or positive")
 
     def _create_gaussian_weights(self, region_size: int) -> NDArray:
         """
@@ -268,7 +274,7 @@ class GridDetector:
         Returns:
             NDArray: Gaussian weight mask
         """
-        if self._distance_penalty == 0:
+        if self._position_weight == 0:
             return np.ones((region_size, region_size), dtype=np.float32)
 
         y = np.linspace(-1, 1, region_size)
@@ -276,36 +282,44 @@ class GridDetector:
         xv, yv = np.meshgrid(x, y)
         dist_squared = xv**2 + yv**2
 
-        # Prevent log(0) when distance_penalty is 1
-        if self._distance_penalty >= 0.999:
+        # Prevent log(0) when position_weight is 1
+        if self._position_weight >= 0.999:
             sigma = 0.1  # Small sigma for very sharp peak
         else:
-            sigma = np.sqrt(-1 / (2 * np.log(1 - self._distance_penalty)))
+            sigma = np.sqrt(-1 / (2 * np.log(1 - self._position_weight)))
 
         weights = np.exp(-dist_squared / (2 * sigma**2))
 
         return weights.astype(np.float32)
 
     def _create_cross_kernel(self) -> NDArray:
-        kernel = np.zeros((self._kernel_size, self._kernel_size), dtype=np.uint8)
-        center = self._kernel_size // 2
+        kernel = np.zeros(
+            (self._intersection_kernel_size, self._intersection_kernel_size),
+            dtype=np.uint8,
+        )
+        center = self._intersection_kernel_size // 2
 
         # Create horizontal bar
-        h_start = max(0, center - self._cross_height // 2)
-        h_end = min(self._kernel_size, center + (self._cross_height + 1) // 2)
+        h_start = max(0, center - self._line_thickness_horizontal // 2)
+        h_end = min(
+            self._intersection_kernel_size,
+            center + (self._line_thickness_horizontal + 1) // 2,
+        )
         kernel[h_start:h_end, :] = 255
 
         # Create vertical bar
-        v_start = max(0, center - self._cross_width // 2)
-        v_end = min(self._kernel_size, center + (self._cross_width + 1) // 2)
+        v_start = max(0, center - self._line_thickness // 2)
+        v_end = min(
+            self._intersection_kernel_size, center + (self._line_thickness + 1) // 2
+        )
         kernel[:, v_start:v_end] = 255
 
         return kernel
 
     def _apply_morphology(self, binary: MatLike) -> MatLike:
         # Define a horizontal kernel (adjust width as needed)
-        kernel_hor = cv.getStructuringElement(cv.MORPH_RECT, (self._morph_size, 1))
-        kernel_ver = cv.getStructuringElement(cv.MORPH_RECT, (1, self._morph_size))
+        kernel_hor = cv.getStructuringElement(cv.MORPH_RECT, (self._line_gap_fill, 1))
+        kernel_ver = cv.getStructuringElement(cv.MORPH_RECT, (1, self._line_gap_fill))
 
         # Apply dilation
         dilated = cv.dilate(binary, kernel_hor, iterations=1)
@@ -345,7 +359,9 @@ class GridDetector:
         if img is None or img.size == 0:
             raise ValueError("Input image is empty or None")
 
-        binary = imu.sauvola(img, k=self._sauvola_k, window_size=self._sauvola_window)
+        binary = imu.sauvola(
+            img, k=self._binarization_sensitivity, window_size=self._binarization_window
+        )
 
         if visual:
             imu.show(binary, title="thresholded")
@@ -380,7 +396,7 @@ class GridDetector:
         if filtered is None or filtered.size == 0:
             raise ValueError("Filtered image is empty or None")
 
-        region_size = region if region is not None else self._search_region
+        region_size = region if region is not None else self._search_radius
         x, y = point
 
         # Calculate crop boundaries
@@ -454,9 +470,9 @@ class GridDetector:
         smooth_strength: float = 0.5,
         smooth_iterations: int = 1,
         smooth_degree: int = 1,
-    ) -> "TableGrid":
+    ) -> "SegmentedTable":
         """
-        Parse the image to a `TableGrid` structure that holds all of the
+        Parse the image to a `SegmentedTable` structure that holds all of the
         intersections between horizontal and vertical rules, starting near the `left_top` point
 
         Args:
@@ -468,7 +484,7 @@ class GridDetector:
             visual (bool): whether to show intermediate steps
             window (str): the name of the OpenCV window to use for visualization
             goals_width (int | None): the width of the goal region when searching for the next point.
-                If None, defaults to 1.5 * search_region
+                If None, defaults to 1.5 * search_radius
             filtered (MatLike | PathLike[str] | None): if provided, this image is used instead of
                 calculating the filtered image from scratch
             smooth (bool): if True, smooth the grid after detection
@@ -477,11 +493,11 @@ class GridDetector:
             smooth_degree (int): polynomial degree for smoothing regression (1 or 2). Default: 1
 
         Returns:
-            a TableGrid object
+            a SegmentedTable object
         """
 
         if goals_width is None:
-            goals_width = self._search_region * 3 // 2
+            goals_width = self._search_radius * 3 // 2
 
         if not cell_widths:
             raise ValueError("cell_widths must contain at least one value")
@@ -516,7 +532,7 @@ class GridDetector:
             point = top_row[i]
             assert point is not None
             adjusted, confidence = self.find_nearest(
-                filtered, point, int(self._search_region * 2)
+                filtered, point, int(self._search_radius * 2)
             )
 
             if confidence < 0.15:
@@ -542,7 +558,7 @@ class GridDetector:
             else None
             for p in top_row
         ]
-        search_region = int(self._search_region * self._scale)
+        search_radius = int(self._search_radius * self._scale)
 
         img_gray = ensure_gray(img)
         filtered_gray = ensure_gray(filtered)
@@ -552,14 +568,14 @@ class GridDetector:
             cell_widths,
             cell_heights,
             top_row,
-            search_region,
-            self._distance_penalty,
-            self._look_distance,
-            self._grow_threshold,
-            self._skip_astar_threshold,
+            search_radius,
+            self._position_weight,
+            self._extrapolation_distance,
+            self._detection_threshold,
+            self._pathfinding_threshold,
             self._min_rows,
-            self._cuts,
-            self._cut_fraction,
+            self._growing_resets,
+            self._reset_fraction,
         )
 
         def show_grower_progress(wait: bool = False):
@@ -584,7 +600,7 @@ class GridDetector:
             imu.show(img_orig, wait=wait)
 
         if visual:
-            threshold = self._grow_threshold
+            threshold = self._detection_threshold
 
             # python implementation of rust loops, for visualization purposes
             # note this is a LOT slower
@@ -646,7 +662,7 @@ class GridDetector:
                             int(corners[y][x][1] / self._scale),  # type:ignore
                         )
 
-        return TableGrid(corners)  # type: ignore
+        return SegmentedTable(corners)  # type: ignore
 
     def _visualize_grid(self, img: MatLike, points: list[list[Point]]) -> None:
         """Visualize the detected grid points."""
@@ -776,7 +792,7 @@ class GridDetector:
         return [(p[0] + top_left[0], p[1] + top_left[1]) for p in path]
 
 
-class TableGrid(TableIndexer):
+class SegmentedTable(TableIndexer):
     """
     Represents a detected table grid as a 2D array of intersection points.
 
@@ -820,12 +836,12 @@ class TableGrid(TableIndexer):
 
     @staticmethod
     def from_split(
-        split_grids: Split["TableGrid"], offsets: Split[Point]
-    ) -> "TableGrid":
+        split_grids: Split["SegmentedTable"], offsets: Split[Point]
+    ) -> "SegmentedTable":
         """
-        Convert two ``TableGrid`` objects into one, that is able to segment the original (non-cropped) image
+        Convert two ``SegmentedTable`` objects into one, that is able to segment the original (non-cropped) image
         Args:
-            split_grids (Split[TableGrid]): a Split of TableGrid objects of the left and right part of the table
+            split_grids (Split[SegmentedTable]): a Split of SegmentedTable objects of the left and right part of the table
             offsets (Split[tuple[int, int]]): a Split of the offsets in the image where the crop happened
         """
 
@@ -860,9 +876,9 @@ class TableGrid(TableIndexer):
             points.append(row_points)
         if not points:
             raise ValueError(
-                "Cannot create TableGrid from split: no complete rows found in both grids"
+                "Cannot create SegmentedTable from split: no complete rows found in both grids"
             )
-        table_grid = TableGrid(points, split_grids.left.cols)
+        table_grid = SegmentedTable(points, split_grids.left.cols)
         return table_grid
 
     def save(self, path: str | Path):
@@ -883,25 +899,25 @@ class TableGrid(TableIndexer):
             json.dump({"points": self.points, "right_offset": self._right_offset}, f)
 
     @staticmethod
-    def from_saved(path: str | Path) -> "TableGrid":
+    def from_saved(path: str | Path) -> "SegmentedTable":
         """
-        Load a previously saved TableGrid from a JSON file.
+        Load a previously saved SegmentedTable from a JSON file.
 
         Args:
             path: Path to the JSON file created by `save()`.
 
         Returns:
-            A TableGrid instance with the saved corner points.
+            A SegmentedTable instance with the saved corner points.
 
         Example:
-            >>> grid = TableGrid.from_saved("grid.json")
+            >>> grid = SegmentedTable.from_saved("grid.json")
             >>> cell = grid.crop_cell(image, (0, 0))
         """
         with open(path) as f:
             points = json.load(f)
             right_offset = points.get("right_offset", None)
             points = [[(p[0], p[1]) for p in pointes] for pointes in points["points"]]
-            return TableGrid(points, right_offset)
+            return SegmentedTable(points, right_offset)
 
     def add_left_col(self, width: int):
         for row in self._points:
