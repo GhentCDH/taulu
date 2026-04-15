@@ -39,6 +39,6 @@ hooks = [
     entry = "uv run ty check",
     language = "system",
     types = ["python"],
-    pass_filenames = false
+    pass_filenames = true
   }
 ]
