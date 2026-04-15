@@ -4,6 +4,7 @@ from util import files_exist, header_image_path, table_image_path
 from taulu import TableTemplate
 
 
+@pytest.mark.visual
 @pytest.mark.skipif(
     not files_exist(header_image_path(0)),
     reason="Files needed for test are missing",
@@ -12,6 +13,7 @@ def test_annotation():
     _ = TableTemplate.annotate_image(header_image_path(0))
 
 
+@pytest.mark.visual
 @pytest.mark.skipif(
     not files_exist(table_image_path(0)),
     reason="Files needed for test are missing",
