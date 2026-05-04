@@ -4,8 +4,13 @@ A module that provides a Split class to handle data with left and right variants
 The Split class allows for easy management and manipulation of paired data, such as images or templates, by providing properties and methods to access and modify the left and right components. It also supports applying functions to both components simultaneously and accessing attributes of the contained objects.
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Any, TypeVar, get_args
+
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import core_schema
 
 V = TypeVar("V")
 
@@ -41,6 +46,47 @@ class Split[T]:
     Type Parameters:
         T: The type of objects stored in left and right
     """
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        source_type: Any,
+        handler: GetCoreSchemaHandler,
+    ) -> core_schema.CoreSchema:
+        args = get_args(source_type)
+        inner_type = args[0] if args else Any
+
+        inner_schema = handler.generate_schema(inner_type)
+
+        def validate_split(value: Any) -> Split:
+            if isinstance(value, Split):
+                return value
+            if isinstance(value, dict) and "left" in value and "right" in value:
+                return Split(value["left"], value["right"])
+            raise ValueError(
+                f"Expected Split instance or dict with 'left'/'right' keys, got {type(value)}"
+            )
+
+        return core_schema.no_info_plain_validator_function(
+            validate_split,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: {"left": v.left, "right": v.right},
+                info_arg=False,
+            ),
+            metadata={
+                "pydantic_js_functions": [
+                    lambda _schema, handler: {
+                        "type": "object",
+                        "properties": {
+                            "left": handler(inner_schema),
+                            "right": handler(inner_schema),
+                        },
+                        "required": ["left", "right"],
+                        "additionalProperties": False,
+                    }
+                ]
+            },
+        )
 
     def __init__(self, left: T | None = None, right: T | None = None):
         """
@@ -99,10 +145,10 @@ class Split[T]:
 
     def apply(
         self,
-        funcs: "Split[Callable[..., V]] | Callable[..., V]",
+        funcs: Split[Callable[..., V]] | Callable[..., V],
         *args,
         **kwargs,
-    ) -> "Split[V]":
+    ) -> Split[V]:
         if not isinstance(funcs, Split):
             funcs = Split(funcs, funcs)
 

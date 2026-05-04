@@ -304,11 +304,7 @@ class Taulu:
             config = TauluConfig.from_toml("my_table.toml")
             taulu = Taulu.from_config(config)
         """
-        import dataclasses
-
-        return cls(
-            **{f.name: getattr(config, f.name) for f in dataclasses.fields(config)}
-        )
+        return cls(**{name: getattr(config, name) for name in config.model_fields})
 
     @staticmethod
     def annotate(
