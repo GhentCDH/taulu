@@ -10,16 +10,13 @@ pub enum Error {
 }
 
 pub fn gaussian_1d(width: usize, sigma: Option<f32>) -> Vec<f32> {
-    #[allow(clippy::cast_precision_loss)]
     let sigma = sigma.unwrap_or(width as f32 * 0.15 + 0.35);
     let mut kernel = Vec::with_capacity(width);
-    #[allow(clippy::cast_precision_loss)]
     let mean = (width as f32 - 1.0) / 2.0;
     let coeff = 1.0 / (sigma * (2.0 * std::f32::consts::PI).sqrt());
     let denom = 2.0 * sigma * sigma;
 
     for x in 0..width {
-        #[allow(clippy::cast_precision_loss)]
         let exponent = -((x as f32 - mean).powi(2)) / denom;
         kernel.push(coeff * exponent.exp());
     }
@@ -88,7 +85,6 @@ pub fn linear_polynomial_least_squares(
 /// Given a primary set of points which you want to fit a line to,
 /// and a selection of secondary sets of points which should be also approximately colinear,
 /// fit a line to the primary set such that this line is mostly parallel to the secondary lines.
-#[allow(clippy::similar_names)]
 pub fn region_aware_fit(
     sample_input: &[f32],
     sample_output: &[f32],
@@ -118,15 +114,13 @@ pub fn region_aware_fit(
     // fit the other lines
     let mut avg_slope = 0.0;
     let mut slope_count: u32 = 0;
-    #[allow(clippy::cast_precision_loss)]
     for (other_input, other_output) in other_inputs.iter().zip(other_outputs.iter()) {
         if other_input.len() < 2 || other_output.len() < 2 {
             continue;
         }
         let coeffs = linear_polynomial_least_squares(1, other_input, other_output)?;
         assert_eq!(coeffs.len(), 2);
-        avg_slope =
-            (coeffs[1] + avg_slope * (slope_count as f32)) / ((slope_count + 1) as f32);
+        avg_slope = (coeffs[1] + avg_slope * (slope_count as f32)) / ((slope_count + 1) as f32);
         slope_count += 1;
     }
 
@@ -396,7 +390,7 @@ mod tests {
         let result = find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, 1, 0.0);
         assert!(result.is_some());
 
-        let (x, y) = result.unwrap();
+        let (x, y) = result.expect("");
         assert_abs_diff_eq!(x, 20.0, epsilon = 1e-4);
         assert_abs_diff_eq!(y, 10.0, epsilon = 1e-4);
     }
@@ -415,7 +409,7 @@ mod tests {
         let result = find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, 1, 5.0);
         assert!(result.is_some());
 
-        let (x, y) = result.unwrap();
+        let (x, y) = result.expect("");
         assert_abs_diff_eq!(x, 10.0, epsilon = 1e-4);
         assert_abs_diff_eq!(y, 10.0, epsilon = 1e-4);
     }

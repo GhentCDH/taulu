@@ -186,7 +186,7 @@ mod tests {
 
         assert_eq!(queue.len(), 3);
 
-        let (coord, point, conf) = queue.pop_max().unwrap();
+        let (coord, point, conf) = queue.pop_max().expect("");
         assert_eq!(coord, Coord::new(1, 0));
         assert_eq!(point, Point(10, 50));
         assert!((conf - 0.8).abs() < f64::EPSILON);
@@ -202,7 +202,7 @@ mod tests {
 
         assert_eq!(queue.len(), 1);
 
-        let (coord, point, conf) = queue.pop_max().unwrap();
+        let (coord, point, conf) = queue.pop_max().expect("");
         assert_eq!(coord, Coord::new(0, 0));
         assert_eq!(point, Point(15, 25)); // Should be the updated point
         assert!((conf - 0.9).abs() < f64::EPSILON);
@@ -216,7 +216,7 @@ mod tests {
 
         assert_eq!(queue.len(), 1);
 
-        let (_, point, conf) = queue.pop_max().unwrap();
+        let (_, point, conf) = queue.pop_max().expect("");
         assert_eq!(point, Point(10, 20)); // Original point preserved
         assert!((conf - 0.9).abs() < f64::EPSILON);
     }
@@ -230,7 +230,7 @@ mod tests {
         queue.remove(&Coord::new(0, 0));
         assert_eq!(queue.len(), 1);
 
-        let (coord, _, _) = queue.pop_max().unwrap();
+        let (coord, _, _) = queue.pop_max().expect("");
         assert_eq!(coord, Coord::new(1, 0));
     }
 
@@ -256,7 +256,7 @@ mod tests {
         // Should pop the 0.8 entry since it's above 0.7 threshold
         let result = queue.pop_max_if(0.7);
         assert!(result.is_some());
-        let (coord, point, conf) = result.unwrap();
+        let (coord, point, conf) = result.expect("");
         assert_eq!(coord, Coord::new(0, 0));
         assert_eq!(point, Point(10, 20));
         assert!((conf - 0.8).abs() < f64::EPSILON);
@@ -278,7 +278,7 @@ mod tests {
         assert_eq!(queue.len(), 2);
 
         // Should still be able to pop normally
-        let (_, _, conf) = queue.pop_max().unwrap();
+        let (_, _, conf) = queue.pop_max().expect("");
         assert!((conf - 0.5).abs() < f64::EPSILON);
     }
 
@@ -292,7 +292,7 @@ mod tests {
         // Should skip the stale 0.5 entry and return the 0.9 entry
         let result = queue.pop_max_if(0.8);
         assert!(result.is_some());
-        let (coord, point, conf) = result.unwrap();
+        let (coord, point, conf) = result.expect("");
         assert_eq!(coord, Coord::new(0, 0));
         assert_eq!(point, Point(15, 25));
         assert!((conf - 0.9).abs() < f64::EPSILON);

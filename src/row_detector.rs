@@ -18,8 +18,8 @@ use crate::Image;
 /// Bilinear sample of an 8-bit single-channel image at fractional (x, y).
 /// Returns 0 outside bounds.
 fn bilinear_sample(img: &Image, x: f32, y: f32) -> f32 {
-    let h = img.shape()[0] as i32;
-    let w = img.shape()[1] as i32;
+    let h = i32::try_from(img.shape()[0]).unwrap_or_default();
+    let w = i32::try_from(img.shape()[1]).unwrap_or_default();
 
     let x0 = x.floor() as i32;
     let y0 = y.floor() as i32;
@@ -138,12 +138,7 @@ fn sample_along_path(img: &Image, path: &[(f32, f32)]) -> Vec<f32> {
 /// Find local maxima with a minimum-distance constraint and a prominence
 /// threshold. The first peak must be at least `skip_initial` from the start
 /// (avoids latching onto the header line that the top point sits on).
-fn find_peaks(
-    profile: &[f32],
-    min_distance: i32,
-    prominence: f32,
-    skip_initial: i32,
-) -> Vec<i32> {
+fn find_peaks(profile: &[f32], min_distance: i32, prominence: f32, skip_initial: i32) -> Vec<i32> {
     if profile.len() < 3 {
         return Vec::new();
     }
@@ -182,7 +177,7 @@ fn median(values: &mut [i32]) -> i32 {
     if n % 2 == 1 {
         values[n / 2]
     } else {
-        (values[n / 2 - 1] + values[n / 2]) / 2
+        i32::midpoint(values[n / 2 - 1], values[n / 2])
     }
 }
 
@@ -199,8 +194,7 @@ fn cluster_peaks(per_column: &[Vec<i32>], tolerance: i32, min_fraction: f32) -> 
         .iter()
         .enumerate()
         .max_by_key(|(_, p)| p.len())
-        .map(|(i, _)| i)
-        .unwrap_or(0);
+        .map_or(0, |(i, _)| i);
 
     let num_cols = per_column.len();
     let min_cols = ((num_cols as f32) * min_fraction).ceil().max(1.0) as usize;
@@ -235,10 +229,10 @@ fn cluster_peaks(per_column: &[Vec<i32>], tolerance: i32, min_fraction: f32) -> 
     clusters.sort_unstable();
     let mut deduped: Vec<i32> = Vec::new();
     for c in clusters {
-        if let Some(&last) = deduped.last() {
-            if (c - last).abs() < tolerance.max(1) {
-                continue;
-            }
+        if let Some(&last) = deduped.last()
+            && (c - last).abs() < tolerance.max(1)
+        {
+            continue;
         }
         deduped.push(c);
     }
@@ -256,10 +250,10 @@ fn enforce_range(offsets: Vec<i32>, min_distance: i32, max_distance: i32) -> Vec
 
     let mut filtered: Vec<i32> = Vec::with_capacity(offsets.len());
     for o in offsets {
-        if let Some(&last) = filtered.last() {
-            if o - last < min_distance {
-                continue;
-            }
+        if let Some(&last) = filtered.last()
+            && o - last < min_distance
+        {
+            continue;
         }
         filtered.push(o);
     }
@@ -269,9 +263,8 @@ fn enforce_range(offsets: Vec<i32>, min_distance: i32, max_distance: i32) -> Vec
         return result;
     }
     result.push(filtered[0]);
-    for i in 1..filtered.len() {
+    for cur in filtered.iter().skip(1) {
         let prev = result[result.len() - 1];
-        let cur = filtered[i];
         let gap = cur - prev;
         if gap > max_distance {
             let n = (gap + max_distance - 1) / max_distance; // ceil
@@ -280,7 +273,7 @@ fn enforce_range(offsets: Vec<i32>, min_distance: i32, max_distance: i32) -> Vec
                 result.push(prev + step * k);
             }
         }
-        result.push(cur);
+        result.push(*cur);
     }
 
     result
@@ -378,16 +371,15 @@ pub fn detect_row_offsets(
             let sy = sy.clamp(0, scaled_h - 1);
             let goal = (sx, scaled_h - 1);
 
-            let path_scaled = match astar_vertical(
+            let Some(path_scaled) = astar_vertical(
                 &gray,
                 (sx, sy),
                 goal,
                 straight_cost,
                 perpendicular_cost,
                 darkness_divisor,
-            ) {
-                Some(p) => p,
-                None => return Vec::new(),
+            ) else {
+                return Vec::new();
             };
 
             // Rescale path to full-resolution coordinates.

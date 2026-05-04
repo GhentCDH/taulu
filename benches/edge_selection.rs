@@ -1,9 +1,15 @@
-//! Benchmark comparing HashMap vs BinaryHeap for edge candidate selection.
+//! Benchmark comparing ``HashMap`` vs ``BinaryHeap`` for edge candidate selection.
 //!
 //! This benchmarks the core pattern used in `TableGrower`:
 //! - Repeatedly find the maximum-confidence edge candidate
 //! - Remove it from the collection
 //! - Add new candidates (simulating neighbor discovery)
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
 use std::cmp::Ordering;
@@ -124,12 +130,12 @@ impl BinaryHeapEdge {
         // Lazy deletion: skip stale entries
         while let Some(candidate) = self.heap.pop() {
             // Check if this entry is still current
-            if let Some(&current_confidence) = self.index.get(&candidate.coord) {
-                if (current_confidence - candidate.confidence).abs() < f64::EPSILON {
-                    // This is the current best entry for this coord
-                    self.index.remove(&candidate.coord);
-                    return Some((candidate.coord, candidate.point, candidate.confidence));
-                }
+            if let Some(&current_confidence) = self.index.get(&candidate.coord)
+                && (current_confidence - candidate.confidence).abs() < f64::EPSILON
+            {
+                // This is the current best entry for this coord
+                self.index.remove(&candidate.coord);
+                return Some((candidate.coord, candidate.point, candidate.confidence));
             }
             // Entry is stale (superseded or already removed), skip it
         }

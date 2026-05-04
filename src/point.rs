@@ -132,7 +132,6 @@ impl<'a> Sub<&'a Point> for &'_ Point {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 impl Mul<f32> for &'_ Point {
     type Output = Point;
 
@@ -144,7 +143,6 @@ impl Mul<f32> for &'_ Point {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 impl Mul<f32> for Point {
     type Output = Point;
 

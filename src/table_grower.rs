@@ -126,7 +126,6 @@ impl TableGrower {
     }
 
     fn log_corners(&self) {
-        #[allow(clippy::cast_precision_loss)]
         let points: Vec<(f32, f32)> = self
             .corners
             .iter()
@@ -150,7 +149,6 @@ impl TableGrower {
     }
 
     fn log_edge(&self) {
-        #[allow(clippy::cast_precision_loss)]
         let points: Vec<(f32, f32)> = self
             .edge
             .iter()
@@ -161,12 +159,10 @@ impl TableGrower {
             return;
         }
 
-        #[allow(clippy::cast_precision_loss)]
         let colors: Vec<rerun::Color> = self
             .edge
             .iter()
             .map(|(_, _, conf)| {
-                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                 let intensity = (conf * 255.0) as u8;
                 rerun::Color::from_rgb(255, intensity, 0)
             })
@@ -188,7 +184,6 @@ impl TableGrower {
     }
 
     fn log_astar_goals(&self, goals: &[Point], label: &str) {
-        #[allow(clippy::cast_precision_loss)]
         let points: Vec<(f32, f32)> = goals.iter().map(|p| (p.x() as f32, p.y() as f32)).collect();
 
         self.rec
@@ -202,7 +197,6 @@ impl TableGrower {
     }
 
     fn log_astar_path(&self, path: &[(i32, i32)], label: &str) {
-        #[allow(clippy::cast_precision_loss)]
         let points: Vec<(f32, f32)> = path.iter().map(|(x, y)| (*x as f32, *y as f32)).collect();
 
         self.rec
@@ -216,7 +210,6 @@ impl TableGrower {
     }
 
     fn log_regression_region_horizontal(&self, y: usize, xs: &[f32], ys: &[f32]) {
-        #[allow(clippy::cast_precision_loss)]
         let points: Vec<(f32, f32)> = xs.iter().zip(ys.iter()).map(|(x, y)| (*x, *y)).collect();
 
         self.rec
@@ -230,7 +223,6 @@ impl TableGrower {
     }
 
     fn log_regression_region_vertical(&self, x: usize, xs: &[f32], ys: &[f32]) {
-        #[allow(clippy::cast_precision_loss)]
         let points: Vec<(f32, f32)> = xs.iter().zip(ys.iter()).map(|(x, y)| (*x, *y)).collect();
 
         self.rec
@@ -245,7 +237,6 @@ impl TableGrower {
 
     /// Log an L-shaped triplet used for parallelogram extrapolation.
     /// Draws lines from the diagonal point to each arm, showing the L-shape.
-    #[allow(clippy::cast_precision_loss)]
     fn log_parallelogram_l_shape(
         &self,
         h_pt: Point,
@@ -291,7 +282,6 @@ impl TableGrower {
     }
 
     /// Log the final averaged parallelogram extrapolation result.
-    #[allow(clippy::cast_precision_loss)]
     fn log_parallelogram_result(&self, result: Point) {
         let p = (result.x() as f32, result.y() as f32);
 
@@ -312,7 +302,6 @@ impl TableGrower {
         h_points: &[Point],
         v_points: &[Point],
     ) {
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
         if let (Some(h_first), Some(h_last)) = (h_points.first(), h_points.last()) {
             let h_start = (
                 h_first.x() as f32,
@@ -333,7 +322,6 @@ impl TableGrower {
                 .expect(RERUN_EXPECT);
         }
 
-        #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
         if let (Some(v_first), Some(v_last)) = (v_points.first(), v_points.last()) {
             let v_start = (
                 evaluate_polynomial(v_coeffs, v_first.y() as f32),
@@ -359,7 +347,6 @@ impl TableGrower {
 #[pymethods]
 impl TableGrower {
     #[new]
-    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (
         cross_correlation,
         column_widths,
@@ -375,6 +362,7 @@ impl TableGrower {
         cut_fraction = 0.6
     ))]
     /// Notice that the `start_point` is given as (x, y), both being integers
+    #[allow(clippy::too_many_arguments)]
     fn new(
         cross_correlation: PyReadonlyArray2<'_, u8>,
         column_widths: Vec<i32>,
@@ -542,7 +530,6 @@ impl TableGrower {
     }
 
     /// Grow a full table given the current state of the ``TableGrower``
-    #[allow(clippy::too_many_lines)]
     fn grow_table(
         &mut self,
         table_image: PyReadonlyArray2<'_, u8>,
@@ -721,11 +708,6 @@ impl TableGrower {
     }
 
     /// Cut a fraction of the corners randomly, preserving the first (seed) row
-    #[allow(
-        clippy::cast_possible_truncation,
-        clippy::cast_sign_loss,
-        clippy::cast_precision_loss
-    )]
     fn cut(&mut self) {
         let some_coords: Vec<Coord> = self
             .some_coords()
@@ -780,7 +762,6 @@ impl TableGrower {
                     if let Some((corner, confidence)) =
                         self.step_from_coord(table_image, cross_correlation, coord, *step)
                     {
-                        #[allow(clippy::cast_possible_truncation)]
                         Some((*new_coord, corner, confidence as f32))
                     } else {
                         None
@@ -879,7 +860,6 @@ impl TableGrower {
             return Some((point, confidence));
         }
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let goals = match step {
             Step::Right => (0..(self.search_region * 2) as i32)
                 .map(|i| estimated_new_point + Point(0, i - self.search_region as i32))
@@ -1057,7 +1037,6 @@ impl TableGrower {
     /// distant points meaningful influence while still favouring closer ones.
     ///
     /// Returns `None` when no complete L-shape exists.
-    #[allow(clippy::cast_precision_loss, clippy::cast_possible_wrap)]
     fn parallelogram_extrapolate(&self, coord: Coord) -> Option<Point> {
         let mut sum_x: f32 = 0.0;
         let mut sum_y: f32 = 0.0;
@@ -1151,7 +1130,6 @@ impl TableGrower {
             return None;
         }
 
-        #[allow(clippy::cast_possible_truncation)]
         let result = Point(
             (sum_x / total_weight).round() as i32,
             (sum_y / total_weight).round() as i32,
@@ -1169,7 +1147,6 @@ impl TableGrower {
     }
 
     /// Count how many L-shaped triplets are available for parallelogram extrapolation.
-    #[allow(clippy::cast_possible_wrap)]
     fn parallelogram_l_shape_count(&self, coord: Coord) -> usize {
         let cx = coord.x() as isize;
         let cy = coord.y() as isize;
@@ -1225,7 +1202,7 @@ impl TableGrower {
         let neighbours_x = self.neighbour_points_x(coord);
         let neighbours_y = self.neighbour_points_y(coord);
 
-        if neighbours_y.len() >= degree + 1 && neighbours_x.len() >= degree + 1 {
+        if neighbours_y.len() > degree && neighbours_x.len() > degree {
             let region = self.get_region(coord);
             if let Some(point) = self.intersect_regressions_region_aware(
                 &neighbours_x,
@@ -1281,7 +1258,6 @@ impl TableGrower {
     fn get_region(&self, coord: Coord) -> Vec<Vec<Option<Point>>> {
         let mut region = vec![vec![None; self.look_distance * 2 + 1]; self.look_distance * 2 + 1];
 
-        #[allow(clippy::cast_possible_wrap)]
         for (dy, row) in region.iter_mut().enumerate() {
             for (dx, cell) in row.iter_mut().enumerate() {
                 let Ok(x) =
@@ -1329,7 +1305,6 @@ impl TableGrower {
             .filter_map(|(step, weight)| step.map(|s| s * *weight))
             .fold(Point(0, 0), |acc, val| acc + val);
 
-        #[allow(clippy::cast_precision_loss)]
         if count <= 3 {
             let header_step = self.header_based_step_from_coord(current, step)?;
             Some(
@@ -1347,7 +1322,6 @@ impl TableGrower {
     /// The result is a vector of length `look_distance * 2`.
     /// For neighbours which don't exist or haven't taken the relevant step yet,
     /// use the default guestimated value
-    #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
     fn similar_neighbouring_steps(&self, current: Coord, step: Step) -> Vec<Option<Point>> {
         let mut steps = vec![None; self.look_distance * 2];
 
@@ -1382,7 +1356,6 @@ impl TableGrower {
 
     /// Given a set of horizontal and vertical points, fit polynomial regressions
     /// of the given degree to each set, and find their intersection point.
-    #[allow(clippy::pedantic)]
     fn intersect_regressions_region_aware(
         &self,
         horizontal_points: &[Point],
@@ -1394,22 +1367,18 @@ impl TableGrower {
             return None;
         }
 
-        #[allow(clippy::cast_precision_loss)]
         let horizontal_xs = horizontal_points
             .iter()
             .map(|p| p.x() as f32)
             .collect::<Vec<_>>();
-        #[allow(clippy::cast_precision_loss)]
         let horizontal_ys = horizontal_points
             .iter()
             .map(|p| p.y() as f32)
             .collect::<Vec<_>>();
-        #[allow(clippy::cast_precision_loss)]
         let vertical_xs = vertical_points
             .iter()
             .map(|p| p.x() as f32)
             .collect::<Vec<_>>();
-        #[allow(clippy::cast_precision_loss)]
         let vertical_ys = vertical_points
             .iter()
             .map(|p| p.y() as f32)
@@ -1495,13 +1464,11 @@ impl TableGrower {
             vertical_points,
         );
 
-        #[allow(clippy::cast_precision_loss)]
         let initial_y = horizontal_points.first()?.y() as f32;
 
         let (x, y) =
             find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, degree, initial_y)?;
 
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
         Some(Point(x.round() as i32, y.round() as i32))
     }
 }
@@ -1518,7 +1485,6 @@ impl Index<Coord> for TableGrower {
     }
 }
 
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
 fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec<f32>> {
     // If no distance penalty, return uniform weights
     if distance_penalty == 0.0 {
@@ -1552,7 +1518,6 @@ fn create_gaussian_weights(region_size: usize, distance_penalty: f64) -> Vec<Vec
 
 /// Given a set of horizontal and vertical points, fit polynomial regressions
 /// of the given degree to each set, and find their intersection point.
-#[allow(clippy::similar_names, dead_code)]
 fn intersect_regressions(
     horizontal_points: &[Point],
     vertical_points: &[Point],
@@ -1562,22 +1527,18 @@ fn intersect_regressions(
         return None;
     }
 
-    #[allow(clippy::cast_precision_loss)]
     let horizontal_xs = horizontal_points
         .iter()
         .map(|p| p.x() as f32)
         .collect::<Vec<_>>();
-    #[allow(clippy::cast_precision_loss)]
     let horizontal_ys = horizontal_points
         .iter()
         .map(|p| p.y() as f32)
         .collect::<Vec<_>>();
-    #[allow(clippy::cast_precision_loss)]
     let vertical_xs = vertical_points
         .iter()
         .map(|p| p.x() as f32)
         .collect::<Vec<_>>();
-    #[allow(clippy::cast_precision_loss)]
     let vertical_ys = vertical_points
         .iter()
         .map(|p| p.y() as f32)
@@ -1588,22 +1549,14 @@ fn intersect_regressions(
     let vertical_coeffs =
         linear_polynomial_least_squares(degree, &vertical_ys, &vertical_xs).ok()?;
 
-    #[allow(clippy::cast_precision_loss)]
     let initial_y = horizontal_points.first()?.y() as f32;
 
     let (x, y) =
         find_polynomial_intersection(&horizontal_coeffs, &vertical_coeffs, degree, initial_y)?;
 
-    #[allow(clippy::cast_possible_truncation)]
     Some(Point(x.round() as i32, y.round() as i32))
 }
 
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss,
-    clippy::cast_possible_wrap
-)]
 fn find_best_corner_match_flat(
     cross_correlation: &Image,
     approx: Point,
