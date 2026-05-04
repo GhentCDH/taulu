@@ -13,7 +13,6 @@ default = []
 debug-tools = ["dep:rerun"]
 
 [lints.clippy]
-pedantic = { level = "warn", priority = -1 }
 correctness = { level = "warn", priority = -1 }
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
