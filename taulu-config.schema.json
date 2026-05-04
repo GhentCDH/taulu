@@ -274,6 +274,28 @@
       "title": "Matching Scale",
       "type": "number"
     },
+    "auto_row_heights": {
+      "default": false,
+      "description": "If True, detect variable per-row heights from the cross-correlation map (overrides row_height_factor).",
+      "title": "Auto Row Heights",
+      "type": "boolean"
+    },
+    "min_row_height_factor": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 0.5,
+      "description": "Minimum row height as a fraction of header height when auto_row_heights is enabled."
+    },
+    "max_row_height_factor": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 1.5,
+      "description": "Maximum row height as a fraction of header height when auto_row_heights is enabled."
+    },
+    "row_detection_path_scale": {
+      "default": 0.25,
+      "description": "Downscale factor (0, 1] for the A* path following used by auto row height detection.",
+      "title": "Row Detection Path Scale",
+      "type": "number"
+    },
     "$schema": {
       "type": "string",
       "description": "Path or URL to this JSON Schema file."

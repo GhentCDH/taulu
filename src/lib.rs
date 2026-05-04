@@ -20,6 +20,7 @@ mod edge_queue;
 mod geom_util;
 mod invert;
 mod point;
+mod row_detector;
 mod step;
 mod table_grower;
 mod traits;
@@ -83,5 +84,6 @@ fn astar(
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<TableGrower>()?;
     m.add_function(wrap_pyfunction!(astar, m)?)?;
+    m.add_function(wrap_pyfunction!(row_detector::detect_row_offsets, m)?)?;
     Ok(())
 }

@@ -8,6 +8,20 @@ def astar(
     goals: list[tuple[int, int]],
     direction: str,
 ) -> list[tuple[int, int]] | None: ...
+def detect_row_offsets(
+    cross_correlation: np.ndarray,
+    scaled_gray: np.ndarray,
+    top_points: list[tuple[float, float]],
+    scale: float,
+    min_distance: int,
+    max_distance: int,
+    prominence: float = 38.0,
+    cluster_tolerance: int = -1,
+    min_columns_for_rule: float = 0.4,
+    straight_cost: int = 10,
+    perpendicular_cost: int = 30,
+    darkness_divisor: int = 100,
+) -> list[int]: ...
 
 class TableGrower:
     """

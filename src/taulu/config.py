@@ -144,6 +144,22 @@ class TauluConfig(BaseModel):
         default=1.0,
         description="Downscale factor (0, 1] for header alignment only.",
     )
+    auto_row_heights: bool = Field(
+        default=False,
+        description="If True, detect variable per-row heights from the cross-correlation map (overrides row_height_factor).",
+    )
+    min_row_height_factor: Splittable[float] = Field(
+        default=0.5,
+        description="Minimum row height as a fraction of header height when auto_row_heights is enabled.",
+    )
+    max_row_height_factor: Splittable[float] = Field(
+        default=1.5,
+        description="Maximum row height as a fraction of header height when auto_row_heights is enabled.",
+    )
+    row_detection_path_scale: float = Field(
+        default=0.25,
+        description="Downscale factor (0, 1] for the A* path following used by auto row height detection.",
+    )
 
     @classmethod
     def from_toml(cls, *paths: PathLike[str] | str) -> "TauluConfig":

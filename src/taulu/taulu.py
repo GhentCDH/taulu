@@ -85,6 +85,10 @@ class Taulu:
         reset_fraction: Splittable[float] = 0.5,
         feature_detector: Splittable[FeatureDetector] = "akaze",
         matching_scale: float = 1.0,
+        auto_row_heights: bool = False,
+        min_row_height_factor: Splittable[float] = 0.5,
+        max_row_height_factor: Splittable[float] = 1.5,
+        row_detection_path_scale: float = 0.25,
     ):
         """
         Args:
@@ -113,8 +117,22 @@ class Taulu:
                 patent-free). Default: "akaze"
             matching_scale: Downscale factor (0, 1] for header alignment only. Lower
                 values speed up feature matching. Default: 1.0
+            auto_row_heights: If True, detect variable per-row heights from the
+                cross-correlation map at runtime (overriding `row_height_factor`).
+                Default: False
+            min_row_height_factor: Minimum row height as a fraction of the header
+                height when `auto_row_heights` is enabled. Default: 0.5
+            max_row_height_factor: Maximum row height as a fraction of the header
+                height when `auto_row_heights` is enabled. Default: 1.5
+            row_detection_path_scale: Downscale factor (0, 1] for the A* path
+                following used by `auto_row_heights`. Lower = faster, less precise.
+                Default: 0.25
         """
         self._detection_scale = detection_scale
+        self._auto_row_heights = auto_row_heights
+        self._min_row_height_factor = min_row_height_factor
+        self._max_row_height_factor = max_row_height_factor
+        self._row_detection_path_scale = row_detection_path_scale
         self._smooth = smooth
         self._smooth_strength = smooth_strength
         self._smooth_iterations = smooth_iterations
@@ -126,7 +144,7 @@ class Taulu:
         self._row_height_factor = row_height_factor
 
         if isinstance(template_path, Split) or isinstance(annotation_path, Split):
-            header = Split(Path(template_path.left), Path(template_path.right))
+            header = Split(Path(template_path.left), Path(template_path.right))  # ty:ignore[unresolved-attribute]
 
             if not exists(header.left.with_suffix(".png")) or not exists(
                 header.right.with_suffix(".png")
@@ -490,15 +508,69 @@ class Taulu:
         else:
             top_row = make_top_row(self._template, self._aligner, h)  # ty:ignore
 
+        cell_heights = self._cell_heights
+        filtered_pre: MatLike | Split | None = None
+
+        if self._auto_row_heights:
+            now_ar = perf_counter()
+            if isinstance(self._grid_detector, Split):
+                filtered_pre = self._grid_detector.apply(image)  # ty:ignore
+                assert isinstance(self._template, Split)
+                header_h = Split(
+                    self._template.left.cell_height(1.0),  # ty:ignore[unresolved-attribute]
+                    self._template.right.cell_height(1.0),  # ty:ignore[unresolved-attribute]
+                )
+                min_h = Split(
+                    int(header_h.left * get_param(self._min_row_height_factor, "left")),
+                    int(
+                        header_h.right * get_param(self._min_row_height_factor, "right")
+                    ),
+                )
+                max_h = Split(
+                    int(header_h.left * get_param(self._max_row_height_factor, "left")),
+                    int(
+                        header_h.right * get_param(self._max_row_height_factor, "right")
+                    ),
+                )
+                detected = self._grid_detector.detect_row_heights(
+                    image,
+                    filtered_pre,
+                    top_row,
+                    min_h,
+                    max_h,
+                    path_scale=self._row_detection_path_scale,
+                )
+                # detected is Split[list[int]]; fall back per side if empty.
+                cell_heights = Split(
+                    detected.left or self._cell_heights.left,  # ty:ignore[unresolved-attribute]
+                    detected.right or self._cell_heights.right,  # ty:ignore[unresolved-attribute]
+                )
+            else:
+                filtered_pre = self._grid_detector.apply(image)  # ty:ignore
+                header_h_one = self._template.cell_height(1.0)
+                min_h_one = int(header_h_one * cast(float, self._min_row_height_factor))
+                max_h_one = int(header_h_one * cast(float, self._max_row_height_factor))
+                detected_one = self._grid_detector.detect_row_heights(
+                    image,  # ty:ignore[invalid-argument-type]
+                    filtered_pre,
+                    top_row,  # ty:ignore
+                    min_h_one,
+                    max_h_one,
+                    path_scale=self._row_detection_path_scale,
+                )
+                cell_heights = detected_one or self._cell_heights
+            ar_time = perf_counter() - now_ar
+            logger.info(f"Row-height detection took {ar_time:.2f} seconds")
+
         now = perf_counter()
         table = self._grid_detector.find_table_points(
             image,  # ty:ignore
             top_row,  # ty:ignore
             self._template.cell_widths(0),
-            self._cell_heights,  # ty:ignore
+            cell_heights,  # ty:ignore
             visual=debug_view,
             visual_notebook=debug_view_notebook,
-            filtered=filtered,  # ty:ignore
+            filtered=filtered if filtered is not None else filtered_pre,  # ty:ignore
             smooth=self._smooth,
             smooth_strength=self._smooth_strength,
             smooth_iterations=self._smooth_iterations,

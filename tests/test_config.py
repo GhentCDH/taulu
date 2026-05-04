@@ -180,5 +180,5 @@ class TestSchema:
     def test_schema_property_count(self):
         """All config fields + $schema should be present."""
         schema = generate_schema()
-        # 22 config fields + $schema = 23
-        assert len(schema["properties"]) == 23
+        # 26 config fields + $schema = 27
+        assert len(schema["properties"]) == 27

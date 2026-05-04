@@ -16,6 +16,7 @@ from cv2.typing import MatLike
 from numpy.typing import NDArray
 
 from taulu._core import astar as rust_astar
+from taulu._core import detect_row_offsets as rust_detect_row_offsets
 from taulu.types import Point, PointFloat
 
 from . import img_util as imu
@@ -454,6 +455,88 @@ class TableDetector:
         result_confidence = float(weighted[best_y, best_x]) / 255.0
 
         return result_point, result_confidence
+
+    def detect_row_heights(
+        self,
+        img: MatLike,
+        filtered: MatLike,
+        top_row: list[Point | None],
+        min_row_height: int,
+        max_row_height: int,
+        path_scale: float = 0.25,
+        prominence: float = 38.0,
+        cluster_tolerance: int | None = None,
+        min_columns_for_rule: float = 0.4,
+        straight_cost: int = 10,
+        perpendicular_cost: int = 30,
+        darkness_divisor: int = 100,
+    ) -> list[int]:
+        """
+        Detect variable row heights from the cross-correlation map by following
+        each vertical rule downward via A* and finding peaks of cross-correlation
+        along that path.
+
+        Args:
+            img: Original (full-resolution) table image.
+            filtered: Cross-correlation map produced by `apply()` (full resolution).
+            top_row: Top points of vertical rules in image space. ``None`` entries
+                (where header alignment failed for that rule) are skipped.
+            min_row_height: Minimum allowed row height in pixels.
+            max_row_height: Maximum allowed row height in pixels.
+            path_scale: Downscale factor used when running A* (purely for speed).
+                The detected path is rescaled back to full resolution for sampling.
+            prominence: Minimum peak value [0, 255] in the cross-correlation profile.
+            cluster_tolerance: Cross-column matching tolerance in pixels.
+                Defaults to ``min_row_height // 2``.
+            min_columns_for_rule: Fraction of columns that must agree on a peak.
+            straight_cost: A* cost per straight (down/up) step.
+            perpendicular_cost: A* cost per lateral step. Higher = stronger
+                straight-line bias.
+            darkness_divisor: A* image cost is ``pixel / darkness_divisor``.
+                Higher = lighter line bias.
+
+        Returns:
+            List of per-row heights (consecutive differences of detected offsets).
+            Empty if detection failed.
+        """
+        valid_points = [(float(p[0]), float(p[1])) for p in top_row if p is not None]
+        if not valid_points:
+            return []
+
+        gray = ensure_gray(img)
+        if path_scale != 1.0:
+            scaled_gray = cv.resize(gray, None, fx=path_scale, fy=path_scale)
+        else:
+            scaled_gray = gray
+
+        tol = (
+            cluster_tolerance
+            if cluster_tolerance is not None
+            else max(1, min_row_height // 2)
+        )
+
+        offsets = rust_detect_row_offsets(
+            filtered,
+            scaled_gray,
+            valid_points,
+            float(path_scale),
+            int(min_row_height),
+            int(max_row_height),
+            float(prominence),
+            int(tol),
+            float(min_columns_for_rule),
+            int(straight_cost),
+            int(perpendicular_cost),
+            int(darkness_divisor),
+        )
+
+        if not offsets:
+            return []
+
+        heights: list[int] = [offsets[0]]
+        for i in range(1, len(offsets)):
+            heights.append(offsets[i] - offsets[i - 1])
+        return heights
 
     def find_table_points(
         self,

@@ -221,7 +221,7 @@ class TemplateMatcher:
             return cv.AKAZE_create()  # type:ignore
         elif self._method == "surf":
             # SURF is in xfeatures2d (requires opencv-contrib-python)
-            return cv.xfeatures2d.SURF_create(hessianThreshold=400)  # type:ignore
+            return cv.xfeatures2d.SURF_create(hessianThreshold=400)  # ty:ignore[unresolved-attribute]
         else:
             raise TauluException(f"Unknown method: {self._method}")
 
