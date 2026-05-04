@@ -1,0 +1,288 @@
+{
+  "$defs": {
+    "Splittable_Literal__orb____sift____akaze___": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "left": {
+              "enum": [
+                "orb",
+                "sift",
+                "akaze"
+              ],
+              "type": "string"
+            },
+            "right": {
+              "enum": [
+                "orb",
+                "sift",
+                "akaze"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "left",
+            "right"
+          ],
+          "type": "object"
+        },
+        {
+          "enum": [
+            "orb",
+            "sift",
+            "akaze"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "Splittable_float_": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "left": {
+              "type": "number"
+            },
+            "right": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "left",
+            "right"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "number"
+        }
+      ]
+    },
+    "Splittable_int_": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "left": {
+              "type": "integer"
+            },
+            "right": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "left",
+            "right"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "Splittable_list_float__": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "left": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "right": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "left",
+            "right"
+          ],
+          "type": "object"
+        },
+        {
+          "items": {
+            "type": "number"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "Splittable_str_": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "left": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "left",
+            "right"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "description": "Configuration for :class:`~taulu.Taulu`.\n\nAll parameters mirror the ``Taulu.__init__`` signature. Any parameter that\naccepts a ``Split[T]`` can be given as a ``Split`` instance or as a plain\nscalar (applied to both sides).\n\nUse :meth:`from_toml` to load from a ``.toml`` file, then pass to\n:meth:`Taulu.from_config <taulu.Taulu.from_config>`.",
+  "properties": {
+    "template_path": {
+      "$ref": "#/$defs/Splittable_str_",
+      "description": "Path to header template image(s). Use left/right split for two-page tables."
+    },
+    "row_height_factor": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Splittable_float_"
+        },
+        {
+          "$ref": "#/$defs/Splittable_list_float__"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Row height relative to header (e.g. 0.8 for 80%). Default: [1.0]",
+      "title": "Row Height Factor"
+    },
+    "annotation_path": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Splittable_str_"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Explicit annotation JSON path. Default: inferred from template_path."
+    },
+    "binarization_sensitivity": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 0.25,
+      "description": "Binarization threshold (0.0-1.0). Higher = less noise."
+    },
+    "search_radius": {
+      "$ref": "#/$defs/Splittable_int_",
+      "default": 60,
+      "description": "Corner search area in pixels."
+    },
+    "position_weight": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 0.4,
+      "description": "Position penalty weight [0, 1]."
+    },
+    "line_thickness": {
+      "$ref": "#/$defs/Splittable_int_",
+      "default": 10,
+      "description": "Cross-kernel width matching line thickness."
+    },
+    "line_gap_fill": {
+      "$ref": "#/$defs/Splittable_int_",
+      "default": 4,
+      "description": "Morphological dilation size for gap filling."
+    },
+    "intersection_kernel_size": {
+      "$ref": "#/$defs/Splittable_int_",
+      "default": 41,
+      "description": "Cross-kernel size (must be odd)."
+    },
+    "detection_scale": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 1.0,
+      "description": "Image downscale factor (0, 1]."
+    },
+    "pathfinding_threshold": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 0.2,
+      "description": "Confidence threshold to skip A* pathfinding."
+    },
+    "min_rows": {
+      "$ref": "#/$defs/Splittable_int_",
+      "default": 5,
+      "description": "Minimum rows before completion."
+    },
+    "extrapolation_distance": {
+      "$ref": "#/$defs/Splittable_int_",
+      "default": 3,
+      "description": "Rows to examine for extrapolation."
+    },
+    "detection_threshold": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 0.3,
+      "description": "Corner acceptance confidence [0, 1]."
+    },
+    "smooth": {
+      "default": false,
+      "description": "Apply grid smoothing after detection.",
+      "title": "Smooth",
+      "type": "boolean"
+    },
+    "smooth_strength": {
+      "default": 0.5,
+      "description": "Blend factor per smoothing iteration (0.0-1.0).",
+      "title": "Smooth Strength",
+      "type": "number"
+    },
+    "smooth_iterations": {
+      "default": 1,
+      "description": "Number of smoothing passes.",
+      "title": "Smooth Iterations",
+      "type": "integer"
+    },
+    "smooth_degree": {
+      "default": 1,
+      "description": "Polynomial degree for smoothing regression (1 or 2).",
+      "title": "Smooth Degree",
+      "type": "integer"
+    },
+    "growing_resets": {
+      "$ref": "#/$defs/Splittable_int_",
+      "default": 0,
+      "description": "Number of grid resets during growing."
+    },
+    "reset_fraction": {
+      "$ref": "#/$defs/Splittable_float_",
+      "default": 0.5,
+      "description": "Fraction of points to delete per reset."
+    },
+    "feature_detector": {
+      "$ref": "#/$defs/Splittable_Literal__orb____sift____akaze___",
+      "default": "akaze",
+      "description": "Feature matching method: 'orb' (fast), 'sift' (robust), 'akaze'."
+    },
+    "matching_scale": {
+      "default": 1.0,
+      "description": "Downscale factor (0, 1] for header alignment only.",
+      "title": "Matching Scale",
+      "type": "number"
+    },
+    "$schema": {
+      "type": "string",
+      "description": "Path or URL to this JSON Schema file."
+    }
+  },
+  "required": [
+    "template_path"
+  ],
+  "title": "TauluConfig",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
