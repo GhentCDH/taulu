@@ -1,6 +1,6 @@
 //! Auto-detection of horizontal-rule offsets along vertical rules.
 //!
-//! For each vertical-rule top point we run a 4-connected A* downward on a
+//! For each vertical-rule top point we run a 3-connected A* downward on a
 //! (typically scaled-down) grayscale image. The cost function strongly
 //! prefers straight downward motion, with only a slight bias toward dark
 //! pixels — the assumption being that vertical rules are nearly straight
@@ -14,6 +14,38 @@ use pathfinding::prelude::astar;
 use pyo3::prelude::*;
 
 use crate::Image;
+
+#[cfg(feature = "debug-tools")]
+const RERUN_EXPECT: &str = "Should be able to log values to rerun server";
+
+#[cfg(feature = "debug-tools")]
+fn start_rerun() -> rerun::RecordingStream {
+    rerun::RecordingStreamBuilder::new("taulu")
+        .connect_grpc()
+        .expect("rerun recorder should spawn")
+}
+
+/// Convert arc-length along a piecewise-linear path to (x, y).
+#[cfg(feature = "debug-tools")]
+fn arc_length_to_point(path: &[(f32, f32)], target: f32) -> Option<(f32, f32)> {
+    let mut acc: f32 = 0.0;
+    for w in path.windows(2) {
+        let (x0, y0) = w[0];
+        let (x1, y1) = w[1];
+        let dx = x1 - x0;
+        let dy = y1 - y0;
+        let seg = (dx * dx + dy * dy).sqrt();
+        if seg <= f32::EPSILON {
+            continue;
+        }
+        if target <= acc + seg {
+            let t = (target - acc) / seg;
+            return Some((x0 + t * dx, y0 + t * dy));
+        }
+        acc += seg;
+    }
+    path.last().copied()
+}
 
 /// Bilinear sample of an 8-bit single-channel image at fractional (x, y).
 /// Returns 0 outside bounds.
@@ -43,7 +75,7 @@ fn bilinear_sample(img: &Image, x: f32, y: f32) -> f32 {
     v0 * (1.0 - dy) + v1 * dy
 }
 
-/// 4-connected A* down a grayscale image.
+/// 3-connected A* down a grayscale image.
 ///
 /// * `start`, `goal` are integer pixel coords on `gray`.
 /// * `straight_cost` is the cost of an aligned step (down/up).
@@ -77,11 +109,10 @@ fn astar_vertical(
     let result = astar(
         &start,
         |&(x, y)| {
-            let mut succ = Vec::with_capacity(4);
+            let mut succ = Vec::with_capacity(3);
             // (dx, dy, base_cost)
             let neighbours = [
                 (0_i32, 1_i32, straight_cost),
-                (0, -1, straight_cost),
                 (1, 0, perpendicular_cost),
                 (-1, 0, perpendicular_cost),
             ];
@@ -136,9 +167,7 @@ fn sample_along_path(img: &Image, path: &[(f32, f32)]) -> Vec<f32> {
 }
 
 /// Find local maxima with a minimum-distance constraint and a prominence
-/// threshold. The first peak must be at least `skip_initial` from the start
-/// (avoids latching onto the header line that the top point sits on).
-fn find_peaks(profile: &[f32], min_distance: i32, prominence: f32, skip_initial: i32) -> Vec<i32> {
+fn find_peaks(profile: &[f32], min_distance: i32, prominence: f32) -> Vec<i32> {
     if profile.len() < 3 {
         return Vec::new();
     }
@@ -155,7 +184,7 @@ fn find_peaks(profile: &[f32], min_distance: i32, prominence: f32, skip_initial:
 
     let mut kept: Vec<i32> = Vec::new();
     for (idx, _) in candidates {
-        if idx < skip_initial {
+        if idx < min_distance {
             continue;
         }
         let too_close = kept.iter().any(|&k| (k - idx).abs() < min_distance);
@@ -187,9 +216,11 @@ fn median(values: &mut [i32]) -> i32 {
 /// median offset.
 fn cluster_peaks(per_column: &[Vec<i32>], tolerance: i32, min_fraction: f32) -> Vec<i32> {
     if per_column.is_empty() {
+        // no columns
         return Vec::new();
     }
 
+    // column with the highest number of peaks
     let ref_idx = per_column
         .iter()
         .enumerate()
@@ -362,36 +393,94 @@ pub fn detect_row_offsets(
         cluster_tolerance
     };
 
-    let per_column: Vec<Vec<i32>> = top_points
-        .iter()
-        .map(|&(tx, ty)| {
-            let sx = (tx * scale).round() as i32;
-            let sy = (ty * scale).round() as i32;
-            let sx = sx.clamp(0, scaled_w - 1);
-            let sy = sy.clamp(0, scaled_h - 1);
-            let goal = (sx, scaled_h - 1);
+    #[cfg(feature = "debug-tools")]
+    let rec = start_rerun();
+    #[cfg(feature = "debug-tools")]
+    {
+        rec.log(
+            "row_detector/cross_correlation",
+            &rerun::Image::from_color_model_and_tensor(rerun::ColorModel::L, cc.to_owned())
+                .expect("should be able to create rerun image"),
+        )
+        .expect(RERUN_EXPECT);
+        rec.log(
+            "row_detector/scaled_gray",
+            &rerun::Image::from_color_model_and_tensor(rerun::ColorModel::L, gray.to_owned())
+                .expect("should be able to create rerun image"),
+        )
+        .expect(RERUN_EXPECT);
+    }
 
-            let Some(path_scaled) = astar_vertical(
-                &gray,
-                (sx, sy),
-                goal,
-                straight_cost,
-                perpendicular_cost,
-                darkness_divisor,
-            ) else {
-                return Vec::new();
-            };
+    #[cfg(feature = "debug-tools")]
+    let mut full_paths: Vec<Vec<(f32, f32)>> = Vec::with_capacity(top_points.len());
 
-            // Rescale path to full-resolution coordinates.
-            let path_full: Vec<(f32, f32)> = path_scaled
-                .into_iter()
-                .map(|(x, y)| (x as f32 * inv_scale, y as f32 * inv_scale))
+    let mut per_column: Vec<Vec<i32>> = Vec::with_capacity(top_points.len());
+    for (col_idx, &(tx, ty)) in top_points.iter().enumerate() {
+        let _ = col_idx;
+        let sx = (tx * scale).round() as i32;
+        let sy = (ty * scale).round() as i32;
+        let sx = sx.clamp(0, scaled_w - 1);
+        let sy = sy.clamp(0, scaled_h - 1);
+        let goal = (sx, scaled_h - 1);
+
+        let Some(path_scaled) = astar_vertical(
+            &gray,
+            (sx, sy),
+            goal,
+            straight_cost,
+            perpendicular_cost,
+            darkness_divisor,
+        ) else {
+            per_column.push(Vec::new());
+            #[cfg(feature = "debug-tools")]
+            full_paths.push(Vec::new());
+            continue;
+        };
+
+        let path_full: Vec<(f32, f32)> = path_scaled
+            .into_iter()
+            .map(|(x, y)| (x as f32 * inv_scale, y as f32 * inv_scale))
+            .collect();
+
+        let profile = sample_along_path(&cc, &path_full);
+        let peaks = find_peaks(&profile, min_distance, prominence);
+
+        #[cfg(feature = "debug-tools")]
+        {
+            rec.log(
+                format!("row_detector/paths/{col_idx}"),
+                &rerun::LineStrips2D::new([path_full.clone()])
+                    .with_colors([rerun::Color::from_rgb(0, 200, 255)])
+                    .with_radii([1.0]),
+            )
+            .expect(RERUN_EXPECT);
+
+            let prof_f64: Vec<f64> = profile.iter().map(|&v| v as f64).collect();
+            rec.log(
+                format!("row_detector/profile/{col_idx}"),
+                &rerun::BarChart::new(prof_f64),
+            )
+            .expect(RERUN_EXPECT);
+
+            let peak_points: Vec<(f32, f32)> = peaks
+                .iter()
+                .filter_map(|&p| arc_length_to_point(&path_full, p as f32))
                 .collect();
+            if !peak_points.is_empty() {
+                rec.log(
+                    format!("row_detector/peaks/{col_idx}"),
+                    &rerun::Points2D::new(peak_points)
+                        .with_colors([rerun::Color::from_rgb(255, 0, 0)])
+                        .with_radii([3.0]),
+                )
+                .expect(RERUN_EXPECT);
+            }
+        }
 
-            let profile = sample_along_path(&cc, &path_full);
-            find_peaks(&profile, min_distance, prominence, min_distance)
-        })
-        .collect();
+        per_column.push(peaks);
+        #[cfg(feature = "debug-tools")]
+        full_paths.push(path_full);
+    }
 
     if per_column.iter().all(Vec::is_empty) {
         return Ok(Vec::new());
@@ -399,6 +488,39 @@ pub fn detect_row_offsets(
 
     let clustered = cluster_peaks(&per_column, tolerance, min_columns_for_rule);
     let final_offsets = enforce_range(clustered, min_distance, max_distance);
+
+    #[cfg(feature = "debug-tools")]
+    {
+        let mut final_points: Vec<(f32, f32)> = Vec::new();
+        for path in &full_paths {
+            if path.is_empty() {
+                continue;
+            }
+            for &off in &final_offsets {
+                if let Some(pt) = arc_length_to_point(path, off as f32) {
+                    final_points.push(pt);
+                }
+            }
+        }
+        if !final_points.is_empty() {
+            rec.log(
+                "row_detector/final_offsets",
+                &rerun::Points2D::new(final_points)
+                    .with_colors([rerun::Color::from_rgb(0, 255, 0)])
+                    .with_radii([4.0]),
+            )
+            .expect(RERUN_EXPECT);
+        }
+
+        let offsets_f64: Vec<f64> = final_offsets.iter().map(|&v| v as f64).collect();
+        if !offsets_f64.is_empty() {
+            rec.log(
+                "row_detector/final_offsets_chart",
+                &rerun::BarChart::new(offsets_f64),
+            )
+            .expect(RERUN_EXPECT);
+        }
+    }
 
     Ok(final_offsets)
 }
@@ -418,14 +540,14 @@ mod tests {
     #[test]
     fn peak_detection_min_distance() {
         let prof = flat_profile_with_peaks(100, &[(10, 200.0), (15, 180.0), (50, 220.0)]);
-        let peaks = find_peaks(&prof, 20, 50.0, 5);
+        let peaks = find_peaks(&prof, 20, 50.0);
         assert_eq!(peaks, vec![10, 50]);
     }
 
     #[test]
     fn peak_detection_skip_initial() {
         let prof = flat_profile_with_peaks(100, &[(2, 200.0), (40, 200.0)]);
-        let peaks = find_peaks(&prof, 10, 50.0, 5);
+        let peaks = find_peaks(&prof, 10, 50.0);
         assert_eq!(peaks, vec![40]);
     }
 

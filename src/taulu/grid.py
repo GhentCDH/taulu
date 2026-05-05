@@ -464,7 +464,7 @@ class TableDetector:
         min_row_height: int,
         max_row_height: int,
         path_scale: float = 0.25,
-        prominence: float = 38.0,
+        prominence: float = 18.0,
         cluster_tolerance: int | None = None,
         min_columns_for_rule: float = 0.4,
         straight_cost: int = 10,

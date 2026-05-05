@@ -25,10 +25,10 @@ document:
     uv run pdoc --logo './logo.svg' --favicon './favicon.svg' -o ./docs --docformat google taulu
 
 setup-no-rerun:
-    uv run maturin develop --no-default-features --release
+    maturin develop --no-default-features --release
 
 setup-rerun:
-    uv run maturin develop --features debug-tools --no-default-features --release
+    maturin develop --features debug-tools --no-default-features --release
 
 setup-rerun-dev:
-    uv run maturin develop --features debug-tools --no-default-features
+    maturin develop --features debug-tools --no-default-features
