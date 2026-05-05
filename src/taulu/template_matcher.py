@@ -344,13 +344,15 @@ class TemplateMatcher:
 
     def view_alignment(self, img: MatLike, h: NDArray):
         """
-        Show the alignment of the template on the given image
-        by transforming it using the supplied transformation matrix `h`
-        and visualising both on different channels
+        Show the alignment of the template on the given image by transforming
+        it with ``h`` and overlaying both on separate color channels.
 
         Args:
-            img (MatLike): the image on which the template is transformed
-            h (NDArray): the transformation matrix
+            img (MatLike): the image on which the template is overlaid
+            h (NDArray): the homography matrix from `align`
+
+        Returns:
+            int | None: the key code returned by the OpenCV window, if any.
         """
 
         im = imu.ensure_gray(img)
@@ -375,8 +377,17 @@ class TemplateMatcher:
         window: str = WINDOW,
     ) -> NDArray:
         """
-        Calculates a homogeneous transformation matrix that maps pixels of
-        the template to the given image
+        Compute a homography that maps template pixels onto ``img``.
+
+        Args:
+            img: Subject image (path or array).
+            visual: Show match visualization in an OpenCV window.
+            visual_notebook: Store the match visualization for later display
+                via `show_matches_notebook`.
+            window: OpenCV window name when ``visual=True``.
+
+        Returns:
+            NDArray: the ``(3, 3)`` homography from template to image space.
         """
 
         logger.info("Aligning header with supplied table image")
@@ -398,12 +409,15 @@ class TemplateMatcher:
 
     def template_to_img(self, h: NDArray, point: Iterable[int]) -> tuple[int, int]:
         """
-        Transform the given point (in template-space) using the transformation h
-        (obtained through the `align` method)
+        Transform a template-space point through the homography ``h``
+        (obtained from `align`).
 
         Args:
-            h (NDArray): transformation matrix of shape (3, 3)
-            point (Iterable[int]): the to-be-transformed point, should conform to (x, y)
+            h (NDArray): transformation matrix of shape ``(3, 3)``
+            point (Iterable[int]): the to-be-transformed point as ``(x, y)``
+
+        Returns:
+            tuple[int, int]: the transformed point in image space.
         """
 
         point = np.array([[point[0], point[1], 1]])  # type:ignore

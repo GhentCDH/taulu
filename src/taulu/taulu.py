@@ -54,6 +54,7 @@ class Taulu:
     left and right sides.
 
     Example:
+        >>> import cv2
         >>> from taulu import Taulu
         >>> Taulu.annotate("table_image.png", "header.png")
         >>> taulu = Taulu("header.png")
@@ -314,13 +315,11 @@ class Taulu:
         Returns:
             A :class:`Taulu` instance configured according to ``config``.
 
-        Example::
-
-            from taulu import Taulu
-            from taulu.config import TauluConfig
-
-            config = TauluConfig.from_toml("my_table.toml")
-            taulu = Taulu.from_config(config)
+        Example:
+            >>> from taulu import Taulu
+            >>> from taulu.config import TauluConfig
+            >>> config = TauluConfig.from_toml("my_table.toml")
+            >>> taulu = Taulu.from_config(config)
         """
         return cls(**{name: getattr(config, name) for name in config.model_fields})
 

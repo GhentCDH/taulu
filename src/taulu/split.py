@@ -105,6 +105,7 @@ class Split[T]:
 
     @property
     def left(self) -> T:
+        """The left value. Asserts it has been set."""
         assert self._left is not None
         return self._left
 
@@ -114,6 +115,7 @@ class Split[T]:
 
     @property
     def right(self) -> T:
+        """The right value. Asserts it has been set."""
         assert self._right is not None
         return self._right
 
@@ -122,6 +124,7 @@ class Split[T]:
         self._right = value
 
     def append(self, value: T):
+        """Set ``left`` if unset, otherwise set ``right``."""
         if self._left is None:
             self._left = value
         else:
@@ -149,6 +152,20 @@ class Split[T]:
         *args,
         **kwargs,
     ) -> Split[V]:
+        """
+        Call ``funcs`` on each side and return a new Split of the results.
+
+        ``self.left`` (resp. ``self.right``) is passed as the first positional
+        argument. Any extra ``args``/``kwargs`` that are themselves a `Split`
+        are unpacked per side; non-Split values are forwarded unchanged.
+
+        Args:
+            funcs: A single callable applied to both sides, or a `Split` of
+                callables for per-side functions.
+
+        Returns:
+            Split[V]: results of the per-side calls.
+        """
         if not isinstance(funcs, Split):
             funcs = Split(funcs, funcs)
 

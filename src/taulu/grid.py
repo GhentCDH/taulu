@@ -266,14 +266,15 @@ class TableDetector:
 
     def _create_gaussian_weights(self, region_size: int) -> NDArray:
         """
-        Create a 2D Gaussian weight mask.
+        Create a square 2D Gaussian weight mask used to bias `find_nearest`
+        toward points close to the search center.
 
         Args:
-            shape (tuple[int, int]): Shape of the region (height, width)
-            p (float): Minimum value at the edge = 1 - p
+            region_size (int): Side length of the square mask.
 
         Returns:
-            NDArray: Gaussian weight mask
+            NDArray: ``(region_size, region_size)`` float32 weight mask, peak 1.0
+            at the center, falling off to ``1 - position_weight`` at the edge.
         """
         if self._position_weight == 0:
             return np.ones((region_size, region_size), dtype=np.float32)
@@ -391,7 +392,12 @@ class TableDetector:
             filtered (MatLike): the filtered image (obtained through `apply`)
             point (tuple[int, int]): the approximate target point (x, y)
             region (None | int): alternative value for search region,
-                overwriting the `__init__` parameter `region`
+                overwriting the `__init__` parameter `search_radius`
+
+        Returns:
+            tuple[Point, float]: the best-matching pixel ``(x, y)`` and its
+            confidence in ``[0, 1]``. If the search window falls outside the
+            image, the input ``point`` is returned with confidence ``0.0``.
         """
 
         if filtered is None or filtered.size == 0:
@@ -822,7 +828,17 @@ class TableDetector:
         direction: str,
     ) -> list[Point] | None:
         """
-        Find the best path between the start point and one of the goal points on the image
+        Find the best path between the start point and one of the goal points on the image.
+
+        Args:
+            img: Grayscale image to follow rules through.
+            start: Starting pixel ``(x, y)``.
+            goals: Candidate end pixels.
+            direction: Either ``"horizontal"`` or ``"vertical"``.
+
+        Returns:
+            list[Point] | None: Path from start to the closest reachable goal,
+            or ``None`` if no path exists.
         """
 
         if not goals:
@@ -889,21 +905,28 @@ class SegmentedTable(TableIndexer):
     def __init__(self, points: list[list[Point]], right_offset: int | None = None):
         """
         Args:
-            points: a 2D list of intersections between hor. and vert. rules
+            points: 2D list of intersections between horizontal and vertical
+                rules, in row-major order.
+            right_offset: For tables built from a `Split`, the column index
+                where the right half begins. ``None`` for single-page tables.
         """
         self._points = points
         self._right_offset = right_offset
 
     @property
     def points(self) -> list[list[Point]]:
+        """The raw 2D grid of intersection points."""
         return self._points
 
     def row(self, i: int) -> list[Point]:
+        """Return the ``i``-th row of intersection points."""
         assert 0 <= i and i < len(self._points)
         return self._points[i]
 
     @property
     def cols(self) -> int:
+        """Number of cell columns (one fewer than vertical rules; two fewer
+        for split tables, accounting for the seam between halves)."""
         if self._right_offset is not None:
             return len(self.row(0)) - 2
         else:
@@ -911,10 +934,12 @@ class SegmentedTable(TableIndexer):
 
     @property
     def rows(self) -> int:
+        """Number of cell rows (one fewer than horizontal rules)."""
         return len(self._points) - 1
 
     @property
     def right_offset(self) -> int | None:
+        """Column index where the right half begins, or ``None``."""
         return self._right_offset
 
     @staticmethod
@@ -922,10 +947,17 @@ class SegmentedTable(TableIndexer):
         split_grids: Split["SegmentedTable"], offsets: Split[Point]
     ) -> "SegmentedTable":
         """
-        Convert two ``SegmentedTable`` objects into one, that is able to segment the original (non-cropped) image
+        Convert two ``SegmentedTable`` objects into one that can segment the original (non-cropped) image.
+
         Args:
-            split_grids (Split[SegmentedTable]): a Split of SegmentedTable objects of the left and right part of the table
-            offsets (Split[tuple[int, int]]): a Split of the offsets in the image where the crop happened
+            split_grids (Split[SegmentedTable]): SegmentedTable objects for the left and right part of the table
+            offsets (Split[tuple[int, int]]): the offsets in the original image where each crop started
+
+        Returns:
+            SegmentedTable: a merged grid spanning both halves.
+
+        Raises:
+            ValueError: if no row is fully populated in both halves.
         """
 
         def offset_points(points, offset):
@@ -1003,12 +1035,26 @@ class SegmentedTable(TableIndexer):
             return SegmentedTable(points, right_offset)
 
     def add_left_col(self, width: int):
+        """
+        Prepend a column to the grid by shifting the first column ``width``
+        pixels to the left and inserting it as a new column.
+
+        Args:
+            width: Width of the new column in pixels.
+        """
         for row in self._points:
             first = row[0]
             new_first = (first[0] - width, first[1])
             row.insert(0, new_first)
 
     def add_top_row(self, height: int):
+        """
+        Prepend a row to the grid by shifting the first row ``height`` pixels
+        upward and inserting it as a new row.
+
+        Args:
+            height: Height of the new row in pixels.
+        """
         new_row = []
         for point in self._points[0]:
             new_row.append((point[0], point[1] - height))
@@ -1016,7 +1062,8 @@ class SegmentedTable(TableIndexer):
         self.points.insert(0, new_row)
 
     def _surrounds(self, rect: list[Point], point: tuple[float, float]) -> bool:
-        """point: x, y"""
+        """Check if ``point`` (x, y) lies inside the quadrilateral ``rect``
+        (lt, rt, rb, lb)."""
         lt, rt, rb, lb = rect
         x, y = point
 
@@ -1180,6 +1227,20 @@ class SegmentedTable(TableIndexer):
     def text_regions(
         self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -3
     ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+        """
+        Split a row into spans of consecutive cells whose vertical separators
+        are obscured by text (i.e. continuous handwriting crosses the rule).
+
+        Args:
+            img: Source table image.
+            row: Row index to scan.
+            margin_x: Horizontal margin around each rule crop, in pixels.
+            margin_y: Vertical margin around each rule crop, in pixels.
+
+        Returns:
+            List of ``((row, start_col), (row, end_col))`` spans (inclusive).
+        """
+
         def vertical_rule_crop(row: int, col: int):
             self._check_col_idx(col)
             self._check_row_idx(row)

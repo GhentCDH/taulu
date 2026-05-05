@@ -211,7 +211,10 @@ class TableTemplate(TableIndexer):
     @log_calls(level=logging.DEBUG)
     def save(self, path: PathLike[str]):
         """
-        Save the TableTemplate to the given path, as a json
+        Save the TableTemplate as JSON.
+
+        Args:
+            path: Destination JSON file path.
         """
 
         data = {"rules": [r.to_dict() for r in self._rules]}
@@ -222,6 +225,15 @@ class TableTemplate(TableIndexer):
     @staticmethod
     @log_calls(level=logging.DEBUG)
     def from_saved(path: PathLike[str] | str) -> "TableTemplate":
+        """
+        Load a TableTemplate from a JSON file produced by `save`.
+
+        Args:
+            path: Path to the JSON file.
+
+        Returns:
+            TableTemplate: the deserialized template.
+        """
         with open(path) as f:
             data = json.load(f)
             rules = data["rules"]
@@ -245,15 +257,18 @@ class TableTemplate(TableIndexer):
         margin: int = 10,
     ) -> "TableTemplate":
         """
-        Utility method that allows users to create a template form a template image.
+        Utility method that allows users to create a template from a template image.
 
         The user is asked to click to annotate lines (two clicks per line).
 
         Args:
             template: the image on which to annotate the header lines
-            crop (str | None): if str, crop the template image first, then do the annotation.
-                The cropped image will be stored at the supplied path
+            crop (str | None): if a path, crop the template image first then
+                do the annotation; the cropped image is written to this path.
             margin (int): margin to add around the cropping of the header
+
+        Returns:
+            TableTemplate: a new template built from the annotated lines.
         """
 
         if type(template) is str:
@@ -676,6 +691,9 @@ class TableTemplate(TableIndexer):
 
         Args:
             annotation (str): the path of the annotation csv file
+
+        Returns:
+            TableTemplate: a new template built from the polyline annotations.
         """
 
         rules = []
@@ -694,16 +712,21 @@ class TableTemplate(TableIndexer):
         return TableTemplate(rules)
 
     def cell_width(self, i: int) -> int:
+        """Width of the ``i``-th cell column, in template pixels."""
         self._check_col_idx(i)
         return int(self._v_rules[i + 1]._x - self._v_rules[i]._x)
 
     def cell_widths(self, start: int = 0) -> list[int]:
+        """Widths of every cell column starting at ``start``, in template pixels."""
         return [self.cell_width(i) for i in range(start, self.cols)]
 
     def cell_height(self, header_factor: float = 0.8) -> int:
+        """Estimated body row height as ``header_factor`` times the header height."""
         return int((self._h_rules[1]._y - self._h_rules[0]._y) * header_factor)
 
     def cell_heights(self, header_factors: list[float] | float) -> list[int]:
+        """Body row heights, one per element in ``header_factors`` (a single
+        float is broadcast to a 1-element list)."""
         if isinstance(header_factors, float):
             header_factors = [header_factors]
         header_factors = cast(list, header_factors)
@@ -713,8 +736,13 @@ class TableTemplate(TableIndexer):
 
     def intersection(self, index: tuple[int, int]) -> tuple[float, float]:
         """
-        Returns the interaction of the index[0]th horizontal rule and the
-        index[1]th vertical rule
+        Get the intersection point of a horizontal and vertical rule.
+
+        Args:
+            index: ``(h, v)`` indices into the horizontal and vertical rule lists.
+
+        Returns:
+            tuple[float, float]: the ``(x, y)`` intersection in template pixels.
         """
 
         ints = self._h_rules[index[0]].intersection(self._v_rules[index[1]])
@@ -760,8 +788,17 @@ class TableTemplate(TableIndexer):
         self, cell: tuple[int, int]
     ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
         """
-        Return points (x,y) that make up a polygon around the requested cell
-        (top left, top right, bottom right, bottom left)
+        Return the four corner points enclosing ``cell`` in the order
+        (top-left, top-right, bottom-right, bottom-left).
+
+        Args:
+            cell: Cell indices as ``(row, col)``.
+
+        Returns:
+            Tuple of four ``(x, y)`` points in template-pixel coordinates.
+
+        Raises:
+            TauluException: if the surrounding rules do not intersect.
         """
 
         row, col = cell
@@ -791,6 +828,10 @@ class TableTemplate(TableIndexer):
     def region(
         self, start: tuple[int, int], end: tuple[int, int]
     ) -> tuple[Point, Point, Point, Point]:
+        """
+        Bounding polygon of the rectangular range of cells from ``start`` to
+        ``end`` (both inclusive), as ``(lt, rt, rb, lb)`` integer pixel points.
+        """
         self._check_row_idx(start[0])
         self._check_row_idx(end[0])
         self._check_col_idx(start[1])
@@ -830,4 +871,5 @@ class TableTemplate(TableIndexer):
     def text_regions(
         self, img: MatLike, row: int, margin_x: int = 10, margin_y: int = -20
     ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
+        """Not supported on a `TableTemplate`; always raises `TauluException`."""
         raise TauluException("text_regions should not be called on a TableTemplate")

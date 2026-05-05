@@ -23,14 +23,14 @@ def log_calls(
         include_return: Whether to also log return values
         max_arg_length: Maximum length for argument representation
 
-    Usage:
-        @log_calls()
-        def my_function(x, y):
-            return x + y
+    Example:
+        >>> @log_calls()
+        ... def my_function(x, y):
+        ...     return x + y
 
-        @log_calls(level=logging.DEBUG, include_return=True)
-        def another_function(data):
-            return processed_data
+        >>> @log_calls(level=logging.DEBUG, include_return=True)
+        ... def another_function(data):
+        ...     return data
     """
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:

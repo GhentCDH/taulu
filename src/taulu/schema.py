@@ -27,6 +27,13 @@ from .config import TauluConfig
 
 
 def generate_schema() -> dict:
+    """
+    Build a JSON Schema (draft-07) for `TauluConfig` TOML files, with an
+    extra ``$schema`` property so editors can self-reference the schema.
+
+    Returns:
+        dict: the JSON Schema as a Python dictionary.
+    """
     schema = TauluConfig.model_json_schema()
     schema["$schema"] = "http://json-schema.org/draft-07/schema#"
     schema["properties"]["$schema"] = {
@@ -37,6 +44,7 @@ def generate_schema() -> dict:
 
 
 def main():
+    """Print the generated schema as indented JSON to stdout."""
     print(json.dumps(generate_schema(), indent=2))
 
 

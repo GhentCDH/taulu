@@ -105,6 +105,7 @@ class TableIndexer(ABC):
 
     @property
     def col_offset(self) -> int:
+        """Column offset applied when reporting cell coordinates."""
         return self._col_offset
 
     @col_offset.setter
@@ -115,11 +116,13 @@ class TableIndexer(ABC):
     @property
     @abstractmethod
     def cols(self) -> int:
+        """Total number of cell columns."""
         pass
 
     @property
     @abstractmethod
     def rows(self) -> int:
+        """Total number of cell rows."""
         pass
 
     def cells(self) -> Generator[tuple[int, int]]:
@@ -170,7 +173,16 @@ class TableIndexer(ABC):
     def cell_polygon(
         self, cell: tuple[int, int]
     ) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]:
-        """returns the polygon (used in e.g. opencv) that enscribes the cell at the given cell position"""
+        """
+        Return the polygon (used e.g. with OpenCV) that encloses ``cell``.
+
+        Args:
+            cell: Cell indices as ``(row, col)``.
+
+        Returns:
+            Four ``(x, y)`` points in order: top-left, top-right,
+            bottom-right, bottom-left.
+        """
         pass
 
     def _highlight_cell(
@@ -199,6 +211,17 @@ class TableIndexer(ABC):
         color: tuple[int, int, int] = (0, 0, 255),
         thickness: int = 1,
     ) -> MatLike:
+        """
+        Return a copy of ``image`` with every cell outlined and labeled.
+
+        Args:
+            image: Source image (path or array, BGR).
+            color: BGR color of the outline.
+            thickness: Line thickness in pixels.
+
+        Returns:
+            MatLike: a new image with all cells highlighted.
+        """
         if not isinstance(image, np.ndarray):
             image = cv.imread(os.fspath(image))  # ty:ignore
         img = np.copy(image)
@@ -215,6 +238,19 @@ class TableIndexer(ABC):
         color: tuple[int, int, int] = (255, 0, 0),
         thickness: int = 2,
     ) -> tuple[int, int] | None:
+        """
+        Open an OpenCV window and let the user click one cell.
+
+        Args:
+            image: Source image (BGR).
+            window: OpenCV window name.
+            color: Highlight color in BGR.
+            thickness: Outline thickness in pixels.
+
+        Returns:
+            tuple[int, int] | None: ``(row, col)`` of the clicked cell, or
+            ``None`` if the window was closed without a valid click.
+        """
         clicked = None
 
         def click_event(event, x, y, flags, params):
@@ -476,10 +512,15 @@ class TableIndexer(ABC):
         end: tuple[int, int],
     ) -> tuple[Point, Point, Point, Point]:
         """
-        Get the bounding box for the rectangular region that goes from start to end
+        Get the bounding polygon for the rectangular region from ``start`` to
+        ``end`` (both cells inclusive).
+
+        Args:
+            start: Top-left cell as ``(row, col)``.
+            end: Bottom-right cell as ``(row, col)``.
 
         Returns:
-            4 points: lt, rt, rb, lb, in format (x, y)
+            Four points (lt, rt, rb, lb), each as ``(x, y)``.
         """
         pass
 
@@ -554,10 +595,16 @@ class TableIndexer(ABC):
         self, img: MatLike, row: int, margin_x: int = 0, margin_y: int = 0
     ) -> list[tuple[tuple[int, int], tuple[int, int]]]:
         """
-        Split the row into regions of continuous text
+        Split a row into spans of continuous text crossing column rules.
 
-        Returns
-            list[tuple[int, int]]: a list of spans (start col, end col)
+        Args:
+            img: Source table image.
+            row: Row index to scan.
+            margin_x: Horizontal margin around each rule crop, in pixels.
+            margin_y: Vertical margin around each rule crop, in pixels.
+
+        Returns:
+            List of ``((row, start_col), (row, end_col))`` spans (inclusive).
         """
 
         pass
