@@ -8,155 +8,175 @@
     <img src="https://img.shields.io/pypi/v/taulu" alt="PyPi version of taulu" />
   </a>
   <img alt="GitHub Actions Workflow Status" src="https://img.shields.io/github/actions/workflow/status/ghentcdh/taulu/maturin.yml">
+  <a href="https://github.com/ghentcdh/taulu/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/ghentcdh/taulu" alt="License" />
+  </a>
+  <a href="https://ghentcdh.github.io/taulu">
+    <img src="https://img.shields.io/badge/docs-pdoc-blue" alt="Documentation" />
+  </a>
+  <a href="https://github.com/astral-sh/ruff">
+    <img src="https://img.shields.io/badge/lint-ruff-orange" alt="Linted with ruff" />
+  </a>
+  <a href="https://colab.research.google.com/github/ghentcdh/taulu/blob/main/examples/demo.ipynb">
+    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open demo in Colab" />
+  </a>
 </p>
 
 <p align="center">
-<a href="https://ghentcdh.github.io/taulu">Documentation</a>
+  <img src="./data/trailer.gif" alt="Taulu demo" width="700"/>
 </p>
+
+<p align="center">
+  <a href="https://ghentcdh.github.io/taulu">Documentation</a>
+  ·
+  <a href="./CHANGELOG.md">Changelog</a>
+  ·
+  <a href="./examples">Examples</a>
+  ·
+  <a href="https://colab.research.google.com/github/ghentcdh/taulu/blob/main/examples/demo.ipynb">Colab demo</a>
+</p>
+
+> [!WARNING]
+> **v3.0** renamed several classes and parameters. See the [migration guide](./CHANGELOG.md#300---2026-03-25) and run `uv run -m taulu.migrate config.toml --inplace` to upgrade TOML configs.
+
+## Features
+
+- **Rust core** (PyO3) for grid growing, A\* pathfinding, row detection
+- **Two-page tables** via `Split` — different headers and parameters per side
+- **Auto row heights** detected from cross-correlation peaks
+- **TOML config** with JSON Schema for editor autocomplete
+- **Notebook UI** for header annotation and cell inspection (matplotlib + ipywidgets)
+- **OpenCV debug view** for live parameter tuning
 
 ## Data Requirements
 
-This package assumes that you are working with images of tables that have **clearly visible rules** (the lines that divide the table into cells).
+Images of tables with **clearly visible rules** (cell borders).
 
-To fully utilize the automated workflow, your tables should include a recognizable header. This header will be used to identify the position of the first cell in the input image and determine the expected widths of the table's cells.
+For the automated workflow, tables should include a recognizable header — used to locate the first cell and infer column widths.
 
-For optimal segmentation, ensure that the tables are rotated so the borders are approximately vertical and horizontal. Minor page warping is acceptable.
+Tables should be roughly axis-aligned. Minor warping is fine.
 
 ## Installation
 
-### Using pip
-
-```sh
+```bash
 pip install taulu
-```
-
-### Using uv
-
-```sh
+# or
 uv add taulu
 ```
 
-## Usage
+## Quickstart
 
 ```python
-from taulu import Taulu, Split
-import os
+from taulu import Taulu
 
-
-def setup():
-    # create an Annotation file of the headers in the image
-    # (one for the left header, one for the right)
-    # and store them in the examples directory
-    print("Annotating the LEFT header...")
-    Taulu.annotate("../data/table_00.png", "table_00_header_left.png")
-
-    print("Annotating the RIGHT header...")
-    Taulu.annotate("../data/table_00.png", "table_00_header_right.png")
-
-
-def main():
-    taulu = Taulu(Split("table_00_header_left.png", "table_00_header_right.png"))
-    table = taulu.segment_table("../data/table_00.png", debug_view=True)
-
-    table.show_cells("../data/table_00.png")
-
-
-if __name__ == "__main__":
-    if os.path.exists("table_00_header_left.png") and os.path.exists(
-        "table_00_header_right.png"
-    ):
-        main()
-    else:
-        setup()
-        main()
+Taulu.annotate("table.png", "header.png")          # one-time, interactive
+taulu = Taulu("header.png")
+grid = taulu.segment_table("table.png")
+grid.show_cells("table.png")                        # click cells to inspect
 ```
 
-This file can be found at `examples/example.py`. To run it, clone this repository, create a uv
-project, and run the script:
-
-```
-git clone git@github.com:GhentCDH/taulu.git
-cd taulu
-uv init --no-workspace --bare
-uv run example.py
-```
-
-During this example, you will need to annotate the header image. You do this by simply clicking twice per line, once for each endpoint. It does not matter in which order you annotate the lines. Example:
-
-![Table Header Annotation Example](./data/header_annotation.png)
-
-Below is an example of table cell identification using the `Taulu` package:
-
-![Table Cell Identification Example](./data/example_segmentation.gif)
+For two-page (split) tables, see [`examples/example.py`](./examples/example.py).
 
 ## Workflow
 
-This package is structured in a modular way, with several components that work together.
+`Taulu` orchestrates these components:
 
-The Taulu class combines the components into one simple API, as seen in [Usage](#usage)
+| Class             | Role                                                               |
+| ----------------- | ------------------------------------------------------------------ |
+| `TemplateMatcher` | Locate the header in the image (ORB / SIFT / AKAZE)                |
+| `TableTemplate`   | Header annotation: column rules + expected cell sizes              |
+| `TableDetector`   | Find rule intersections (binarization → morphology → cross-kernel) |
+| `SegmentedTable`  | Output grid: cell lookups, cropping, persistence                   |
 
-The algorithm identifies the header's location in the input image, which provides a starting point. From there, it scans the image to find intersections of the rules (borders) and segments the image into cells accordingly.
+Annotation is two clicks per line:
 
-The output is a `SegmentedTable` object that contains the detected intersections and which defines some useful methods, enabling you to segment the image into rows, columns, and cells.
+![Header annotation](./data/header_annotation.png)
 
-The main classes are:
+## Parameters
 
-- `TemplateMatcher`: Uses template matching to identify the header's location in the input images.
-- `TableTemplate`: Stores header template information by reading an annotation JSON file. You can create this file by running `TableTemplate.annotate_image`.
-- `TableDetector`: Processes the image to identify intersections of horizontal and vertical lines (borders). To see its progress, you can run it with `debug_view=True`. This should allow you to tune the parameters to your data.
+Most-tuned `Taulu(...)` parameters:
 
-## Parameters and Methods
+| Parameter                                    | Purpose                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `template_path`                              | Header image (`.png` + `.json` annotation). Pass `Split(...)` for two-page tables.         |
+| `intersection_kernel_size`, `line_thickness` | Shape the cross-kernel to match real corner geometry after morphology.                     |
+| `line_gap_fill`                              | Dilation size — bridges broken rules. Affects optimal `line_thickness`.                    |
+| `search_radius`                              | Search window around predicted corner. Larger = more warp tolerance, more false positives. |
+| `binarization_sensitivity`                   | Sauvola threshold. Higher = more aggressive noise removal.                                 |
+| `row_height_factor`                          | Row height as fraction of header height. Float or list.                                    |
+| `auto_row_heights`                           | Detect per-row heights from cross-correlation peaks.                                       |
 
-The taulu algorithm has a number of parameters which you might need to tune in order for it to fit your data's characteristics.
-The following is a summary of the most important parameters and how you could tune them to your data.
+Cross-kernel shape vs. search region:
 
-### `Taulu`
+<p align="center">
+  <img src="./data/kernel.svg" alt="kernel diagram" width="200"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="./data/search.svg" alt="search region" width="200"/>
+</p>
 
-- `template_path`: a path of the header image which has an annotation associated with it. The annotation is assumed to have the same path, but with a `json` suffix (this is the case when created with `Taulu.annotate`). When working with images that have two tables (or one table, split across two pages), you can supply a `Split` of the left and right header images.
-- `intersection_kernel_size`, `line_thickness`: The `TableDetector` uses a kernel to detect intersections of rules in the image. The kernel looks like this:
+> [!TIP]
+> Run with `debug_view=True` to see binarization, morphology, and search regions live — easiest way to tune.
 
-  ![kernel diagram](./data/kernel.svg)
+Full parameter docs: [`Taulu` reference](https://ghentcdh.github.io/taulu/taulu/taulu.html#Taulu).
 
-  The goal is to make this kernel look like the actual corners in your images after thresholding and dilation. The example script shows the dilated result (because `debug_view=True`), which you can use to estimate the `line_thickness` and `intersection_kernel_size` values that fit your image.
-  Note that the optimal values will depend on the `line_gap_fill` parameter too.
+## `SegmentedTable` methods
 
-- `line_gap_fill`: The `TableDetector` uses a dilation step in order to _connect lines_ in the image that might be broken up after thresholding. With a larger `line_gap_fill`, larger gaps in the lines will be connected, but it will also lead to much thicker lines. As a result, this parameter affects the optimal `line_thickness` and `line_thickness_horizontal`.
-- `search_radius`: This parameter influences the search algorithm. The algorithm has a rough idea of where the next corner point should be. At that location, the algorithm then finds the best match that is within a square of size `search_radius` around that point, and selects that as the detected corner. Visualized:
+| Method                      | Purpose                                          |
+| --------------------------- | ------------------------------------------------ |
+| `save` / `from_saved`       | Persist grid to/from JSON                        |
+| `cell((x, y))`              | Pixel → `(row, col)`                             |
+| `cell_polygon((r, c))`      | Cell → 4-corner polygon                          |
+| `region(start, end)`        | Bounding polygon over a cell range               |
+| `crop_cell` / `crop_region` | Perspective-correct crop                         |
+| `highlight_all_cells`       | Render all cell outlines                         |
+| `show_cells`                | Interactive click-to-inspect (OpenCV / notebook) |
 
-  ![search algorithm region](./data/search.svg)
+## Configuration via TOML
 
-  A larger region will be more forgiving for warping or other artefacts, but could lead to false positives too. You can see this region as blue squares when running the segmentation with `debug_view=True`
+```toml
+"$schema" = "./taulu-config.schema.json"
+template_path = "header.png"
+binarization_sensitivity = 0.05
+intersection_kernel_size = 41
 
-- `binarization_sensitivity`: This parameter adjusts the threshold that is used when binarizing the image. The larger `binarization_sensitivity` more pixels will be mapped to zero. You should increase this parameter until most of the noise is gone in your image, without removing too many pixels from the actual lines of the table.
+[search_radius]                   # per-side override (split tables)
+left = 60
+right = 80
+```
 
-**These methods are the most useful**:
+```python
+from taulu import Taulu, TauluConfig
+taulu = Taulu.from_config(TauluConfig.from_toml("config.toml"))
+```
 
-- `Taulu.annotate`: create an annotation file for a header image. This requires an image of a table with a clear header. Taulu will first ask you to crop the header in the image (by clicking four points, one for each corner). Then, it will ask you to annotate the lines in the header (by clicking two points per line, one for each endpoint). The annotation file will be saved as a `json` file and a `png` with the same name.
-- `Taulu.__init__`: initialize a Taulu instance with a header image and parameters.
-  - `row_height_factor`: a float or a list of floats that determine the expected height of each row in the table, relative to the height of the header. If the list is shorter than the number of rows, the last value will be repeated for the remaining rows. If a single float is given, it will be used for all rows.
-- `Taulu.segment_table`: given an input image, segment into a `SegmentedTable` object.
-  - `filtered`: optional pre-filtered binary image for corner detection. If provided, binarization parameters are ignored.
-  - `debug_view`: show intermediate processing steps (note: crashes in Jupyter notebooks due to OpenCV window handling).
+Generate the schema for editor autocomplete:
 
-### `SegmentedTable`
+```bash
+uv run -m taulu.schema > taulu-config.schema.json
+```
 
-`Taulu.segment_table` returns a `SegmentedTable` instance, which you can use to get information about the location and bounding box of cells in your image.
+## Citation
 
-These methods are the most useful:
+```bibtex
+@software{taulu,
+  author  = {Peeters, Miel and {GhentCDH}},
+  title   = {taulu: segmentation of tables from images},
+  url     = {https://github.com/ghentcdh/taulu},
+  version = {3.0.0},
+  year    = {2026}
+}
+```
 
-- `save`: save the `SegmentedTable` object as a `json` file
-- `from_saved`: restore a `SegmentedTable` object from a `json` file
-- `cell`: given a location in the image (`(tuple[float, float]`), return the cell index `(row, column)`
-- `cell_polygon`: get the polygon (left top, right top, right bottom, left bottom) of the cell in the image
-- `region`: given a start and end cell, get the polygon that surrounds all cells in between (inclusive range)
-- `highlight_all_cells`: highlight all cell edges on an image
-- `show_cells`: interactively highlight cells you click on in the image (in an OpenCV window)
-- `crop_cell` and `crop_region`: crop the image to the supplied cell or region
+See [`CITATION.cff`](./CITATION.cff).
 
-## Credits
-
-Development by [Ghent Centre for Digital Humanities - Ghent University](https://www.ghentcdh.ugent.be/). Funded by the [GhentCDH research projects](https://www.ghentcdh.ugent.be/projects).
+---
 
 <div align="center">
-    <img src="https://www.ghentcdh.ugent.be/ghentcdh_logo_blue_text_transparent_bg_landscape.svg" alt="Ghent Centre for Digital Humanities Logo" width="500">
+
+Development by <a href="https://www.ghentcdh.ugent.be/">Ghent Centre for Digital Humanities — Ghent University</a>.<br>
+Funded by the <a href="https://www.ghentcdh.ugent.be/projects">GhentCDH research projects</a>.
+
+<br>
+<img src="https://www.ghentcdh.ugent.be/ghentcdh_logo_blue_text_transparent_bg_landscape.svg" alt="GhentCDH Logo" width="400">
+
 </div>
