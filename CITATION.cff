@@ -11,6 +11,7 @@ authors:
     country: BE
     website: 'https://www.ghentcdh.ugent.be/'
 repository-code: 'https://github.com/ghentcdh/taulu'
+url: 'https://ghentcdh.github.io/taulu'
 abstract: "Taulu is a Python package designed to segment tabular data in scanned or photographed documents."
 keywords:
   - OCR
@@ -18,5 +19,5 @@ keywords:
   - data extraction
   - HTR
   - historic documents
-version: v2.0.6
-date-released: '2025-11-13'
+version: v3.0.0
+date-released: '2026-05-05'
