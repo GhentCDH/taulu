@@ -1,3 +1,124 @@
+## [3.0.0] - 2026-03-25
+
+### 💥 Breaking Changes
+
+Classes and constructor/config parameters were renamed to be more intuitive.
+Update any existing code and TOML config files. A migration tool ships in
+this release; see the migration guide below.
+
+#### Class renames
+
+| Old              | New               |
+| ---------------- | ----------------- |
+| `GridDetector`   | `TableDetector`   |
+| `TableGrid`      | `SegmentedTable`  |
+| `HeaderAligner`  | `TemplateMatcher` |
+| `HeaderTemplate` | `TableTemplate`   |
+| `MatchMethod`    | `FeatureDetector` |
+
+The corresponding modules were renamed too: `header_aligner` →
+`template_matcher`, `header_template` → `table_template`.
+
+#### Parameter renames
+
+Applies to `Taulu(...)`, `TauluConfig`, and TOML config files.
+
+| Old                    | New                        |
+| ---------------------- | -------------------------- |
+| `header_image_path`    | `template_path`            |
+| `header_anno_path`     | `annotation_path`          |
+| `cell_height_factor`   | `row_height_factor`        |
+| `sauvola_k`            | `binarization_sensitivity` |
+| `search_region`        | `search_radius`            |
+| `distance_penalty`     | `position_weight`          |
+| `cross_width`          | `line_thickness`           |
+| `morph_size`           | `line_gap_fill`            |
+| `kernel_size`          | `intersection_kernel_size` |
+| `processing_scale`     | `detection_scale`          |
+| `skip_astar_threshold` | `pathfinding_threshold`    |
+| `grow_threshold`       | `detection_threshold`      |
+| `look_distance`        | `extrapolation_distance`   |
+| `smooth_grid`          | `smooth`                   |
+| `cuts`                 | `growing_resets`           |
+| `cut_fraction`         | `reset_fraction`           |
+| `match_method`         | `feature_detector`         |
+| `alignment_scale`      | `matching_scale`           |
+
+### 📖 Migration Guide
+
+**1. Update imports.** Replace old class names with new ones.
+
+```python
+# before
+from taulu import GridDetector, TableGrid, HeaderAligner, HeaderTemplate, MatchMethod
+
+# after
+from taulu import TableDetector, SegmentedTable, TemplateMatcher, TableTemplate, FeatureDetector
+```
+
+**2. Update `Taulu(...)` keyword arguments.** Apply the parameter rename
+table above. Example:
+
+```python
+# before
+taulu = Taulu(
+    header_image_path="header.png",
+    sauvola_k=0.04,
+    search_region=60,
+    cross_width=10,
+    kernel_size=41,
+    grow_threshold=0.3,
+    smooth_grid=True,
+    match_method="akaze",
+)
+
+# after
+taulu = Taulu(
+    template_path="header.png",
+    binarization_sensitivity=0.04,
+    search_radius=60,
+    line_thickness=10,
+    intersection_kernel_size=41,
+    detection_threshold=0.3,
+    smooth=True,
+    feature_detector="akaze",
+)
+```
+
+**3. Migrate TOML config files** with the bundled tool. Both top-level
+keys and `[split]` section headers are renamed.
+
+```bash
+# preview to stdout
+uv run -m taulu.migrate config.toml
+
+# rewrite in place (creates config.toml.bak)
+uv run -m taulu.migrate config.toml --inplace
+```
+
+For split configs, section headers are also rewritten (e.g. `[search_region]`
+→ `[search_radius]`).
+
+**4. Regenerate the JSON schema** if you reference it from your TOML files:
+
+```bash
+uv run -m taulu.schema > taulu-config.schema.json
+```
+
+### 🚀 Features
+
+- Config as a pydantic model
+- Automatic row height detection with cross correlation peak detection
+
+### 🚜 Refactor
+
+- Rename classes and parameters to be more intuitive
+
+### ⚙️ Miscellaneous Tasks
+
+- Add `taulu.migrate` CLI for upgrading TOML configs
+- Update README and demo notebook to new names
+
 ## [2.5.0] - 2026-03-23
 
 ### 🚀 Features
@@ -12,6 +133,10 @@
 - Notebook Google Colab
 - Type hinting issues
 
+### 📚 Documentation
+
+- Update documentation for v2.5.0
+
 ### 🔨 Build
 
 - Pillow >=12.1.1 to fix security issue (CVE-2026-25990)
@@ -24,6 +149,7 @@
 
 - Add CODEOWNERS
 - Add prek.toml for pre-commit checks
+
 ## [2.4.0] - 2026-03-12
 
 ### 🚀 Features
@@ -35,6 +161,7 @@
 ### 🐛 Bug Fixes
 
 - DeepConvNet.load type hint
+
 ## [2.3.1] - 2026-03-11
 
 ### 🚀 Features
@@ -82,6 +209,7 @@
 ### ⚡ Performance
 
 - Shell-based iteration and sqrt weighting for parallelogram extrapolation
+
 ## [2.2.0] - 2026-01-15
 
 ### 🚀 Features
@@ -110,6 +238,7 @@
 
 - Increase minimum python version
 - Version bump
+
 ## [2.1.0] - 2026-01-12
 
 ### 🚀 Features
@@ -124,6 +253,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version update
+
 ## [2.0.7] - 2026-01-12
 
 ### 🐛 Bug Fixes
@@ -146,36 +276,42 @@
 - Update docs workflow
 - Add LICENSE
 - Version update
+
 ## [2.0.6] - 2025-11-17
 
 ### 🐛 Bug Fixes
 
 - Don't modify search region each time...
+
 ## [2.0.5] - 2025-11-17
 
 ### 🚀 Features
 
-- *(torch)* Randomly distributed negative line points
-- *(torch)* Density based point sampling
+- _(torch)_ Randomly distributed negative line points
+- _(torch)_ Density based point sampling
 
 ### ⚙️ Miscellaneous Tasks
 
 - Version updates
+
 ## [2.0.4] - 2025-11-14
 
 ### 🚀 Features
 
 - Grid smoothing is optional
+
 ## [2.0.3] - 2025-11-13
 
 ### 🚀 Features
 
 - Version bump
+
 ## [2.0.2] - 2025-11-13
 
 ### 🐛 Bug Fixes
 
 - Daulu model convolutions use padding
+
 ## [2.0.1] - 2025-11-13
 
 ### 🚀 Features
@@ -184,6 +320,7 @@
 - Remove unnecessary method
 - Limit python version for build times
 - Remove debug logging from torch/run.py
+
 ## [2.0.0] - 2025-10-17
 
 ### 🚀 Features
@@ -212,6 +349,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Format + version update
+
 ## [1.2.0] - 2025-10-13
 
 ### 🚀 Features
@@ -225,6 +363,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v1.2.0
+
 ## [1.1.0] - 2025-09-29
 
 ### 🚀 Features
@@ -255,6 +394,7 @@
 
 - Docs pages workflow
 - Version v1.1.0
+
 ## [1.0.1] - 2025-09-23
 
 ### 🐛 Bug Fixes
@@ -269,6 +409,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Update README
+
 ## [1.0.0] - 2025-09-22
 
 ### 🚀 Features
@@ -277,8 +418,8 @@
 - Table annealing post processing step
 - Initial implementation
 - Clean up TableGrower implementation
-- *(table_grower)* Internalize loop in rust for performance
-- *(table_grower)* Parallellize
+- _(table_grower)_ Internalize loop in rust for performance
+- _(table_grower)_ Parallellize
 - If visual, show grown points
 - Regression based table completion
 - Take informed step guesses based on neighbours
@@ -287,7 +428,7 @@
 
 ### 🐛 Bug Fixes
 
-- *(aligner)* Correctly rescale homography
+- _(aligner)_ Correctly rescale homography
 - Fix clippy warnings
 
 ### 📚 Documentation
@@ -297,11 +438,13 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version 1.0.0
+
 ## [0.8.2] - 2025-09-12
 
 ### 🐛 Bug Fixes
 
-- Don't show images when A* fails
+- Don't show images when A\* fails
+
 ## [0.8.1] - 2025-09-12
 
 ### 🚀 Features
@@ -317,6 +460,7 @@
 - Update README and example.py
 - Documentation of Taulu class
 - Version 0.8.1
+
 ## [0.8.0] - 2025-09-10
 
 ### 🚀 Features
@@ -325,17 +469,19 @@
 - Add logging decorator and test config
 - Refactor grid point detector
 - Add logging to aligner and template
-- Use A* for growing column lines too
+- Use A\* for growing column lines too
 
 ### ⚙️ Miscellaneous Tasks
 
 - Add gif of segmentation
 - Update README
+
 ## [0.7.5] - 2025-06-04
 
 ### 🚀 Features
 
 - Utility functions for table indexer class
+
 ## [0.7.4] - 2025-05-28
 
 ### 🚀 Features
@@ -345,6 +491,7 @@
 ### 🔨 Build
 
 - Automatic release on github
+
 ## [0.7.3] - 2025-05-28
 
 ### 🚀 Features
@@ -357,23 +504,26 @@
 - Update README
 - Update README
 - Add CITATION.cff file
+
 ## [0.7.2] - 2025-05-26
 
 ### 🚀 Features
 
 - Allow variable row heights
+
 ## [0.7.1] - 2025-05-26
 
 ### 🚀 Features
 
 - Draw astar paths on visual=True
+
 ## [0.7.0] - 2025-05-26
 
 ### 🚀 Features
 
 - Implement astar based grid detection
 - Implement astar as a rust python extension module
-- Use _core extension module in grid
+- Use \_core extension module in grid
 - Tests only run if files exist
 - Add simple benchmark for profiling rust
 - Improve build actions
@@ -391,6 +541,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version 0.7.0
+
 ## [0.6.9] - 2025-05-21
 
 ### 🚀 Features
@@ -400,6 +551,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.9
+
 ## [0.6.8] - 2025-05-21
 
 ### 🚀 Features
@@ -409,6 +561,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.8
+
 ## [0.6.7] - 2025-05-16
 
 ### 🚀 Features
@@ -418,6 +571,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.7
+
 ## [0.6.6] - 2025-05-13
 
 ### 🐛 Bug Fixes
@@ -427,6 +581,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.6
+
 ## [0.6.5] - 2025-05-13
 
 ### 🐛 Bug Fixes
@@ -437,6 +592,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.5
+
 ## [0.6.4] - 2025-05-08
 
 ### 🚀 Features
@@ -454,20 +610,23 @@
 - V0.6.4
 - Documentation fixes
 - Version v0.6.4
+
 ## [0.6.3] - 2025-04-30
 
 ### ⚙️ Miscellaneous Tasks
 
 - Add publish step to action
+
 ## [0.6.2] - 2025-04-30
 
 ### 🐛 Bug Fixes
 
-- *(tablegrid)* Get actual points from saved json
+- _(tablegrid)_ Get actual points from saved json
 
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.2
+
 ## [0.6.1] - 2025-04-29
 
 ### 🚀 Features
@@ -483,11 +642,13 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.1
+
 ## [0.6.0] - 2025-04-24
 
 ### 🚀 Features
 
 - More general region cropping
+
 ## [0.5.0] - 2025-04-22
 
 ### 🚀 Features
@@ -498,6 +659,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.5.0
+
 ## [0.4.0] - 2025-04-18
 
 ### 🚀 Features
@@ -507,6 +669,7 @@
 ### ⚙️ Miscellaneous Tasks
 
 - Version 0.4.0
+
 ## [0.3.0] - 2025-04-18
 
 ### 🐛 Bug Fixes
@@ -515,11 +678,12 @@
 
 ### 🔨 Build
 
-- Only on v* tags
+- Only on v\* tags
 
 ### ⚙️ Miscellaneous Tasks
 
 - Version 0.3.0
+
 ## [0.2.0] - 2025-04-16
 
 ### 🚀 Features
@@ -548,7 +712,7 @@
 
 ### 🐛 Bug Fixes
 
-- *(cornerfiler)* Fix offset & out of bounds error
+- _(cornerfiler)_ Fix offset & out of bounds error
 - Examples is not a workspace member
 - Text_presence score update for sauvola
 
@@ -574,7 +738,7 @@
 - Update README
 - Update README
 - Update README
-- *(README)* Add kernel visualization
+- _(README)_ Add kernel visualization
 - Update README
 - Update README
 - Update README
