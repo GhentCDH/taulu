@@ -514,7 +514,7 @@ class Taulu:
         if self._auto_row_heights:
             now_ar = perf_counter()
             if isinstance(self._grid_detector, Split):
-                filtered_pre = self._grid_detector.apply(image)  # ty:ignore
+                filtered_pre = self._grid_detector.apply(image, visual=debug_view)  # ty:ignore
                 assert isinstance(self._template, Split)
                 header_h = Split(
                     self._template.left.cell_height(1.0),  # ty:ignore[unresolved-attribute]
@@ -546,7 +546,7 @@ class Taulu:
                     detected.right or self._cell_heights.right,  # ty:ignore[unresolved-attribute]
                 )
             else:
-                filtered_pre = self._grid_detector.apply(image)  # ty:ignore
+                filtered_pre = self._grid_detector.apply(image, visual=debug_view)  # ty:ignore
                 header_h_one = self._template.cell_height(1.0)
                 min_h_one = int(header_h_one * cast(float, self._min_row_height_factor))
                 max_h_one = int(header_h_one * cast(float, self._max_row_height_factor))
