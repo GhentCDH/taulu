@@ -174,9 +174,10 @@ See [`CITATION.cff`](./CITATION.cff).
 <div align="center">
 
 Development by <a href="https://www.ghentcdh.ugent.be/">Ghent Centre for Digital Humanities — Ghent University</a>.<br>
-Funded by the <a href="https://www.ghentcdh.ugent.be/projects">GhentCDH research projects</a>.
+Funded by the <a href="https://www.ghentcdh.ugent.be/projects">GhentCDH research projects</a>, within the <a href="https://clariahvl.hypotheses.org/">CLARIAH-VL</a> consortium.
 
 <br>
+<img width="400" alt="clariah VL logo" src="https://github.com/user-attachments/assets/d5b614b5-2521-4ce4-a08f-0a8a5b684649"/>
+<br>
 <img src="https://www.ghentcdh.ugent.be/ghentcdh_logo_blue_text_transparent_bg_landscape.svg" alt="GhentCDH Logo" width="400">
-
 </div>
