@@ -117,7 +117,7 @@ Cross-kernel shape vs. search region:
 > [!TIP]
 > Run with `debug_view=True` to see binarization, morphology, and search regions live — easiest way to tune.
 
-Full parameter docs: [`Taulu` reference](https://ghentcdh.github.io/taulu/taulu/taulu.html#Taulu).
+Full parameter docs: [`Taulu` reference](https://ghentcdh.github.io/taulu/taulu.html#Taulu).
 
 ## `SegmentedTable` methods
 
