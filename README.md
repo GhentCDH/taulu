@@ -14,11 +14,12 @@
   <a href="https://ghentcdh.github.io/taulu">
     <img src="https://img.shields.io/badge/docs-pdoc-blue" alt="Documentation" />
   </a>
-  <a href="https://github.com/astral-sh/ruff">
-    <img src="https://img.shields.io/badge/lint-ruff-orange" alt="Linted with ruff" />
-  </a>
+  <br>
   <a href="https://colab.research.google.com/github/ghentcdh/taulu/blob/main/examples/demo.ipynb">
     <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open demo in Colab" />
+  </a>
+  <a href="https://doi.org/10.5281/zenodo.20311441">
+    <img src="https://zenodo.org/badge/959982828.svg" alt="DOI">
   </a>
 </p>
 

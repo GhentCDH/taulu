@@ -19,5 +19,12 @@ keywords:
   - data extraction
   - HTR
   - historic documents
-version: v3.0.0
-date-released: '2026-05-05'
+version: v3.0.1
+date-released: '2026-05-20'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20311441
+    description: "All Taulu versions"
+  - type: doi
+    value: 10.5281/zenodo.20311442
+    description: "Version 3.0.1"
