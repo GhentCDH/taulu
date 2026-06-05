@@ -1,0 +1,3 @@
+compile:
+  typst compile banner.typ ../data/banner.svg
+  typst compile banner.typ --input='dark=true' ../data/banner-dark.svg

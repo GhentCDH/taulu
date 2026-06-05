@@ -1,5 +1,9 @@
 <p align="center">
-  <img src="./data/banner.svg" alt="Banner" width="400"/>
+  <img src="" alt="Banner" width="400"/>
+    <picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./data/banner-dark.svg">
+  <img alt="palette" src="./data/banner.svg">
+</picture>
   <br>
   <i>Segmentation of tables from images</i>
   <br>
