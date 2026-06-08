@@ -1,7 +1,6 @@
 #import "@preview/cetz:0.5.2"
 
 #let dark = sys.inputs.at("dark", default: "false") == "true"
-#let dark = true
 
 #let fg = if dark { white } else { black }
 
