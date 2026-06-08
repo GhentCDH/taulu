@@ -1,124 +1,61 @@
-## [3.0.0] - 2026-03-25
+## [3.0.2] - 2026-06-08
 
-### 💥 Breaking Changes
+### 🚀 Features
 
-Classes and constructor/config parameters were renamed to be more intuitive.
-Update any existing code and TOML config files. A migration tool ships in
-this release; see the migration guide below.
+- Fix demo.ipynb documentation and parameters
 
-#### Class renames
+### 🐛 Bug Fixes
 
-| Old              | New               |
-| ---------------- | ----------------- |
-| `GridDetector`   | `TableDetector`   |
-| `TableGrid`      | `SegmentedTable`  |
-| `HeaderAligner`  | `TemplateMatcher` |
-| `HeaderTemplate` | `TableTemplate`   |
-| `MatchMethod`    | `FeatureDetector` |
+- Annotation ui for notebooks
 
-The corresponding modules were renamed too: `header_aligner` →
-`template_matcher`, `header_template` → `table_template`.
+### ⚙️ Miscellaneous Tasks
 
-#### Parameter renames
+- Update CITATION and README
+- Update banner (+ dark mode banner)
+- Fix README banner width
+- Move banner to logo/
+- Fix banner for light theme
+- Version 3.0.2
+## [3.0.1] - 2026-05-20
 
-Applies to `Taulu(...)`, `TauluConfig`, and TOML config files.
+### ⚙️ Miscellaneous Tasks
 
-| Old                    | New                        |
-| ---------------------- | -------------------------- |
-| `header_image_path`    | `template_path`            |
-| `header_anno_path`     | `annotation_path`          |
-| `cell_height_factor`   | `row_height_factor`        |
-| `sauvola_k`            | `binarization_sensitivity` |
-| `search_region`        | `search_radius`            |
-| `distance_penalty`     | `position_weight`          |
-| `cross_width`          | `line_thickness`           |
-| `morph_size`           | `line_gap_fill`            |
-| `kernel_size`          | `intersection_kernel_size` |
-| `processing_scale`     | `detection_scale`          |
-| `skip_astar_threshold` | `pathfinding_threshold`    |
-| `grow_threshold`       | `detection_threshold`      |
-| `look_distance`        | `extrapolation_distance`   |
-| `smooth_grid`          | `smooth`                   |
-| `cuts`                 | `growing_resets`           |
-| `cut_fraction`         | `reset_fraction`           |
-| `match_method`         | `feature_detector`         |
-| `alignment_scale`      | `matching_scale`           |
-
-### 📖 Migration Guide
-
-**1. Update imports.** Replace old class names with new ones.
-
-```python
-# before
-from taulu import GridDetector, TableGrid, HeaderAligner, HeaderTemplate, MatchMethod
-
-# after
-from taulu import TableDetector, SegmentedTable, TemplateMatcher, TableTemplate, FeatureDetector
-```
-
-**2. Update `Taulu(...)` keyword arguments.** Apply the parameter rename
-table above. Example:
-
-```python
-# before
-taulu = Taulu(
-    header_image_path="header.png",
-    sauvola_k=0.04,
-    search_region=60,
-    cross_width=10,
-    kernel_size=41,
-    grow_threshold=0.3,
-    smooth_grid=True,
-    match_method="akaze",
-)
-
-# after
-taulu = Taulu(
-    template_path="header.png",
-    binarization_sensitivity=0.04,
-    search_radius=60,
-    line_thickness=10,
-    intersection_kernel_size=41,
-    detection_threshold=0.3,
-    smooth=True,
-    feature_detector="akaze",
-)
-```
-
-**3. Migrate TOML config files** with the bundled tool. Both top-level
-keys and `[split]` section headers are renamed.
-
-```bash
-# preview to stdout
-uv run -m taulu.migrate config.toml
-
-# rewrite in place (creates config.toml.bak)
-uv run -m taulu.migrate config.toml --inplace
-```
-
-For split configs, section headers are also rewritten (e.g. `[search_region]`
-→ `[search_radius]`).
-
-**4. Regenerate the JSON schema** if you reference it from your TOML files:
-
-```bash
-uv run -m taulu.schema > taulu-config.schema.json
-```
+- Update README
+- Update README
+- Update README
+- Bump versions
+## [3.0.0] - 2026-05-05
 
 ### 🚀 Features
 
 - Config as a pydantic model
 - Automatic row height detection with cross correlation peak detection
+- Fix clippy warnings
+- Row_detector.rs rerun logging
+- Pass visual mode to filter application
+
+### 🐛 Bug Fixes
+
+- Mark all visual tests
+- *(ci)* Windows build with specific python version
 
 ### 🚜 Refactor
 
 - Rename classes and parameters to be more intuitive
 
+### 📚 Documentation
+
+- Improve Python documentation
+- Generate pdoc html
+
 ### ⚙️ Miscellaneous Tasks
 
-- Add `taulu.migrate` CLI for upgrading TOML configs
-- Update README and demo notebook to new names
-
+- Ty check specific files
+- Prek config
+- Add pydantic dependency
+- Add taulu config schema json
+- Don't include clippy pedantic warnings
+- Update README and CITATION
 ## [2.5.0] - 2026-03-23
 
 ### 🚀 Features
@@ -149,7 +86,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 
 - Add CODEOWNERS
 - Add prek.toml for pre-commit checks
-
 ## [2.4.0] - 2026-03-12
 
 ### 🚀 Features
@@ -161,7 +97,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### 🐛 Bug Fixes
 
 - DeepConvNet.load type hint
-
 ## [2.3.1] - 2026-03-11
 
 ### 🚀 Features
@@ -209,7 +144,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚡ Performance
 
 - Shell-based iteration and sqrt weighting for parallelogram extrapolation
-
 ## [2.2.0] - 2026-01-15
 
 ### 🚀 Features
@@ -238,7 +172,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 
 - Increase minimum python version
 - Version bump
-
 ## [2.1.0] - 2026-01-12
 
 ### 🚀 Features
@@ -253,7 +186,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version update
-
 ## [2.0.7] - 2026-01-12
 
 ### 🐛 Bug Fixes
@@ -276,42 +208,36 @@ uv run -m taulu.schema > taulu-config.schema.json
 - Update docs workflow
 - Add LICENSE
 - Version update
-
 ## [2.0.6] - 2025-11-17
 
 ### 🐛 Bug Fixes
 
 - Don't modify search region each time...
-
 ## [2.0.5] - 2025-11-17
 
 ### 🚀 Features
 
-- _(torch)_ Randomly distributed negative line points
-- _(torch)_ Density based point sampling
+- *(torch)* Randomly distributed negative line points
+- *(torch)* Density based point sampling
 
 ### ⚙️ Miscellaneous Tasks
 
 - Version updates
-
 ## [2.0.4] - 2025-11-14
 
 ### 🚀 Features
 
 - Grid smoothing is optional
-
 ## [2.0.3] - 2025-11-13
 
 ### 🚀 Features
 
 - Version bump
-
 ## [2.0.2] - 2025-11-13
 
 ### 🐛 Bug Fixes
 
 - Daulu model convolutions use padding
-
 ## [2.0.1] - 2025-11-13
 
 ### 🚀 Features
@@ -320,7 +246,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 - Remove unnecessary method
 - Limit python version for build times
 - Remove debug logging from torch/run.py
-
 ## [2.0.0] - 2025-10-17
 
 ### 🚀 Features
@@ -349,7 +274,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Format + version update
-
 ## [1.2.0] - 2025-10-13
 
 ### 🚀 Features
@@ -363,7 +287,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v1.2.0
-
 ## [1.1.0] - 2025-09-29
 
 ### 🚀 Features
@@ -394,7 +317,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 
 - Docs pages workflow
 - Version v1.1.0
-
 ## [1.0.1] - 2025-09-23
 
 ### 🐛 Bug Fixes
@@ -409,7 +331,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Update README
-
 ## [1.0.0] - 2025-09-22
 
 ### 🚀 Features
@@ -418,8 +339,8 @@ uv run -m taulu.schema > taulu-config.schema.json
 - Table annealing post processing step
 - Initial implementation
 - Clean up TableGrower implementation
-- _(table_grower)_ Internalize loop in rust for performance
-- _(table_grower)_ Parallellize
+- *(table_grower)* Internalize loop in rust for performance
+- *(table_grower)* Parallellize
 - If visual, show grown points
 - Regression based table completion
 - Take informed step guesses based on neighbours
@@ -428,7 +349,7 @@ uv run -m taulu.schema > taulu-config.schema.json
 
 ### 🐛 Bug Fixes
 
-- _(aligner)_ Correctly rescale homography
+- *(aligner)* Correctly rescale homography
 - Fix clippy warnings
 
 ### 📚 Documentation
@@ -438,13 +359,11 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version 1.0.0
-
 ## [0.8.2] - 2025-09-12
 
 ### 🐛 Bug Fixes
 
-- Don't show images when A\* fails
-
+- Don't show images when A* fails
 ## [0.8.1] - 2025-09-12
 
 ### 🚀 Features
@@ -460,7 +379,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 - Update README and example.py
 - Documentation of Taulu class
 - Version 0.8.1
-
 ## [0.8.0] - 2025-09-10
 
 ### 🚀 Features
@@ -469,19 +387,17 @@ uv run -m taulu.schema > taulu-config.schema.json
 - Add logging decorator and test config
 - Refactor grid point detector
 - Add logging to aligner and template
-- Use A\* for growing column lines too
+- Use A* for growing column lines too
 
 ### ⚙️ Miscellaneous Tasks
 
 - Add gif of segmentation
 - Update README
-
 ## [0.7.5] - 2025-06-04
 
 ### 🚀 Features
 
 - Utility functions for table indexer class
-
 ## [0.7.4] - 2025-05-28
 
 ### 🚀 Features
@@ -491,7 +407,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### 🔨 Build
 
 - Automatic release on github
-
 ## [0.7.3] - 2025-05-28
 
 ### 🚀 Features
@@ -504,26 +419,23 @@ uv run -m taulu.schema > taulu-config.schema.json
 - Update README
 - Update README
 - Add CITATION.cff file
-
 ## [0.7.2] - 2025-05-26
 
 ### 🚀 Features
 
 - Allow variable row heights
-
 ## [0.7.1] - 2025-05-26
 
 ### 🚀 Features
 
 - Draw astar paths on visual=True
-
 ## [0.7.0] - 2025-05-26
 
 ### 🚀 Features
 
 - Implement astar based grid detection
 - Implement astar as a rust python extension module
-- Use \_core extension module in grid
+- Use _core extension module in grid
 - Tests only run if files exist
 - Add simple benchmark for profiling rust
 - Improve build actions
@@ -541,7 +453,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version 0.7.0
-
 ## [0.6.9] - 2025-05-21
 
 ### 🚀 Features
@@ -551,7 +462,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.9
-
 ## [0.6.8] - 2025-05-21
 
 ### 🚀 Features
@@ -561,7 +471,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.8
-
 ## [0.6.7] - 2025-05-16
 
 ### 🚀 Features
@@ -571,7 +480,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.7
-
 ## [0.6.6] - 2025-05-13
 
 ### 🐛 Bug Fixes
@@ -581,7 +489,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.6
-
 ## [0.6.5] - 2025-05-13
 
 ### 🐛 Bug Fixes
@@ -592,7 +499,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.5
-
 ## [0.6.4] - 2025-05-08
 
 ### 🚀 Features
@@ -610,23 +516,20 @@ uv run -m taulu.schema > taulu-config.schema.json
 - V0.6.4
 - Documentation fixes
 - Version v0.6.4
-
 ## [0.6.3] - 2025-04-30
 
 ### ⚙️ Miscellaneous Tasks
 
 - Add publish step to action
-
 ## [0.6.2] - 2025-04-30
 
 ### 🐛 Bug Fixes
 
-- _(tablegrid)_ Get actual points from saved json
+- *(tablegrid)* Get actual points from saved json
 
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.2
-
 ## [0.6.1] - 2025-04-29
 
 ### 🚀 Features
@@ -642,13 +545,11 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.6.1
-
 ## [0.6.0] - 2025-04-24
 
 ### 🚀 Features
 
 - More general region cropping
-
 ## [0.5.0] - 2025-04-22
 
 ### 🚀 Features
@@ -659,7 +560,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version v0.5.0
-
 ## [0.4.0] - 2025-04-18
 
 ### 🚀 Features
@@ -669,7 +569,6 @@ uv run -m taulu.schema > taulu-config.schema.json
 ### ⚙️ Miscellaneous Tasks
 
 - Version 0.4.0
-
 ## [0.3.0] - 2025-04-18
 
 ### 🐛 Bug Fixes
@@ -678,12 +577,11 @@ uv run -m taulu.schema > taulu-config.schema.json
 
 ### 🔨 Build
 
-- Only on v\* tags
+- Only on v* tags
 
 ### ⚙️ Miscellaneous Tasks
 
 - Version 0.3.0
-
 ## [0.2.0] - 2025-04-16
 
 ### 🚀 Features
@@ -712,7 +610,7 @@ uv run -m taulu.schema > taulu-config.schema.json
 
 ### 🐛 Bug Fixes
 
-- _(cornerfiler)_ Fix offset & out of bounds error
+- *(cornerfiler)* Fix offset & out of bounds error
 - Examples is not a workspace member
 - Text_presence score update for sauvola
 
@@ -738,7 +636,7 @@ uv run -m taulu.schema > taulu-config.schema.json
 - Update README
 - Update README
 - Update README
-- _(README)_ Add kernel visualization
+- *(README)* Add kernel visualization
 - Update README
 - Update README
 - Update README

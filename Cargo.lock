@@ -4102,7 +4102,7 @@ checksum = "df7f62577c25e07834649fc3b39fafdc597c0a3527dc1c60129201ccfcbaa50c"
 
 [[package]]
 name = "taulu"
-version = "3.0.1"
+version = "3.0.2"
 dependencies = [
  "approx",
  "criterion",
