@@ -467,27 +467,41 @@ class TableTemplate(TableIndexer):
                 cv.imwrite(os.fspath(session._crop_path), cropped)
 
             plt.close(fig)
-            container.clear_output()
-            with container:
-                TableTemplate._show_annotation_ui(cropped, session)
+            # Hide the crop UI, then render the annotation UI into the
+            # annotation Output that was already displayed at the top level.
+            crop_container.clear_output()
+            TableTemplate._show_annotation_ui(cropped, session, anno_container)
 
         done_button.on_click(on_done)
         undo_button.on_click(on_undo)
 
         cid = fig.canvas.mpl_connect("button_press_event", on_click)
 
-        # Anchor an Output widget to the cell, then render inside it so that
-        # on_done can clear and re-populate it without leaving the cell context.
-        container = widgets.Output()
-        display(container)
-        with container:
+        # Anchor both Output widgets to the cell up front (at cell-execution
+        # time). Colab drops widgets that are display()-ed into an Output from a
+        # button callback, so the annotation container must already exist before
+        # on_done fires; otherwise its buttons never render on Colab.
+        crop_container = widgets.Output()
+        anno_container = widgets.Output()
+        display(crop_container, anno_container)
+        with crop_container:
             plt.tight_layout(pad=0)
             plt.show()
             display(widgets.HBox([done_button, undo_button, status_label]))
 
     @staticmethod
-    def _show_annotation_ui(template: MatLike, session: "AnnotationSession"):
-        """Show the line annotation UI using matplotlib + ipywidgets."""
+    def _show_annotation_ui(
+        template: MatLike,
+        session: "AnnotationSession",
+        container=None,
+    ):
+        """Show the line annotation UI using matplotlib + ipywidgets.
+
+        If ``container`` is given it must be an Output widget already displayed
+        at the top level of the cell; the UI is rendered into it. This is
+        required on Colab, where widgets display()-ed from a button callback
+        into a not-yet-shown Output are dropped.
+        """
         import ipywidgets as widgets
         from IPython.display import display
 
@@ -599,10 +613,16 @@ class TableTemplate(TableIndexer):
 
         cid = fig.canvas.mpl_connect("button_press_event", on_click)
 
-        # Display figure first, then buttons below
-        plt.tight_layout(pad=0)
-        plt.show()
-        display(widgets.HBox([done_button, undo_button, status_label]))
+        # Display figure first, then buttons below. When a container is supplied
+        # (the crop -> annotate flow) render into it; otherwise create and show
+        # one at cell-execution time (direct annotate flow, no crop).
+        if container is None:
+            container = widgets.Output()
+            display(container)
+        with container:
+            plt.tight_layout(pad=0)
+            plt.show()
+            display(widgets.HBox([done_button, undo_button, status_label]))
 
     @staticmethod
     @log_calls(level=logging.DEBUG, include_return=True)
