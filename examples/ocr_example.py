@@ -109,7 +109,7 @@ def ocr_table(grid: SegmentedTable, image: MatLike, ocr: TrOCR) -> list[list[str
 
 def write_csv(transcriptions: list[list[str]], path: str):
     """Write the transcribed cells to a CSV matching the table structure."""
-    with open(path, "w", newline="") as f:
+    with open(path, "w, newline="") as f:
         writer = csv.writer(f)
         writer.writerows(transcriptions)
     print(f"Wrote {path}")
@@ -127,7 +127,14 @@ def main():
         Split(
             str(data_dir / "header_left_00.png"),
             str(data_dir / "header_right_00.png"),
-        )
+        ),
+        binarization_sensitivity=0.25,
+        extrapolation_distance=30,
+        line_gap_fill=7,
+        intersection_kernel_size=35,
+        search_radius=30,
+        row_height_factor=0.85,
+        min_rows=45,
     )
 
     print(f"Segmenting {table_image}...")
